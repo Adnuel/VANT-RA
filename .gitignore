@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Production build outputs
+dist/
+dist-ssr/
+build/
+dev-dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# AI Studio artifacts & test outputs
+.aistudio/
+.playwright-cli/
+*.zip
+public/assets/aistudio/
+src/assets/
+
+# Android Capacitor build outputs & copied assets
+android/app/build/
+android/app/src/main/assets/public/
+android/.gradle/
+android/capacitor-cordova-android-plugins/build/
+android/capacitor-cordova-android-plugins/.gradle/

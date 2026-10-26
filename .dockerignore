@@ -1,0 +1,11 @@
+node_modules
+dist
+dev-dist
+.git
+.DS_Store
+*.log
+android
+archives
+tests
+public/vantera-android-project.zip
+public/vantera-project.zip

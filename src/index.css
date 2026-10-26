@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #121210;
+  background-color: #f8f7f4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (min-width: 640px) {
+  .sm\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Additional luxury styling for CEO dashboard & Customer Account modals */
+.admin-card {
+  background: #ffffff;
+  border: 1px solid var(--line, #e7e4de);
+  border-radius: var(--radius, 12px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.admin-badge-paid {
+  background: #eef8ee;
+  color: #1e7e34;
+  border: 1px solid #c3e6cb;
+}
+
+.admin-badge-pending {
+  background: #fff8e6;
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+.admin-badge-awaiting {
+  background: #e8f4fd;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.admin-badge-shipped {
+  background: #f0eef8;
+  color: #553c9a;
+  border: 1px solid #d6bcfa;
+}
+
+.admin-badge-delivered {
+  background: #e6fffa;
+  color: #234e52;
+  border: 1px solid #b2f5ea;
+}
+
+.admin-badge-cancelled {
+  background: #fdf2f2;
+  color: #9b1c1c;
+  border: 1px solid #f8b4b4;
+}

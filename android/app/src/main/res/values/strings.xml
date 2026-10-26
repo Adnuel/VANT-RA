@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VANTÉRA</string>
+    <string name="title_activity_main">VANTÉRA</string>
+    <string name="package_name">com.vantera.store</string>
+    <string name="custom_url_scheme">com.vantera.store</string>
+</resources>

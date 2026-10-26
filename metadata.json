@@ -1,0 +1,8 @@
+{
+  "name": "VANTÉRA — Technology, Elevated.",
+  "description": "VANTÉRA premium technology storefront, customer authentication, automated order workflows, and private CEO dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
