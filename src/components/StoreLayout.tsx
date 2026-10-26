@@ -65,7 +65,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
       <div className="bg-[#121210] text-[#f8f7f4] text-[11px] py-1.5 px-4 text-center border-b border-[#252521] flex items-center justify-center gap-2 flex-wrap">
         <span className="font-semibold tracking-wider uppercase text-[#c4a66b]">VANTÉRA</span>
         <span className="text-[#77746d]">/</span>
-        <span>Technology, Elevated.</span>
+        <span>All About Tech Finds</span>
         <span className="text-[#77746d]">·</span>
         <span className="text-[#a9a69f] hidden sm:inline">Direct Bank Transfer Orders Active · Verified by CEO Adnuel</span>
         <span className="text-[#77746d] hidden sm:inline">·</span>
@@ -102,8 +102,8 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                 <span className="text-base sm:text-xl font-extrabold tracking-[0.2em] sm:tracking-[0.25em] uppercase font-sans text-[#121210]">
                   VANTÉRA
                 </span>
-                <span className="text-[9px] tracking-[0.2em] uppercase text-[#77746d] font-mono hidden sm:inline">
-                  Technology, Elevated.
+                <span className="text-[9px] tracking-[0.2em] uppercase text-[#c4a66b] font-mono hidden sm:inline">
+                  All About Tech Finds
                 </span>
               </div>
             </a>
@@ -558,9 +558,9 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                   VANTÉRA
                 </span>
               </div>
-              <p className="font-serif italic text-sm text-[#252521]">Technology, Elevated.</p>
+              <p className="font-serif italic text-sm text-[#252521]">All About Tech Finds.</p>
               <p className="text-xs text-[#77746d] max-w-sm leading-relaxed">
-                A considered technology storefront focused on phone protection, charging and everyday accessories. Direct bank transfer verified and authorized under CEO Adnuel.
+                A curated luxury storefront for cutting-edge tech finds, wireless charging, and everyday device essentials. Direct bank transfer verified and authorized under CEO Adnuel.
               </p>
 
               {/* Private Newsletter Subscription */}
@@ -618,26 +618,31 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
 
             {/* Explore column */}
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">Explore</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">Explore Tech Finds</h3>
               <ul className="space-y-2 text-xs text-[#77746d]">
                 <li>
                   <a href="/shop" onClick={(e) => { e.preventDefault(); onNavigate('/shop'); }} className="hover:text-[#121210]">
-                    Shop all
+                    Shop All Finds
                   </a>
                 </li>
                 <li>
                   <a href="/category/phone-cases" onClick={(e) => { e.preventDefault(); onNavigate('/category/phone-cases'); }} className="hover:text-[#121210]">
-                    Phone protection
+                    Phone Protection & MagSafe
                   </a>
                 </li>
                 <li>
                   <a href="/category/charging" onClick={(e) => { e.preventDefault(); onNavigate('/category/charging'); }} className="hover:text-[#121210]">
-                    Charging & power
+                    Charging & Power Hubs
+                  </a>
+                </li>
+                <li>
+                  <a href="/category/room-desk" onClick={(e) => { e.preventDefault(); onNavigate('/category/room-desk'); }} className="hover:text-[#121210]">
+                    Desk & Workspace Gear
                   </a>
                 </li>
                 <li>
                   <a href="/category/trending" onClick={(e) => { e.preventDefault(); onNavigate('/category/trending'); }} className="hover:text-[#121210]">
-                    Trending finds
+                    Trending Viral Finds
                   </a>
                 </li>
               </ul>
@@ -675,7 +680,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
               </ul>
             </div>
 
-            {/* Customer Care & CEO column */}
+            {/* Customer Care column */}
             <div className="space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">Customer Care</h3>
               <div className="space-y-2 text-xs text-[#77746d]">
@@ -686,28 +691,18 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                   </a>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase tracking-wide text-[#a9a69f]">WhatsApp Business</span>
+                  <span className="block text-[10px] uppercase tracking-wide text-[#a9a69f]">WhatsApp VIP Concierge</span>
                   <a href="https://wa.me/2349132793670" target="_blank" rel="noopener noreferrer" className="text-[#1e7e34] hover:underline font-mono">
                     +234 913 279 3670
                   </a>
                 </div>
-                <div className="pt-2 flex flex-col gap-1.5">
-                  <a
-                    href="/ceo"
-                    onClick={(e) => { e.preventDefault(); onNavigate('/ceo'); }}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#121210] hover:text-[#c4a66b] font-medium"
-                  >
-                    <span>✦</span>
-                    <span>CEO Management Portal</span>
-                  </a>
-                  <a
-                    href="/domain"
-                    onClick={(e) => { e.preventDefault(); onNavigate('/domain'); }}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#b45309] hover:text-[#c4a66b] font-semibold"
-                  >
-                    <span>🌐</span>
-                    <span>Custom Domain & DNS Setup</span>
-                  </a>
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wide text-[#a9a69f]">Bank Wire Orders</span>
+                  <span className="text-[#121210] font-mono text-[11px]">GTBank: 1033269410</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wide text-[#a9a69f]">Order Verification</span>
+                  <span className="text-[#1e7e34] font-medium text-[11px]">Instant CEO Verification</span>
                 </div>
               </div>
             </div>
@@ -715,16 +710,14 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
 
           <div className="mt-12 pt-6 border-t border-[#e7e4de] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#77746d]">
             <div>
-              © 2026 VANTÉRA. All rights reserved. Technology, Elevated.
+              © 2026 VANTÉRA. All rights reserved. All About Tech Finds.
             </div>
             <div className="flex items-center gap-4 flex-wrap">
               <a href="/privacy" onClick={(e) => { e.preventDefault(); onNavigate('/privacy'); }} className="hover:underline">Privacy Policy</a>
               <span>·</span>
               <a href="/terms" onClick={(e) => { e.preventDefault(); onNavigate('/terms'); }} className="hover:underline">Terms of Service</a>
               <span>·</span>
-              <a href="/track" onClick={(e) => { e.preventDefault(); onNavigate('/track'); }} className="hover:underline">Order Status</a>
-              <span>·</span>
-              <a href="/ceo" onClick={(e) => { e.preventDefault(); onNavigate('/ceo'); }} className="hover:underline text-[#121210] font-semibold">CEO Portal</a>
+              <a href="/track" onClick={(e) => { e.preventDefault(); onNavigate('/track'); }} className="hover:underline">Track Order</a>
               <span>·</span>
               <button
                 type="button"
@@ -734,17 +727,6 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
               >
                 <span>📱</span>
                 <span>Android App</span>
-              </button>
-              <span>·</span>
-              <button
-                type="button"
-                onClick={handleDownload}
-                disabled={isDownloadingZip}
-                className="text-[#c4a66b] hover:underline font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                title="Download verified binary ZIP of complete project"
-              >
-                <span>📦</span>
-                <span>{isDownloadingZip ? 'Verifying & Downloading ZIP...' : 'Download Verified ZIP'}</span>
               </button>
             </div>
           </div>

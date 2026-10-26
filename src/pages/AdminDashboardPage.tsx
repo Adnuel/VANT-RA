@@ -760,6 +760,71 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         {/* 1. OVERVIEW & METRICS (GENUINE DATABASE ONLY) */}
         {!isLoading && activeTab === 'overview' && realAnalytics && stats && (
           <div className="space-y-8">
+            {/* CEO Executive Infrastructure & Operations Banner */}
+            <div className="bg-[#121210] border border-[#252521] text-[#f8f7f4] p-6 shadow-md rounded-xs">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#c4a66b] font-bold">
+                      EXECUTIVE INFRASTRUCTURE & DOMAIN
+                    </span>
+                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] px-2 py-0.5 rounded-full font-mono font-bold">
+                      ● Active & Live
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold font-sans text-white">
+                    vantera.com.ng & Operations Hub
+                  </h3>
+                  <p className="text-xs text-[#a9a69f] max-w-2xl leading-relaxed">
+                    Custom domain and DNS routing, verified project source backup, and live CEO controls are managed privately here in your Executive Suite.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('domain')}
+                    className="bg-[#c4a66b] text-[#121210] font-bold px-4 py-2 text-xs uppercase tracking-wider hover:bg-[#d4af37] transition-colors rounded-xs flex items-center gap-2 cursor-pointer shadow-xs"
+                    title="Configure Custom Domain and DNS settings"
+                  >
+                    <span>🌐</span>
+                    <span>Custom Domain & DNS Setup</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsDownloadingZip(true);
+                      const res = await downloadProjectZip();
+                      setIsDownloadingZip(false);
+                      if (!res.success) {
+                        showToast(`Download notice: ${res.message}`, 'info');
+                      } else {
+                        showToast('Project ZIP downloaded successfully!', 'success');
+                      }
+                    }}
+                    disabled={isDownloadingZip}
+                    className="border border-[#c4a66b] text-[#c4a66b] hover:bg-[#c4a66b] hover:text-[#121210] font-bold px-4 py-2 text-xs uppercase tracking-wider transition-colors rounded-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    title="Download verified binary ZIP of complete project"
+                  >
+                    <span>📦</span>
+                    <span>{isDownloadingZip ? 'Downloading ZIP...' : 'Download Verified ZIP'}</span>
+                  </button>
+
+                  <a
+                    href="https://vantera.com.ng"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border border-[#77746d]/50 text-[#f8f7f4] hover:border-[#f8f7f4] px-3.5 py-2 text-xs font-mono transition-colors rounded-xs flex items-center gap-1.5"
+                    title="View live production domain"
+                  >
+                    <span>↗</span>
+                    <span>vantera.com.ng</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
             {/* Time Period Filter Bar */}
             <div className="bg-white border border-[#e7e4de] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
               <div className="flex flex-wrap items-center gap-2">

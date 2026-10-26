@@ -4,8 +4,6 @@ import { ProductCard } from '../components/ProductCard.tsx';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
 import { TechSpecsModal } from '../components/TechSpecsModal.tsx';
-import { DeviceComparisonMatrix } from '../components/DeviceComparisonMatrix.tsx';
-import { EcosystemBundleBuilder } from '../components/EcosystemBundleBuilder.tsx';
 
 interface HomeProps {
   products: Product[];
@@ -20,47 +18,10 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
   const [copiedAccount, setCopiedAccount] = useState<boolean>(false);
   const [selectedQuickViewProduct, setSelectedQuickViewProduct] = useState<Product | null>(null);
 
-  // Samsung-style Flagship Hero Interactive Finish Switcher
-  const heroFinishes = [
-    {
-      id: 'titanium-noir',
-      name: 'Titanium Noir',
-      hex: '#141412',
-      accentGlow: 'bg-[#c4a66b]/15',
-      tagline: 'Deep Obsidian · Stealth Matte Finish',
-      specs: '187g Bespoke Weight · 32 W/m·K Thermal Ratio',
-    },
-    {
-      id: 'natural-titanium',
-      name: 'Natural Titanium',
-      hex: '#8a8d8f',
-      accentGlow: 'bg-[#8a8d8f]/15',
-      tagline: 'Aerospace Grade 5 Alloy · Raw Metallic Texture',
-      specs: '15,000 Articulation Hinge · CNC Precision Bevel',
-    },
-    {
-      id: 'desert-gold',
-      name: 'Desert Gold',
-      hex: '#c4a66b',
-      accentGlow: 'bg-[#c4a66b]/20',
-      tagline: 'Champagne Luster · Anodized Luxury Shield',
-      specs: '99.4% Purity Anodization · Scratch-Resistant Hardness',
-    },
-    {
-      id: 'phantom-silver',
-      name: 'Phantom Silver',
-      hex: '#e2e8f0',
-      accentGlow: 'bg-white/10',
-      tagline: 'Frosted Architectural Chrome · Pure Minimalist Tone',
-      specs: 'Zero Fingerprint Matte Film · 45ms Acoustic Isolation',
-    },
-  ];
-
-  const [activeHeroFinish, setActiveHeroFinish] = useState(heroFinishes[0]);
-
-  // Find primary flagship item for hero direct add
-  const flagshipProduct = useMemo(() => {
+  // Spotlight featured tech find of the week
+  const spotlightProduct = useMemo(() => {
     return (
+      products.find((p) => p.id === 'festive-3in1-foldable-magsafe-charger') ||
       products.find((p) => p.id === 'foldable-laptop-stand') ||
       products.find((p) => p.trending) ||
       products[0]
@@ -74,7 +35,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
   }, [products]);
 
   // Filter products by selected category tab
-  const filteredFeaturedProducts = useMemo(() => {
+  const filteredProducts = useMemo(() => {
     let list = products;
     if (selectedTab === 'festive') {
       list = products.filter((p) => p.festiveBestseller);
@@ -88,6 +49,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
       list = products.filter((p) => p.category === 'audio');
     } else {
       const priorityIds = [
+        'festive-3in1-foldable-magsafe-charger',
         'foldable-laptop-stand',
         'wireless-bluetooth-earbuds',
         'compact-20w-usb-c-charger',
@@ -95,7 +57,6 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
         'clear-protective-phone-case',
         'adjustable-phone-tripod',
         'compact-usb-hub',
-        '3-in-1-charging-cable',
       ];
       list = products.filter((p) => priorityIds.includes(p.id) || p.trending);
     }
@@ -114,137 +75,120 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
     setTimeout(() => setCopiedAccount(false), 2500);
   };
 
-  const handleAddHeroFlagship = () => {
-    if (flagshipProduct) {
-      addToCart(flagshipProduct, 1);
+  const handleAddSpotlight = () => {
+    if (spotlightProduct) {
+      addToCart(spotlightProduct, 1);
       setIsCartOpen(true);
     }
   };
 
   return (
-    <div className="space-y-24 sm:space-y-32 pb-24">
-      {/* 1. SAMSUNG-STYLE FLAGSHIP HERO STAGE */}
-      <section className="relative bg-[#0d0d0c] text-[#f8f7f4] overflow-hidden border-b border-[#252521]">
-        {/* Dynamic Ambient Radial Glow */}
+    <div className="space-y-20 sm:space-y-28 pb-24">
+      {/* 1. LUXURY GOLD & BLACK HERO STAGE — ALL ABOUT TECH FINDS */}
+      <section className="relative bg-[#0a0a0a] text-[#f8f7f4] overflow-hidden border-b border-[#252521]">
+        {/* Ambient Gold Radial Glow */}
         <div
-          className={`absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[850px] h-[500px] blur-[150px] pointer-events-none rounded-full transition-all duration-700 ${activeHeroFinish.accentGlow}`}
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[850px] h-[500px] blur-[160px] pointer-events-none rounded-full bg-[#c4a66b]/15"
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 sm:pt-24 sm:pb-28 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Left Hero Content */}
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-            {/* Zero-Pill Unboxed Flagship Label */}
-            <div className="flex items-center justify-center lg:justify-start gap-2 text-[11px] font-mono tracking-widest uppercase text-[#c4a66b]">
+            <div className="flex items-center justify-center lg:justify-start gap-2.5 text-[11px] font-mono tracking-widest uppercase text-[#c4a66b]">
               <span className="w-2 h-2 rounded-full bg-[#c4a66b] animate-pulse"></span>
-              <span>Flagship Collection · 2026 Unpacked Edition</span>
+              <span className="font-bold">VANTÉRA · All About Tech Finds</span>
             </div>
 
             <h1 className="font-sans text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] text-[#f8f7f4]">
               Technology, <span className="text-[#c4a66b]">Elevated.</span>
             </h1>
 
-            <p className="text-[#a9a69f] text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
-              Precision-machined aerospace alloys, GaNFast™ thermal delivery, and acoustic clarity engineered for modern life.
+            <p className="text-xl sm:text-2xl font-serif italic text-[#c4a66b]/90">
+              Curated Luxury Tech Finds for Modern Living.
             </p>
 
-            {/* Interactive Colorway Selector (Samsung Galaxy Bespoke Style) */}
-            <div className="pt-2 space-y-2">
-              <div className="flex items-center justify-center lg:justify-start gap-3">
-                <span className="text-xs font-mono text-[#a9a69f] uppercase tracking-wider">
-                  Finish: <strong className="text-white font-sans">{activeHeroFinish.name}</strong>
-                </span>
-                <span className="text-[#3a3a35]">·</span>
-                <span className="text-xs font-mono text-[#c4a66b]">{activeHeroFinish.tagline}</span>
-              </div>
-
-              <div className="flex items-center justify-center lg:justify-start gap-3.5 pt-1">
-                {heroFinishes.map((finish) => (
-                  <button
-                    key={finish.id}
-                    type="button"
-                    onClick={() => setActiveHeroFinish(finish)}
-                    className={`w-7 h-7 rounded-full border border-white/30 transition-all cursor-pointer ${
-                      activeHeroFinish.id === finish.id
-                        ? 'scale-125 ring-2 ring-[#c4a66b] ring-offset-2 ring-offset-[#0d0d0c]'
-                        : 'hover:scale-110 opacity-70 hover:opacity-100'
-                    }`}
-                    style={{ backgroundColor: finish.hex }}
-                    title={finish.name}
-                  />
-                ))}
-              </div>
-            </div>
+            <p className="text-[#a9a69f] text-sm sm:text-base max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+              A bespoke collection of precision magnetic chargers, high-grade phone armor, viral desk aesthetics, and acoustic excellence — rigorously vetted and ready for instant delivery.
+            </p>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4">
-              <button
-                type="button"
-                onClick={handleAddHeroFlagship}
-                className="bg-[#f8f7f4] text-[#121210] px-8 py-3.5 text-xs uppercase tracking-widest font-bold hover:bg-[#c4a66b] transition-all duration-200 cursor-pointer shadow-lg active:scale-95"
-              >
-                Order Flagship ({formatAmount(flagshipProduct?.retailPriceCents || 4500)})
-              </button>
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-3">
               <button
                 type="button"
                 onClick={() => {
-                  const el = document.getElementById('featured-section');
+                  const el = document.getElementById('curated-finds');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                   else onNavigate('/shop');
                 }}
-                className="border border-[#77746d]/50 text-[#f8f7f4] px-8 py-3.5 text-xs uppercase tracking-widest font-bold hover:border-[#f8f7f4] hover:bg-white/5 transition-all duration-200 cursor-pointer"
+                className="bg-[#c4a66b] text-[#0a0a0a] px-8 py-3.5 text-xs uppercase tracking-widest font-extrabold hover:bg-[#d6b97d] transition-all duration-200 cursor-pointer shadow-lg active:scale-95"
               >
-                Explore Full Lineup
+                Explore Tech Finds
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('/shop?category=festive-season')}
+                className="border border-[#c4a66b]/60 text-[#f8f7f4] px-8 py-3.5 text-xs uppercase tracking-widest font-bold hover:border-[#c4a66b] hover:bg-[#c4a66b]/10 transition-all duration-200 cursor-pointer"
+              >
+                Festive Deals
               </button>
             </div>
 
-            {/* Live Spec Ticker */}
-            <div className="pt-6 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-[#a9a69f] font-mono border-t border-[#252521]">
-              <div className="flex items-center gap-2">
+            {/* Value Props Strip */}
+            <div className="pt-6 flex flex-wrap items-center justify-center lg:justify-start gap-5 text-xs text-[#a9a69f] font-mono border-t border-[#252521]">
+              <div className="flex items-center gap-1.5">
                 <span className="text-[#c4a66b]">⚡</span>
-                <span>GaNFast™ 140W</span>
+                <span>GaNFast & MagSafe</span>
               </div>
               <span className="text-[#3a3a35]">/</span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className="text-[#c4a66b]">🛡️</span>
-                <span>Aerospace Titanium</span>
+                <span>Curated Vetted Quality</span>
               </div>
               <span className="text-[#3a3a35]">/</span>
-              <div className="flex items-center gap-2">
-                <span className="text-[#c4a66b]">💎</span>
-                <span>GTBank Instant Settlement</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[#c4a66b]">₦/$</span>
+                <span>Dual Currency Settlement</span>
+              </div>
+              <span className="text-[#3a3a35]">/</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[#c4a66b]">👑</span>
+                <span>Direct CEO GTBank Verification</span>
               </div>
             </div>
           </div>
 
-          {/* Right Hero Visual Showcase */}
+          {/* Right Hero Visual Showcase: Spotlight Tech Find */}
           <div className="lg:col-span-5 relative flex justify-center">
-            <div className="relative w-full max-w-lg aspect-4/3 sm:aspect-square rounded-xs overflow-hidden border border-[#2a2a26] shadow-2xl bg-[#141412] group">
+            <div className="relative w-full max-w-lg aspect-4/3 sm:aspect-square rounded-xs overflow-hidden border border-[#2e2e2a] shadow-2xl bg-[#141412] group">
               <img
-                src="/vantera-flagship-hero.jpg"
-                alt="VANTÉRA Flagship Technology hardware showcase"
+                src={spotlightProduct?.image || '/vantera-flagship-hero.jpg'}
+                alt={spotlightProduct?.title || 'VANTÉRA Curated Tech Find'}
                 className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0c] via-transparent to-transparent opacity-60"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-75"></div>
 
               {/* Floating Bottom Card Banner */}
-              <div className="absolute bottom-4 left-4 right-4 bg-[#121210]/95 backdrop-blur-md p-4 border border-[#2e2e2a] flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-[#c4a66b] block">
-                    {activeHeroFinish.name} Edition
+              <div className="absolute bottom-4 left-4 right-4 bg-[#121210]/95 backdrop-blur-md p-4 border border-[#2e2e2a] flex items-center justify-between shadow-xl">
+                <div className="space-y-0.5 max-w-[65%]">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-[#c4a66b] font-bold block">
+                    FEATURED TECH FIND
                   </span>
-                  <span className="text-xs font-semibold text-white">
-                    {activeHeroFinish.specs}
-                  </span>
+                  <h3 className="text-xs font-bold text-white truncate font-sans">
+                    {spotlightProduct?.title}
+                  </h3>
+                  <div className="text-xs font-mono text-[#c4a66b] font-semibold">
+                    {formatAmount(spotlightProduct?.retailPriceCents || 3999)}
+                  </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedQuickViewProduct(flagshipProduct)}
-                  className="text-xs text-[#c4a66b] font-semibold hover:underline font-mono"
+                  onClick={handleAddSpotlight}
+                  className="bg-[#c4a66b] text-[#0a0a0a] px-3.5 py-2 text-xs font-bold uppercase tracking-wider hover:bg-[#d6b97d] transition-colors rounded-xs shadow-xs"
                 >
-                  Quick Specs →
+                  Add to Cart
                 </button>
               </div>
             </div>
@@ -252,12 +196,12 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
         </div>
       </section>
 
-      {/* 2. PROMOTIONAL TECH BANNER (Samsung Deals Inspired) */}
+      {/* 2. EXCLUSIVE PRIVILEGE BANNER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-[#141412] via-[#1a1a18] to-[#141412] border border-[#2a2a26] text-[#f8f7f4] p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-md rounded-xs">
+        <div className="bg-gradient-to-r from-[#121210] via-[#1c1c18] to-[#121210] border border-[#2e2e2a] text-[#f8f7f4] p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg rounded-xs">
           <div className="space-y-1.5 text-center md:text-left">
             <span className="text-[10px] uppercase font-mono tracking-widest text-[#c4a66b] font-bold">
-              EXCLUSIVE LAUNCH PRIVILEGE
+              EXCLUSIVE PRIVILEGE
             </span>
             <h3 className="text-xl sm:text-2xl font-bold font-sans">
               Complimentary Express Shipping on Orders Over {currency === 'NGN' ? '₦75,000' : '$50'}
@@ -271,14 +215,14 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
             <button
               type="button"
               onClick={handleCopyCoupon}
-              className="px-4 py-2 text-xs font-mono font-bold border border-[#c4a66b] text-[#c4a66b] hover:bg-[#c4a66b] hover:text-[#121210] transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-mono font-bold border border-[#c4a66b] text-[#c4a66b] hover:bg-[#c4a66b] hover:text-[#0a0a0a] transition-colors cursor-pointer"
             >
               {copiedCoupon ? '✓ Code Copied!' : 'Copy Code: WELCOME10'}
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/shop?filter=deals')}
-              className="bg-[#c4a66b] text-[#121210] px-5 py-2 text-xs font-bold uppercase tracking-wider hover:bg-[#d6b97d] transition-colors cursor-pointer"
+              className="bg-[#c4a66b] text-[#0a0a0a] px-5 py-2 text-xs font-bold uppercase tracking-wider hover:bg-[#d6b97d] transition-colors cursor-pointer"
             >
               Shop Deals
             </button>
@@ -286,7 +230,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
         </div>
       </section>
 
-      {/* 2.5 FESTIVE SEASON BESTSELLERS SHOWCASE (Holiday Tech Gifting) */}
+      {/* 3. HOLIDAY & FESTIVE SEASON BESTSELLERS */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#e7e4de] pb-6">
           <div>
@@ -302,7 +246,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
               The Year's Most Wanted Tech Gifts
             </h2>
             <p className="text-xs sm:text-sm text-[#77746d] mt-1">
-              Real-time festive pricing on the viral accessories, Qi2 travel chargers, spatial audio, and aesthetic smart lighting people buy the most.
+              Real-time festive pricing on viral accessories, Qi2 travel chargers, spatial audio, and aesthetic smart lighting people buy the most.
             </p>
           </div>
 
@@ -311,7 +255,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
             onClick={() => onNavigate('/shop?category=festive-season')}
             className="inline-flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-[#121210] hover:text-[#c4a66b] transition-colors self-start md:self-auto cursor-pointer"
           >
-            <span>Explore All 10 Festive Deals</span>
+            <span>Explore All Festive Finds</span>
             <span>→</span>
           </button>
         </div>
@@ -329,30 +273,30 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
         </div>
       </section>
 
-      {/* 3. FEATURED PRODUCTS (Samsung "Explore the Lineup" Style) */}
-      <section id="featured-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 scroll-mt-20">
+      {/* 4. CURATED TECH FINDS SHOWCASE (With Category Tabs) */}
+      <section id="curated-finds" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 scroll-mt-20">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#e7e4de] pb-6">
           <div>
             <span className="text-[10px] uppercase tracking-widest font-mono text-[#c4a66b] font-bold">
-              EXPLORE THE LINEUP
+              CURATED COLLECTION
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[#121210] tracking-tight mt-1 font-sans">
-              Featured Technology
+              All Tech Finds
             </h2>
             <p className="text-xs sm:text-sm text-[#77746d] mt-1">
-              Engineered for seamless productivity, protection, and daily acoustic clarity.
+              Precision-selected for seamless productivity, everyday device protection, and smart aesthetic utility.
             </p>
           </div>
 
-          {/* Interactive Category Segmented Tabs */}
+          {/* Category Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none text-xs font-semibold">
             {[
-              { id: 'all', label: 'All Essentials', isStar: false },
-              { id: 'festive', label: 'Festive Bestsellers', isStar: true },
-              { id: 'smartphones', label: 'Smartphones & Accessories', isStar: false },
-              { id: 'gadgets', label: 'Smart Gadgets', isStar: false },
-              { id: 'charging', label: 'Charging & Power', isStar: false },
-              { id: 'audio', label: 'Audio & Sound', isStar: false },
+              { id: 'all', label: 'All Tech Finds', isStar: false },
+              { id: 'festive', label: 'Festive Deals', isStar: true },
+              { id: 'smartphones', label: 'Phones & Accessories', isStar: false },
+              { id: 'gadgets', label: 'Desk & Smart Gadgets', isStar: false },
+              { id: 'charging', label: 'Charging & Power Hubs', isStar: false },
+              { id: 'audio', label: 'Audio & Acoustics', isStar: false },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -375,9 +319,9 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
           </div>
         </div>
 
-        {/* Product Cards Grid with Quick View modal integration */}
+        {/* Product Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredFeaturedProducts.map((product) => (
+          {filteredProducts.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
@@ -393,90 +337,84 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
             onClick={() => onNavigate('/shop')}
             className="inline-flex items-center gap-2 border-2 border-[#121210] text-[#121210] px-8 py-3 text-xs uppercase tracking-widest font-bold hover:bg-[#121210] hover:text-[#f8f7f4] transition-all cursor-pointer"
           >
-            <span>View Complete 62-Product Catalog</span>
+            <span>View Full 62-Product Catalog</span>
             <span>→</span>
           </button>
         </div>
       </section>
 
-      {/* 4. SAMSUNG-STYLE CONNECTED ECOSYSTEM BUILDER */}
-      <EcosystemBundleBuilder products={products} />
-
-      {/* 5. SAMSUNG-STYLE SIDE-BY-SIDE DEVICE COMPARISON MATRIX */}
-      <DeviceComparisonMatrix products={products} onNavigate={onNavigate} />
-
-      {/* 6. PRECISION ENGINEERING ARCHITECTURE (Samsung Exploded View Style) */}
-      <section className="bg-[#121210] text-[#f8f7f4] py-20 border-y border-[#252521]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+      {/* 5. THE VANTÉRA CURATION STANDARD (Luxury Gold & Black Architectural Cards) */}
+      <section className="bg-[#0e0e0d] text-[#f8f7f4] py-20 border-y border-[#252521]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-[10px] uppercase font-mono tracking-widest text-[#c4a66b] font-bold">
-              ENGINEERED WITHOUT COMPROMISE
+              THE VANTÉRA STANDARD
             </span>
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight font-sans">
-              Architectural Mastery
+              All About Tech Finds
             </h2>
             <p className="text-xs sm:text-sm text-[#a9a69f] leading-relaxed">
-              Every millimeter is evaluated for thermal dissipation, structural durability, and tactile satisfaction.
+              Curating tomorrow's most practical and aesthetic gadgets today with zero compromise on quality.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-[#181816] border border-[#2a2a26] p-6 space-y-3 rounded-xs hover:border-[#c4a66b]/60 transition-colors">
-              <span className="font-mono text-xs text-[#c4a66b] block">LAYER 01</span>
+            <div className="bg-[#141412] border border-[#262622] p-6 space-y-3 rounded-xs hover:border-[#c4a66b]/60 transition-colors">
+              <span className="font-mono text-xs text-[#c4a66b] block">PILLAR 01</span>
               <h3 className="text-base font-bold text-white font-sans">
-                Aerospace Grade Titanium
+                Rigorous Curation
               </h3>
               <p className="text-xs text-[#a9a69f] leading-relaxed">
-                Precision CNC milled frames engineered to withstand 15,000 hinge articulations with zero torsional flex.
+                Every gadget is evaluated for build quality, thermal performance, and everyday utility before joining the store.
               </p>
               <div className="text-[11px] font-mono text-[#77746d] pt-2">
-                Yield strength: 830 MPa
+                Curated Selection: Top 5% Only
               </div>
             </div>
 
-            <div className="bg-[#181816] border border-[#2a2a26] p-6 space-y-3 rounded-xs hover:border-[#c4a66b]/60 transition-colors">
-              <span className="font-mono text-xs text-[#c4a66b] block">LAYER 02</span>
+            <div className="bg-[#141412] border border-[#262622] p-6 space-y-3 rounded-xs hover:border-[#c4a66b]/60 transition-colors">
+              <span className="font-mono text-xs text-[#c4a66b] block">PILLAR 02</span>
               <h3 className="text-base font-bold text-white font-sans">
-                GaNFast™ Multi-Stage Silicon
+                Direct CEO Verification
               </h3>
               <p className="text-xs text-[#a9a69f] leading-relaxed">
-                Gallium Nitride semiconductors operate at 3x higher switching frequency with minimal thermal loss.
+                Bank transfers to our GTBank account are personally audited by CEO Emmanuel Adarikwu for lightning-fast dispatch.
               </p>
               <div className="text-[11px] font-mono text-[#77746d] pt-2">
-                Efficiency: 94.2% Peak
+                GTBank: 1033269410
               </div>
             </div>
 
-            <div className="bg-[#181816] border border-[#2a2a26] p-6 space-y-3 rounded-xs hover:border-[#c4a66b]/60 transition-colors">
-              <span className="font-mono text-xs text-[#c4a66b] block">LAYER 03</span>
+            <div className="bg-[#141412] border border-[#262622] p-6 space-y-3 rounded-xs hover:border-[#c4a66b]/60 transition-colors">
+              <span className="font-mono text-xs text-[#c4a66b] block">PILLAR 03</span>
               <h3 className="text-base font-bold text-white font-sans">
-                Acoustic Armature Drivers
+                Dual Currency Transparency
               </h3>
               <p className="text-xs text-[#a9a69f] leading-relaxed">
-                Custom balanced-armature transducers output crystal highs and punchy bass with ultra-low 45ms gaming latency.
+                Pay seamlessly in Nigerian Naira (₦) or US Dollars ($) with transparent live pricing and zero surprise hidden fees.
               </p>
               <div className="text-[11px] font-mono text-[#77746d] pt-2">
-                THD: &lt; 0.1% at 1kHz
+                Guaranteed Fair Exchange
               </div>
             </div>
 
-            <div className="bg-[#181816] border border-[#2a2a26] p-6 space-y-3 rounded-xs hover:border-[#c4a66b]/60 transition-colors">
-              <span className="font-mono text-xs text-[#c4a66b] block">LAYER 04</span>
+            <div className="bg-[#141412] border border-[#262622] p-6 space-y-3 rounded-xs hover:border-[#c4a66b]/60 transition-colors">
+              <span className="font-mono text-xs text-[#c4a66b] block">PILLAR 04</span>
               <h3 className="text-base font-bold text-white font-sans">
-                Neodymium Magnetic Ring
+                1-Year Care Warranty
               </h3>
               <p className="text-xs text-[#a9a69f] leading-relaxed">
-                Custom N52 rare-earth magnetic array provides 15N of holding force for zero-slip MagSafe locking.
+                Complete 30-day hassle-free return window and 12-month manufacturer replacement protection on all technology finds.
               </p>
               <div className="text-[11px] font-mono text-[#77746d] pt-2">
-                Qi2 Fast Alignment Ready
+                30-Day Hassle-Free Returns
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 7. TRUST & DIRECT GTBANK VIP CONCIERGE (Samsung Trust Pillars) */}
+      {/* 6. OFFICIAL GTBANK WIRE ACCOUNT & VIP CONCIERGE */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-[#fbfaf7] border border-[#e7e4de] p-8 sm:p-12 rounded-xs shadow-xs space-y-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#e7e4de]">
@@ -548,7 +486,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
         </div>
       </section>
 
-      {/* Interactive Tech Specs Quick View Modal */}
+      {/* Tech Specs Quick View Modal */}
       <TechSpecsModal
         product={selectedQuickViewProduct}
         isOpen={Boolean(selectedQuickViewProduct)}
