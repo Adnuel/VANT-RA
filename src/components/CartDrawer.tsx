@@ -213,26 +213,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
     <div className="fixed inset-0 z-50 flex justify-end bg-black/80 backdrop-blur-md transition-opacity">
       <div className="flex h-full w-full max-w-md flex-col bg-[#0B0B0B] text-[#EDEDED] shadow-[0_0_80px_rgba(0,0,0,0.95)] border-l border-white/5">
         {/* Drawer Header */}
-        <div className="flex items-center justify-between border-b border-white/5 px-7 py-5 bg-[#0E0E0E]">
-          <div className="flex items-center gap-3">
-            <span className="font-editorial text-lg text-[#F5F5F0]">
+        <div className="flex items-center justify-between border-b border-white/5 px-4 py-3.5 bg-[#0E0E0E]">
+          <div className="flex items-center gap-2">
+            <span className="font-editorial text-base text-[#F5F5F0]">
               {checkoutStep === 'cart' && `Atelier Bag (${itemCount})`}
               {checkoutStep === 'shipping' && 'Delivery Allocation'}
               {checkoutStep === 'confirmed' && 'Reservation Placed'}
             </span>
-            <span className="text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-meta">VANTÉRA</span>
+            <span className="text-[9px] uppercase tracking-wider text-[#D4AF37] font-meta">VANTÉRA</span>
           </div>
           <button
             onClick={handleClose}
             aria-label="Close bag drawer"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#888880] hover:text-[#EDEDED] hover:bg-white/5 transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#888880] hover:text-[#EDEDED] hover:bg-white/5 transition-colors cursor-pointer"
           >
             ✕
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-7 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Real-Time Currency Selector & Live Rate Bar */}
           {checkoutStep !== 'confirmed' && (
             <div className="bg-[#121212] p-4 border border-white/5 rounded-xs space-y-3">

@@ -37,39 +37,41 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate }) =>
   const isDelivered = orderData?.fulfilmentStatus === 'delivered';
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
-      <div className="text-center space-y-3">
-        <span className="text-[10px] uppercase tracking-widest font-mono text-[#c4a66b]">
-          TRANSPARENT FULFILMENT
+    <div className="w-full px-3.5 py-6 space-y-6 font-sans">
+      <div className="text-center space-y-2">
+        <span className="text-[9px] uppercase tracking-[0.18em] font-meta text-[#D4AF37] block">
+          TRANSPARENT FULFILLMENT
         </span>
-        <h1 className="font-serif text-3xl sm:text-4xl text-[#121210]">Track Your VANTÉRA Order</h1>
-        <p className="text-xs sm:text-sm text-[#77746d] max-w-lg mx-auto leading-relaxed">
-          Enter your unique order reference (e.g. <strong className="font-mono">VAN-2026-XXXX</strong>) to check payment verification and real-time shipping dispatch.
+        <h1 className="font-editorial text-2xl min-[360px]:text-3xl font-bold text-[#F8F7F4] leading-snug break-words">
+          Track Your Order
+        </h1>
+        <p className="text-xs text-[#8E8B82] leading-relaxed break-words font-light">
+          Enter your order reference (e.g. <strong className="font-mono text-[#D4AF37]">VAN-2026-XXXX</strong>) to check verification and dispatch.
         </p>
       </div>
 
       {/* Tracking Search Bar */}
-      <div className="border border-[#e7e4de] bg-white p-6 shadow-sm">
-        <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-3">
+      <div className="border border-white/5 bg-[#121212] p-4 rounded-xs shadow-sm space-y-3">
+        <form onSubmit={handleTrack} className="flex flex-col gap-2.5">
           <input
             type="text"
             required
             value={reference}
             onChange={(e) => setReference(e.target.value)}
             placeholder="e.g. VAN-2026-8492"
-            className="flex-1 border border-[#e7e4de] px-4 py-3 text-xs font-mono uppercase focus:border-[#121210] focus:outline-hidden"
+            className="w-full bg-[#181818] border border-white/10 px-3.5 py-2.5 text-xs font-mono uppercase text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
           />
           <button
             type="submit"
             disabled={isLoading}
-            className="bg-[#121210] text-[#f8f7f4] px-8 py-3 text-xs uppercase tracking-widest font-semibold hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50"
+            className="w-full gold-gradient-bg text-[#0B0B0B] py-2.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
           >
             {isLoading ? 'Searching...' : 'Track Milestone'}
           </button>
         </form>
 
         {errorMessage && (
-          <div className="mt-4 p-3 bg-[#fdf2f2] border border-[#f8b4b4] text-[#9b1c1c] text-xs">
+          <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
             {errorMessage}
           </div>
         )}
@@ -77,61 +79,55 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate }) =>
 
       {/* Order Results */}
       {orderData && (
-        <div className="border border-[#e7e4de] bg-white p-8 space-y-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e7e4de] pb-6">
+        <div className="border border-white/5 bg-[#121212] p-4 space-y-6 rounded-xs shadow-sm">
+          <div className="flex flex-col gap-2 border-b border-white/5 pb-4">
             <div>
-              <span className="text-[10px] uppercase tracking-widest font-mono text-[#a9a69f] block">
+              <span className="text-[9px] uppercase tracking-wider font-meta text-[#D4AF37] block">
                 AUTHENTICATED ORDER
               </span>
-              <h2 className="font-mono text-xl font-bold text-[#121210]">{orderData.orderReference}</h2>
-              <span className="text-xs text-[#77746d]">
-                Created on {new Date(orderData.createdAt).toLocaleDateString()}
+              <h2 className="font-mono text-lg font-bold text-[#F8F7F4] break-all">{orderData.orderReference}</h2>
+              <span className="text-[11px] text-[#8E8B82]">
+                Placed {new Date(orderData.createdAt).toLocaleDateString()}
               </span>
             </div>
-            <div className="text-right">
-              <span className="text-xs text-[#77746d] block">{orderData.itemCount} items</span>
-              <span className="text-lg font-bold text-[#121210]">
+            <div className="pt-1">
+              <span className="text-lg font-editorial font-bold text-[#D4AF37] block">
                 {orderData.currency === 'NGN'
                   ? formatNGN(convertUsdCentsToNgn(orderData.totalCents, orderData.exchangeRateUsed || 1500))
                   : formatUSD(orderData.totalCents)}
               </span>
-              <span className="text-[10px] text-[#77746d] font-mono block">
-                ~{orderData.currency === 'NGN'
-                  ? formatUSD(orderData.totalCents)
-                  : formatNGN(convertUsdCentsToNgn(orderData.totalCents, orderData.exchangeRateUsed || 1500))}
+              <span className="text-[10px] text-[#6C6A64]">
+                {orderData.itemCount} items
               </span>
             </div>
           </div>
 
           {/* Timeline Milestones */}
-          <div className="space-y-6">
-            <h3 className="font-serif text-base text-[#121210]">Fulfilment Milestones</h3>
-            <div className="relative pl-6 space-y-8 border-l-2 border-[#e7e4de]">
+          <div className="space-y-4">
+            <h3 className="font-editorial text-sm font-semibold text-[#F8F7F4]">Fulfillment Milestones</h3>
+            <div className="relative pl-5 space-y-5 border-l border-white/10 ml-2">
               {/* Step 1 */}
               <div className="relative">
-                <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-[#121210] border-2 border-white"></div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">1. Order Created</h4>
-                <p className="text-xs text-[#77746d] mt-0.5">Order record generated in database.</p>
+                <div className="absolute -left-[25px] top-0.5 w-3 h-3 rounded-full bg-[#D4AF37]"></div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#F8F7F4]">1. Order Created</h4>
+                <p className="text-[10px] text-[#8E8B82] mt-0.5">Order record cataloged in atelier vault.</p>
               </div>
 
               {/* Step 2 */}
               <div className="relative">
                 <div
-                  className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${
-                    isPaid ? 'bg-[#1e7e34]' : 'bg-[#e2cfaa]'
+                  className={`absolute -left-[25px] top-0.5 w-3 h-3 rounded-full ${
+                    isPaid ? 'bg-[#34A853]' : 'bg-[#D4AF37]/40'
                   }`}
                 ></div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">
-                  2. Direct Bank Transfer Verification
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#F8F7F4]">
+                  2. Payment Settlement
                 </h4>
-                <p className="text-xs text-[#77746d] mt-0.5">
-                  Status:{' '}
-                  <strong className="uppercase">
-                    {orderData.paymentStatus.replace('_', ' ')}
-                  </strong>
+                <p className="text-[10px] text-[#8E8B82] mt-0.5">
+                  Status: <strong className="uppercase text-[#D4AF37]">{orderData.paymentStatus.replace('_', ' ')}</strong>
                   {orderData.paymentVerifiedAt && (
-                    <span className="text-[11px] text-[#1e7e34] block">
-                      ✓ Verified by CEO Adnuel on {new Date(orderData.paymentVerifiedAt).toLocaleDateString()}
+                    <span className="text-[10px] text-[#34A853] block">
+                      ✓ Verified on {new Date(orderData.paymentVerifiedAt).toLocaleDateString()}
                     </span>
                   )}
                 </p>
@@ -140,33 +136,31 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate }) =>
               {/* Step 3 */}
               <div className="relative">
                 <div
-                  className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${
-                    isShipped ? 'bg-[#553c9a]' : 'bg-[#e7e4de]'
+                  className={`absolute -left-[25px] top-0.5 w-3 h-3 rounded-full ${
+                    isShipped ? 'bg-[#34A853]' : 'bg-white/20'
                   }`}
                 ></div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">
-                  3. Carrier Dispatch & Shipping
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#F8F7F4]">
+                  3. Carrier Dispatch
                 </h4>
                 {orderData.trackingNumber ? (
-                  <div className="mt-1 text-xs text-[#252521] space-y-1">
-                    <p>
-                      Dispatched via <strong>{orderData.carrier}</strong>
-                    </p>
-                    <p className="font-mono">Tracking Number: {orderData.trackingNumber}</p>
+                  <div className="mt-0.5 text-[10px] text-[#A9A69F] space-y-0.5">
+                    <p>Carrier: <strong>{orderData.carrier}</strong></p>
+                    <p className="font-mono">Tracking: {orderData.trackingNumber}</p>
                     {orderData.trackingUrl && (
                       <a
                         href={orderData.trackingUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#553c9a] underline font-medium hover:text-[#121210]"
+                        className="text-[#D4AF37] underline block mt-1"
                       >
-                        Open Live Carrier Tracking →
+                        Live Tracking Link →
                       </a>
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-[#77746d] mt-0.5">
-                    Awaiting dispatch upon payment confirmation.
+                  <p className="text-[10px] text-[#8E8B82] mt-0.5">
+                    Pending dispatch after settlement confirmation.
                   </p>
                 )}
               </div>
@@ -174,22 +168,22 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate }) =>
               {/* Step 4 */}
               <div className="relative">
                 <div
-                  className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white ${
-                    isDelivered ? 'bg-[#1e7e34]' : 'bg-[#e7e4de]'
+                  className={`absolute -left-[25px] top-0.5 w-3 h-3 rounded-full ${
+                    isDelivered ? 'bg-[#34A853]' : 'bg-white/20'
                   }`}
                 ></div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">4. Delivery</h4>
-                <p className="text-xs text-[#77746d] mt-0.5">
-                  {isDelivered ? 'Package delivered to recipient.' : 'Pending delivery completion.'}
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#F8F7F4]">4. Delivery</h4>
+                <p className="text-[10px] text-[#8E8B82] mt-0.5">
+                  {isDelivered ? 'Delivered to client recipient.' : 'Pending delivery completion.'}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Help box */}
-          <div className="bg-[#fbfaf7] border border-[#e7e4de] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-xs text-[#77746d]">
-              Have a question about your order or need to submit your payment receipt?
+          <div className="bg-[#161616] border border-white/5 p-3 rounded-xs flex flex-col gap-2.5">
+            <div className="text-[11px] text-[#8E8B82]">
+              Need payment receipt assistance or immediate status confirmation?
             </div>
             <a
               href={`https://wa.me/2349132793670?text=${encodeURIComponent(
@@ -197,9 +191,9 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate }) =>
               )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#1e7e34] text-white px-4 py-2 text-xs uppercase tracking-wider hover:bg-[#186429] transition-colors whitespace-nowrap"
+              className="bg-[#0F2E22] text-[#48BB78] border border-[#34A853]/30 px-3.5 py-2 text-[10px] uppercase font-bold tracking-wider rounded-xs text-center hover:bg-[#153e2f] transition-colors"
             >
-              WhatsApp CEO Adnuel
+              WhatsApp Concierge ↗
             </a>
           </div>
         </div>

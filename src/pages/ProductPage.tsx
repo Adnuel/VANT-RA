@@ -69,32 +69,32 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20 font-sans">
-      {/* Editorial Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-[10px] text-[#73736E] font-meta tracking-[0.2em] uppercase">
-        <a href="/" onClick={(e) => { e.preventDefault(); onNavigate('/'); }} className="hover:text-[#D4AF37] transition-colors">Atelier</a>
+    <div className="w-full px-3.5 py-6 space-y-8 font-sans">
+      {/* Editorial Breadcrumbs - Horizontal scroll on mobile if long */}
+      <nav className="flex items-center gap-1.5 text-[9px] text-[#73736E] font-meta tracking-wider uppercase overflow-x-auto scrollbar-none pb-1">
+        <a href="/" onClick={(e) => { e.preventDefault(); onNavigate('/'); }} className="hover:text-[#D4AF37] transition-colors shrink-0">Atelier</a>
         <span>/</span>
-        <a href="/shop" onClick={(e) => { e.preventDefault(); onNavigate('/shop'); }} className="hover:text-[#D4AF37] transition-colors">Curations</a>
+        <a href="/shop" onClick={(e) => { e.preventDefault(); onNavigate('/shop'); }} className="hover:text-[#D4AF37] transition-colors shrink-0">Curations</a>
         <span>/</span>
-        <a href={`/category/${product.category}`} onClick={(e) => { e.preventDefault(); onNavigate(`/category/${product.category}`); }} className="hover:text-[#D4AF37] transition-colors">
+        <a href={`/category/${product.category}`} onClick={(e) => { e.preventDefault(); onNavigate(`/category/${product.category}`); }} className="hover:text-[#D4AF37] transition-colors shrink-0">
           {product.category.replace('-', ' ')}
         </a>
         <span>/</span>
-        <span className="text-[#D4AF37] font-medium truncate max-w-xs">{product.title}</span>
+        <span className="text-[#D4AF37] font-medium truncate max-w-[140px] shrink-0">{product.title}</span>
       </nav>
 
       {/* Main Product Showcase */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-        {/* Left: Product Imagery Showcase */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="bg-[#111111]/90 zero-border-card aspect-square max-h-[560px] w-full relative overflow-hidden flex items-center justify-center p-8 sm:p-14 rounded-xs group">
+      <div className="flex flex-col gap-6">
+        {/* Product Imagery Showcase */}
+        <div className="space-y-3">
+          <div className="bg-[#111111]/90 zero-border-card aspect-square max-h-[360px] w-full relative overflow-hidden flex items-center justify-center p-6 rounded-xs group">
             <div className="absolute inset-0 bg-radial from-[#181818] to-[#0A0A0A] opacity-90" />
 
             {product.image ? (
               <img
                 src={product.image}
                 alt={product.imageAlt || product.title}
-                className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-108"
+                className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-105"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '/products/charging-phone-stand.jpg';
@@ -102,102 +102,102 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
               />
             ) : (
               <div className="relative z-10 text-center text-[#77746d]">
-                <div className="font-editorial text-7xl mb-3 text-[#D4AF37]">V</div>
-                <span className="text-xs uppercase tracking-[0.25em] font-meta block text-[#EDEDED] font-bold">VANTÉRA ATELIER</span>
-                <span className="text-[11px] text-[#73736E] block mt-1 font-meta">Official Hardware Curation</span>
+                <div className="font-editorial text-5xl mb-2 text-[#D4AF37]">V</div>
+                <span className="text-xs uppercase tracking-[0.2em] font-meta block text-[#EDEDED] font-bold">VANTÉRA ATELIER</span>
+                <span className="text-[10px] text-[#73736E] block mt-1 font-meta">Official Hardware Curation</span>
               </div>
             )}
 
             {/* Badges */}
-            <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
-              <span className="bg-[#0B0B0B]/90 text-[#EDEDED] border border-white/10 text-[9px] px-3.5 py-1 tracking-[0.2em] uppercase font-meta font-semibold backdrop-blur-md">
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-20">
+              <span className="bg-[#0B0B0B]/90 text-[#EDEDED] border border-white/10 text-[8px] px-2.5 py-0.5 tracking-wider uppercase font-meta font-semibold backdrop-blur-md">
                 {product.category.replace('-', ' ')}
               </span>
               {product.trending && (
-                <span className="gold-gradient-bg text-[#0B0B0B] text-[9px] px-3.5 py-1 tracking-[0.2em] uppercase font-meta font-bold shadow-md">
+                <span className="gold-gradient-bg text-[#0B0B0B] text-[8px] px-2.5 py-0.5 tracking-wider uppercase font-meta font-bold shadow-xs">
                   ★ Flagship Edition
                 </span>
               )}
             </div>
 
             {/* Availability Indicator */}
-            <div className="absolute bottom-6 left-6 z-20">
-              <span className="inline-flex items-center gap-2 bg-[#0B0B0B]/90 backdrop-blur-md text-[#EDEDED] text-[10px] px-3.5 py-1.5 font-meta tracking-wider border border-white/10">
-                <span className={`w-2 h-2 rounded-full ${product.isAvailable ? 'bg-[#10b981] animate-pulse' : 'bg-amber-400'}`}></span>
-                <span>{product.isAvailable ? 'In Stock · Atelier Vault Ready' : 'VIP Allocation'}</span>
+            <div className="absolute bottom-3 left-3 z-20">
+              <span className="inline-flex items-center gap-1.5 bg-[#0B0B0B]/90 backdrop-blur-md text-[#EDEDED] text-[9px] px-2.5 py-1 font-meta tracking-wider border border-white/10">
+                <span className={`w-1.5 h-1.5 rounded-full ${product.isAvailable ? 'bg-[#10b981] animate-pulse' : 'bg-amber-400'}`}></span>
+                <span>{product.isAvailable ? 'Vault Ready' : 'VIP Allocation'}</span>
               </span>
             </div>
           </div>
 
           {/* Quick Specifications Strip */}
-          <div className="grid grid-cols-3 gap-3 text-center font-meta">
-            <div className="p-4 bg-[#111111]/80 zero-border-card rounded-xs">
-              <span className="block text-[9px] text-[#73736E] uppercase tracking-[0.2em]">Craftsmanship</span>
-              <span className="text-xs font-medium text-[#EDEDED] mt-0.5 block">Aerospace Alloy</span>
+          <div className="grid grid-cols-3 gap-1.5 text-center font-meta">
+            <div className="p-2 bg-[#111111]/80 zero-border-card rounded-xs">
+              <span className="block text-[8px] text-[#73736E] uppercase tracking-wider">Craft</span>
+              <span className="text-[10px] font-medium text-[#EDEDED] mt-0.5 block truncate">Aerospace Alloy</span>
             </div>
-            <div className="p-4 bg-[#111111]/80 zero-border-card rounded-xs">
-              <span className="block text-[9px] text-[#73736E] uppercase tracking-[0.2em]">Assurance</span>
-              <span className="text-xs font-medium text-[#EDEDED] mt-0.5 block">1-Year VANTÉRA Care</span>
+            <div className="p-2 bg-[#111111]/80 zero-border-card rounded-xs">
+              <span className="block text-[8px] text-[#73736E] uppercase tracking-wider">Assurance</span>
+              <span className="text-[10px] font-medium text-[#EDEDED] mt-0.5 block truncate">1-Year Care</span>
             </div>
-            <div className="p-4 bg-[#111111]/80 zero-border-card rounded-xs">
-              <span className="block text-[9px] text-[#73736E] uppercase tracking-[0.2em]">Fulfillment</span>
-              <span className="text-xs font-medium text-[#D4AF37] mt-0.5 block">Complimentary Express</span>
+            <div className="p-2 bg-[#111111]/80 zero-border-card rounded-xs">
+              <span className="block text-[8px] text-[#73736E] uppercase tracking-wider">Transit</span>
+              <span className="text-[10px] font-medium text-[#D4AF37] mt-0.5 block truncate">Express</span>
             </div>
           </div>
         </div>
 
-        {/* Right: Buy Box & Options */}
-        <div className="lg:col-span-5 flex flex-col justify-between space-y-6 bg-[#111111]/90 zero-border-card p-7 sm:p-9 rounded-xs text-[#EDEDED]">
-          <div className="space-y-5">
+        {/* Buy Box & Options */}
+        <div className="flex flex-col space-y-4 bg-[#111111]/90 zero-border-card p-4 rounded-xs text-[#EDEDED]">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-meta font-bold">
-                VANTÉRA OFFICIAL LINEUP
+              <span className="text-[9px] uppercase tracking-[0.18em] text-[#D4AF37] font-meta font-bold">
+                VANTÉRA OFFICIAL
               </span>
-              <span className="text-[10px] font-meta text-[#73736E] tracking-widest">
-                REF: {product.slug.toUpperCase().slice(0, 10)}
+              <span className="text-[9px] font-meta text-[#73736E] tracking-wider">
+                REF: {product.slug.toUpperCase().slice(0, 8)}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-editorial text-[#F5F5F0] tracking-wide leading-tight">
+            <h1 className="text-xl min-[360px]:text-2xl font-editorial text-[#F5F5F0] leading-snug break-words">
               {product.title}
             </h1>
 
             {/* Price section */}
-            <div className="space-y-1.5 pt-1 border-b border-white/5 pb-5">
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-editorial font-bold text-[#D4AF37]">
+            <div className="space-y-1 pt-1 border-b border-white/5 pb-3">
+              <div className="flex items-baseline gap-2.5">
+                <span className="text-2xl font-editorial font-bold text-[#D4AF37]">
                   {formatAmount(product.retailPriceCents)}
                 </span>
-                <span className="text-[10px] uppercase text-[#73736E] font-meta tracking-wider">
-                  {currency} · Vault Inspected
+                <span className="text-[9px] uppercase text-[#73736E] font-meta tracking-wider">
+                  {currency} · Inspected
                 </span>
               </div>
               {product.referencePriceCents && product.referencePriceCents > product.retailPriceCents && (
-                <div className="flex items-center gap-2 text-xs font-meta">
+                <div className="flex items-center gap-2 text-[10px] font-meta flex-wrap">
                   <span className="text-[#73736E]">
-                    Standard Valuation: <span className="line-through">{formatAmount(product.referencePriceCents)}</span>
+                    Standard: <span className="line-through">{formatAmount(product.referencePriceCents)}</span>
                   </span>
-                  <span className="text-[#10b981] bg-[#0F2E22] px-2 py-0.5 text-[10px] tracking-wide">
-                    Reserve Privilege {Math.round(((product.referencePriceCents - product.retailPriceCents) / product.referencePriceCents) * 100)}% Off
+                  <span className="text-[#10b981] bg-[#0F2E22] px-1.5 py-0.5 text-[9px] tracking-wide">
+                    {Math.round(((product.referencePriceCents - product.retailPriceCents) / product.referencePriceCents) * 100)}% Off
                   </span>
                 </div>
               )}
             </div>
 
             {/* Color / Finish Selector */}
-            <div className="space-y-2 pt-2">
-              <div className="flex justify-between items-center text-xs font-meta">
-                <span className="text-[#A0A09A] tracking-wider uppercase text-[10px]">Material Finish:</span>
-                <span className="text-[#EDEDED] font-medium uppercase text-[10px] tracking-widest">{selectedFinish}</span>
+            <div className="space-y-1.5 pt-1">
+              <div className="flex justify-between items-center text-[10px] font-meta">
+                <span className="text-[#A0A09A] uppercase">Finish:</span>
+                <span className="text-[#EDEDED] font-medium uppercase tracking-wider">{selectedFinish}</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 {finishes.map((f) => (
                   <button
                     key={f.name}
                     type="button"
                     onClick={() => setSelectedFinish(f.name)}
-                    className={`relative w-8 h-8 rounded-full border transition-all cursor-pointer ${
-                      selectedFinish === f.name ? 'border-[#D4AF37] scale-110 ring-2 ring-[#D4AF37]/50 ring-offset-2 ring-offset-[#0B0B0B]' : 'border-white/10 opacity-70 hover:opacity-100'
+                    className={`relative w-7 h-7 rounded-full border transition-all cursor-pointer ${
+                      selectedFinish === f.name ? 'border-[#D4AF37] scale-110 ring-1 ring-[#D4AF37]/50 ring-offset-1 ring-offset-[#0B0B0B]' : 'border-white/10 opacity-70 hover:opacity-100'
                     }`}
                     style={{ backgroundColor: f.hex }}
                     title={f.name}
@@ -207,8 +207,8 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             </div>
 
             {/* Quantity Selector */}
-            <div className="space-y-2 pt-2">
-              <label htmlFor="quantity-input" className="block text-[10px] font-meta uppercase tracking-wider text-[#A0A09A]">
+            <div className="space-y-1.5 pt-1">
+              <label htmlFor="quantity-input" className="block text-[9px] font-meta uppercase tracking-wider text-[#A0A09A]">
                 Quantity
               </label>
               <div className="flex items-center gap-3">
@@ -216,15 +216,15 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                   <button
                     type="button"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-3.5 py-1.5 text-sm text-[#888880] hover:text-[#EDEDED]"
+                    className="px-3 py-1 text-xs text-[#888880] hover:text-[#EDEDED]"
                   >
                     -
                   </button>
-                  <span className="px-3 text-xs font-meta text-[#EDEDED]">{quantity}</span>
+                  <span className="px-2.5 text-xs font-meta text-[#EDEDED]">{quantity}</span>
                   <button
                     type="button"
                     onClick={() => setQuantity(quantity + 1)}
-                    className="px-3.5 py-1.5 text-sm text-[#888880] hover:text-[#EDEDED]"
+                    className="px-3 py-1 text-xs text-[#888880] hover:text-[#EDEDED]"
                   >
                     +
                   </button>
@@ -233,49 +233,49 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-4 space-y-3">
+            <div className="pt-3 space-y-2">
               {product.category !== 'phones' && product.isAvailable ? (
                 <div className="space-y-2">
                   <button
                     type="button"
                     onClick={handleAddToCart}
-                    className="w-full gold-gradient-bg text-[#0B0B0B] py-3.5 text-[11px] font-meta font-bold uppercase tracking-[0.25em] shadow-lg hover:brightness-110 cursor-pointer active:scale-98 transition-all"
+                    className="w-full gold-gradient-bg text-[#0B0B0B] py-3 text-[11px] font-meta font-bold uppercase tracking-[0.15em] shadow-lg hover:brightness-110 cursor-pointer active:scale-98 transition-all rounded-xs"
                   >
                     Acquire for Atelier Bag
                   </button>
                   {addedNotice && (
-                    <div className="p-3 bg-[#0F2E22] text-[#10b981] border border-[#10b981]/30 text-xs font-meta text-center rounded-xs">
+                    <div className="p-2.5 bg-[#0F2E22] text-[#10b981] border border-[#10b981]/30 text-[11px] font-meta text-center rounded-xs">
                       ✓ Added to Atelier Bag.
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="p-4 bg-[#0F2E22]/30 border border-[#0F2E22] text-xs font-meta text-[#D4AF37] rounded-xs">
-                  This flagship device is currently in VIP allocation. Reserve your interest via VIP concierge with CEO Adnuel.
+                <div className="p-3 bg-[#0F2E22]/30 border border-[#0F2E22] text-xs font-meta text-[#D4AF37] rounded-xs">
+                  This flagship device is currently in VIP allocation. Contact concierge to reserve.
                 </div>
               )}
             </div>
 
-            {/* Payment & Security Assurance - ACCOUNT NUMBER IS KEPT OFF UNTIL CHECKOUT */}
-            <div className="bg-[#0E0E0E] border border-white/5 p-4 text-xs space-y-2.5 rounded-xs">
+            {/* Payment & Security Assurance */}
+            <div className="bg-[#0E0E0E] border border-white/5 p-3 text-[11px] space-y-2 rounded-xs">
               <div className="font-editorial text-[#F5F5F0] flex items-center justify-between">
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5">
                   <span>✦</span>
-                  <span>Verified Settlement Protocols</span>
+                  <span>Settlement Assurance</span>
                 </span>
-                <span className="text-[9px] font-meta text-[#10b981] uppercase tracking-widest">100% Authentic</span>
+                <span className="text-[9px] font-meta text-[#10b981] uppercase tracking-wider">Authentic</span>
               </div>
-              <p className="text-[11px] text-[#888880] font-meta leading-relaxed">
-                Official GTBank (NGN) and Global USD Wire settlements available. Official account coordinates are revealed exclusively during checkout when completing your order.
+              <p className="text-[10px] text-[#888880] font-meta leading-relaxed break-words">
+                Official GTBank (NGN) and Card checkout. Official bank transfer coordinates are provided during checkout when you are ready to complete payment.
               </p>
-              <div className="pt-1 flex items-center justify-between">
+              <div className="pt-1">
                 <a
                   href="https://wa.me/2349132793670"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[10px] font-meta tracking-wider text-[#D4AF37] hover:underline"
+                  className="inline-flex items-center gap-1 text-[10px] font-meta tracking-wider text-[#D4AF37] hover:underline break-words"
                 >
-                  <span>VIP Concierge WhatsApp with CEO Adnuel (+234 913 279 3670) ↗</span>
+                  <span>VIP WhatsApp Concierge (+234 913 279 3670) ↗</span>
                 </a>
               </div>
             </div>
@@ -285,18 +285,18 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
 
       {/* Specifications & Information Tabs */}
       <section className="bg-[#111111]/90 zero-border-card rounded-xs overflow-hidden text-[#EDEDED]">
-        <div className="flex border-b border-white/5 bg-[#0E0E0E] overflow-x-auto">
+        <div className="flex border-b border-white/5 bg-[#0E0E0E] overflow-x-auto scrollbar-none">
           {[
             { id: 'overview', label: 'Highlights' },
-            { id: 'specs', label: 'Dossier & Specifications' },
-            { id: 'warranty', label: 'Warranty & Authenticity' },
-            { id: 'shipping', label: 'Delivery & Fulfillment' },
+            { id: 'specs', label: 'Dossier' },
+            { id: 'warranty', label: 'Warranty' },
+            { id: 'shipping', label: 'Delivery' },
           ].map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-7 py-4 text-[10px] font-meta uppercase tracking-[0.25em] font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
+              className={`px-4 py-3 text-[10px] font-meta uppercase tracking-wider font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap shrink-0 ${
                 activeTab === tab.id
                   ? 'border-[#D4AF37] text-[#D4AF37] bg-[#141414]'
                   : 'border-transparent text-[#73736E] hover:text-[#EDEDED]'
@@ -307,7 +307,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
           ))}
         </div>
 
-        <div className="p-8 sm:p-12">
+        <div className="p-4 sm:p-6">
           {activeTab === 'overview' && (
             <div className="space-y-6 max-w-3xl">
               <h3 className="text-xl font-editorial text-[#F5F5F0]">Engineered for Modern Precision</h3>

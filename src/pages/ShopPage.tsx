@@ -122,27 +122,27 @@ export const ShopPage: React.FC<ShopPageProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 font-sans">
+    <div className="w-full px-3.5 py-6 space-y-6 font-sans">
       {/* Masthead */}
-      <div className="border-b border-white/5 pb-8">
-        <div className="text-[10px] uppercase tracking-[0.25em] font-meta text-[#D4AF37] mb-2">
+      <div className="border-b border-white/5 pb-5">
+        <div className="text-[9px] uppercase tracking-[0.18em] font-meta text-[#D4AF37] mb-1">
           {activeFilter !== 'all'
             ? `COLLECTION / ${activeFilter.toUpperCase()}`
             : selectedCategory === 'all'
             ? 'ATELIER PERMANENT COLLECTION'
             : `CATEGORY / ${selectedCategory.toUpperCase()}`}
         </div>
-        <h1 className="text-3xl sm:text-5xl font-editorial font-bold tracking-[0.14em] uppercase text-[#F8F7F4]">
+        <h1 className="text-xl min-[360px]:text-2xl font-editorial font-bold tracking-[0.06em] uppercase text-[#F8F7F4] leading-snug break-words">
           {getPageHeading()}
         </h1>
-        <p className="mt-2 text-xs sm:text-sm text-[#8E8B82] max-w-2xl leading-relaxed font-light">
+        <p className="mt-1.5 text-[11px] text-[#8E8B82] leading-relaxed font-light break-words">
           {selectedCategory === 'phones'
-            ? 'Flagship phones inventory is currently under VIP preview and marked Coming Soon. Check back for verified models and direct delivery.'
-            : 'Explore high-grade phone protection, MagSafe ecosystem hardware, ambient spatial desk illumination, audio equipment, and high-speed charging.'}
+            ? 'Flagship phones inventory is currently under VIP preview. Check back for verified models.'
+            : 'Curated phone protection, MagSafe ecosystems, ambient spatial lighting, and high-speed induction.'}
         </p>
 
-        {/* Segment Filter Tabs */}
-        <div className="flex items-center gap-2 pt-6 flex-wrap">
+        {/* Segment Filter Tabs - Horizontal Scroll on Phone */}
+        <div className="flex items-center gap-1.5 pt-4 overflow-x-auto pb-1 scrollbar-none w-full">
           <button
             type="button"
             onClick={() => {
@@ -150,13 +150,13 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setSelectedCategory('all');
               onNavigate('/shop');
             }}
-            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer ${
+            className={`px-3 py-1.5 text-[10px] font-meta uppercase tracking-wider shrink-0 transition-all rounded-xs cursor-pointer ${
               activeFilter === 'all' && selectedCategory === 'all'
                 ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
                 : 'bg-[#141414] border border-white/10 text-[#8E8B82] hover:text-[#EDEDED]'
             }`}
           >
-            All Products ({products.length})
+            All Finds ({products.length})
           </button>
           <button
             type="button"
@@ -164,7 +164,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('all');
               setSelectedCategory('festive-season');
             }}
-            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 text-[10px] font-meta uppercase tracking-wider shrink-0 transition-all rounded-xs cursor-pointer inline-flex items-center gap-1 ${
               selectedCategory === 'festive-season'
                 ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
                 : 'bg-[#141414] border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10'
@@ -179,7 +179,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('featured');
               onNavigate('/shop?filter=featured');
             }}
-            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer ${
+            className={`px-3 py-1.5 text-[10px] font-meta uppercase tracking-wider shrink-0 transition-all rounded-xs cursor-pointer ${
               activeFilter === 'featured'
                 ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
                 : 'bg-[#141414] border border-white/10 text-[#8E8B82] hover:text-[#EDEDED]'
@@ -193,7 +193,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('new');
               onNavigate('/shop?filter=new');
             }}
-            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer ${
+            className={`px-3 py-1.5 text-[10px] font-meta uppercase tracking-wider shrink-0 transition-all rounded-xs cursor-pointer ${
               activeFilter === 'new'
                 ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
                 : 'bg-[#141414] border border-white/10 text-[#8E8B82] hover:text-[#EDEDED]'
@@ -207,13 +207,13 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('deals');
               onNavigate('/shop?filter=deals');
             }}
-            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer ${
+            className={`px-3 py-1.5 text-[10px] font-meta uppercase tracking-wider shrink-0 transition-all rounded-xs cursor-pointer ${
               activeFilter === 'deals'
                 ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
                 : 'bg-[#141414] border border-white/10 text-[#8E8B82] hover:text-[#EDEDED]'
             }`}
           >
-            Special Offers & Deals %
+            Special Offers %
           </button>
         </div>
       </div>

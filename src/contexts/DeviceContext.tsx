@@ -25,15 +25,7 @@ export const DeviceProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     height: typeof window !== 'undefined' ? window.innerHeight : 800,
   });
 
-  const [activeMode, setActiveModeState] = useState<DeviceMode>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('vantera_device_mode');
-      if (saved === 'phone' || saved === 'desktop' || saved === 'auto') {
-        return saved;
-      }
-    }
-    return 'auto';
-  });
+  const [activeMode, setActiveModeState] = useState<DeviceMode>('phone');
 
   const [isTouch, setIsTouch] = useState<boolean>(false);
 
@@ -65,41 +57,25 @@ export const DeviceProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const setActiveMode = (mode: DeviceMode) => {
     setActiveModeState(mode);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('vantera_device_mode', mode);
-    }
   };
 
   const toggleDeviceMode = () => {
-    setActiveModeState((prev) => {
-      const next: DeviceMode = prev === 'auto' ? 'phone' : prev === 'phone' ? 'desktop' : 'auto';
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('vantera_device_mode', next);
-      }
-      return next;
-    });
+    setActiveModeState('phone');
   };
 
-  // Physical screen category based on viewport
+  // Hardware device type for reference
   const hardwareDeviceType: DeviceType = useMemo(() => {
     if (dimensions.width < 768) return 'phone';
     if (dimensions.width < 1024) return 'tablet';
     return 'desktop';
   }, [dimensions.width]);
 
-  // Effective layout device type
-  const effectiveDeviceType: DeviceType = useMemo(() => {
-    if (activeMode === 'phone') return 'phone';
-    if (activeMode === 'desktop') return 'desktop';
-    return hardwareDeviceType;
-  }, [activeMode, hardwareDeviceType]);
-
-  const isPhone = effectiveDeviceType === 'phone';
-  const isTablet = effectiveDeviceType === 'tablet';
-  const isDesktop = effectiveDeviceType === 'desktop';
-
-  // If user selected 'phone' mode while viewing on a wide desktop screen
-  const isSimulatedPhone = activeMode === 'phone' && dimensions.width >= 768;
+  // App is phone-only
+  const effectiveDeviceType: DeviceType = 'phone';
+  const isPhone = true;
+  const isTablet = false;
+  const isDesktop = false;
+  const isSimulatedPhone = dimensions.width >= 768;
 
   const value = useMemo(
     () => ({

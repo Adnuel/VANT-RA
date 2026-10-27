@@ -24,7 +24,8 @@ body {
 
 .font-meta {
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.08em;
+  overflow-wrap: break-word;
 }
 
 /* Liquid Metal Champagne Gold Gradient */

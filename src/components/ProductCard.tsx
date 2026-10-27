@@ -118,35 +118,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
       </div>
 
       {/* Product Body */}
-      <div className="flex flex-1 flex-col justify-between p-3.5 sm:p-6 space-y-3 sm:space-y-4">
+      <div className="flex flex-1 flex-col justify-between p-3 space-y-2.5">
         <div>
           {/* Zero-Pill Unboxed Category Kicker */}
-          <div className="text-[10px] font-meta tracking-[0.25em] uppercase text-[#73736E] flex items-center gap-2 mb-2">
+          <div className="text-[9px] font-meta tracking-[0.12em] uppercase text-[#73736E] flex items-center gap-1 mb-1 flex-wrap">
             <span>{product.category.replace('-', ' ')}</span>
             {product.festiveHolidayTag ? (
               <>
                 <span aria-hidden="true" className="text-[#D4AF37]">·</span>
-                <span className="text-[#D4AF37] font-bold">★ {product.festiveHolidayTag}</span>
+                <span className="text-[#D4AF37] font-semibold">★ {product.festiveHolidayTag}</span>
               </>
             ) : product.trending ? (
               <>
                 <span aria-hidden="true" className="text-[#D4AF37]">·</span>
-                <span className="text-[#D4AF37]">Flagship Curation</span>
+                <span className="text-[#D4AF37]">Flagship</span>
               </>
             ) : null}
           </div>
 
-          <h3 className="font-editorial text-base text-[#F5F5F0] group-hover:text-[#D4AF37] transition-colors leading-snug line-clamp-2">
+          <h3 className="font-editorial text-[13px] font-semibold text-[#F5F5F0] group-hover:text-[#D4AF37] transition-colors leading-snug line-clamp-2 break-words">
             {product.title}
           </h3>
 
-          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#8E8E88] font-meta font-light">
+          <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[#8E8E88] font-meta font-light break-words">
             {product.description}
           </p>
 
           {/* Interactive Finish Dots */}
-          <div className="pt-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="pt-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
               {swatches.map((swatch, idx) => (
                 <button
                   key={idx}
@@ -155,7 +155,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
                     e.stopPropagation();
                     setSelectedFinishIndex(idx);
                   }}
-                  className={`w-3 h-3 rounded-full border border-white/20 transition-all ${
+                  className={`w-2.5 h-2.5 rounded-full border border-white/20 transition-all ${
                     selectedFinishIndex === idx
                       ? 'scale-125 ring-1 ring-[#D4AF37] ring-offset-1 ring-offset-[#0B0B0B]'
                       : 'hover:scale-110 opacity-60 hover:opacity-100'
@@ -165,28 +165,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
                 />
               ))}
             </div>
-            <span className="text-[10px] font-meta tracking-wider text-[#73736E] truncate max-w-[130px] uppercase">
+            <span className="text-[8px] font-meta tracking-wider text-[#73736E] truncate max-w-[80px] uppercase">
               {swatches[selectedFinishIndex]?.name}
             </span>
           </div>
         </div>
 
         {/* Price & Action Row */}
-        <div className="pt-4 flex items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] uppercase tracking-[0.2em] text-[#73736E] font-meta">
-                {product.referencePriceCents && product.referencePriceCents > product.retailPriceCents
-                  ? 'Privé Reserve'
-                  : `Price (${currency})`}
-              </span>
-              {product.referencePriceCents && product.referencePriceCents > product.retailPriceCents && (
-                <span className="text-[10px] font-meta line-through text-[#555550]">
-                  {formatAmount(product.referencePriceCents)}
-                </span>
-              )}
-            </div>
-            <div className="text-base font-editorial font-bold text-[#D4AF37]">
+        <div className="pt-2 flex items-center justify-between gap-1.5 border-t border-white/5">
+          <div className="min-w-0">
+            <span className="text-[8px] uppercase tracking-wider text-[#73736E] font-meta block truncate">
+              {product.referencePriceCents && product.referencePriceCents > product.retailPriceCents
+                ? 'Privé Reserve'
+                : currency}
+            </span>
+            <div className="text-[13px] font-editorial font-bold text-[#D4AF37] truncate">
               {formatAmount(product.retailPriceCents)}
             </div>
           </div>
@@ -196,12 +189,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
               type="button"
               onClick={handleAddToCart}
               aria-label={`Add ${product.title} to shopping bag`}
-              className="gold-gradient-bg text-[#0B0B0B] px-2.5 sm:px-4 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-meta font-bold uppercase tracking-[0.18em] hover:brightness-110 cursor-pointer shadow-md active:scale-95 transition-all shrink-0 rounded-xs"
+              className="gold-gradient-bg text-[#0B0B0B] px-2 py-1 text-[9px] font-meta font-bold uppercase tracking-wider hover:brightness-110 cursor-pointer shadow-xs active:scale-95 transition-all shrink-0 rounded-xs"
             >
               <span>Acquire</span>
             </button>
           ) : (
-            <span className="text-[11px] text-[#555550] font-meta uppercase tracking-wider italic">
+            <span className="text-[9px] text-[#555550] font-meta uppercase tracking-wider italic">
               Reserved
             </span>
           )}

@@ -237,62 +237,62 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <div className="w-full px-3.5 py-6 space-y-6 font-sans">
       {/* If Not Logged In: Show Authentication Card */}
       {!user ? (
-        <div className="max-w-md mx-auto border border-[#e7e4de] bg-white p-8 shadow-sm">
-          <div className="text-center space-y-2 mb-8">
-            <div className="w-8 h-8 bg-[#121210] text-[#f8f7f4] flex items-center justify-center font-serif text-base font-bold mx-auto">
+        <div className="w-full border border-white/5 bg-[#121212] p-5 rounded-xs shadow-sm space-y-5">
+          <div className="text-center space-y-1.5 mb-4">
+            <div className="w-8 h-8 gold-gradient-bg text-[#0B0B0B] flex items-center justify-center font-editorial text-sm font-bold mx-auto rounded-xs">
               V
             </div>
-            <h1 className="font-serif text-2xl font-normal text-[#121210]">
-              {authMode === 'login' && 'Sign In to Your Account'}
-              {authMode === 'register' && 'Create Your Customer Account'}
-              {authMode === 'forgot' && 'Reset Your Password'}
+            <h1 className="font-editorial text-xl font-bold text-[#F8F7F4] break-words">
+              {authMode === 'login' && 'Sign In to VANTÉRA'}
+              {authMode === 'register' && 'Create Client Account'}
+              {authMode === 'forgot' && 'Reset Password'}
             </h1>
-            <p className="text-xs text-[#77746d]">
+            <p className="text-[11px] text-[#8E8B82] font-light break-words">
               {authMode === 'login' && 'Manage delivery addresses and track bank transfer orders.'}
               {authMode === 'register' && 'Join VANTÉRA for seamless tracking and saved shipping.'}
-              {authMode === 'forgot' && 'Enter your email to receive a secure recovery code.'}
+              {authMode === 'forgot' && 'Enter your email to receive recovery instructions.'}
             </p>
           </div>
 
           {errorMessage && (
-            <div className="mb-4 p-3 bg-[#fdf2f2] border border-[#f8b4b4] text-[#9b1c1c] text-xs">
+            <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
               {errorMessage}
             </div>
           )}
 
           {successMessage && (
-            <div className="mb-4 p-3 bg-[#eef8ee] border border-[#c3e6cb] text-[#1e7e34] text-xs">
+            <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
               {successMessage}
             </div>
           )}
 
           {authMode === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-medium text-[#121210] mb-1">Email Address</label>
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Email Address</label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-medium text-[#121210]">Password</label>
+                  <label className="text-[10px] font-meta uppercase tracking-wider text-[#A9A69F]">Password</label>
                   <button
                     type="button"
                     onClick={() => {
                       setAuthMode('forgot');
                       setErrorMessage('');
                     }}
-                    className="text-[11px] text-[#77746d] hover:text-[#121210] hover:underline"
+                    className="text-[10px] text-[#8E8B82] hover:text-[#D4AF37] hover:underline"
                   >
                     Forgot password?
                   </button>
@@ -303,19 +303,19 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-[#121210] text-[#f8f7f4] py-3 text-xs uppercase tracking-widest font-semibold hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50"
+                className="w-full gold-gradient-bg text-[#0B0B0B] py-2.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? 'Signing in...' : 'Sign In'}
               </button>
 
-              <div className="text-center pt-4 border-t border-[#e7e4de] text-xs text-[#77746d]">
+              <div className="text-center pt-3 border-t border-white/5 text-[11px] text-[#8E8B82]">
                 Don't have an account yet?{' '}
                 <button
                   type="button"
@@ -323,7 +323,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
                     setAuthMode('register');
                     setErrorMessage('');
                   }}
-                  className="font-medium text-[#121210] underline"
+                  className="font-medium text-[#D4AF37] underline cursor-pointer"
                 >
                   Create one now
                 </button>
