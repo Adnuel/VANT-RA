@@ -11,5 +11,15 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "routes": [
+    {
+      "pattern": "vantera.com.ng/*",
+      "zone_name": "vantera.com.ng"
+    },
+    {
+      "pattern": "www.vantera.com.ng/*",
+      "zone_name": "vantera.com.ng"
+    }
   ]
 }
