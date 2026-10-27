@@ -37,20 +37,8 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
-  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-
-  const handleDownload = async () => {
-    setIsDownloadingZip(true);
-    try {
-      await downloadProjectZip();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsDownloadingZip(false);
-    }
-  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,32 +48,15 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] text-[#121210] flex flex-col font-sans selection:bg-[#c4a66b]/30">
-      {/* Top Banner Notice */}
-      <div className="bg-[#121210] text-[#f8f7f4] text-[11px] py-1.5 px-4 text-center border-b border-[#252521] flex items-center justify-center gap-2 flex-wrap">
-        <span className="font-semibold tracking-wider uppercase text-[#c4a66b]">VANTÉRA</span>
-        <span className="text-[#77746d]">/</span>
-        <span>All About Tech Finds</span>
-        <span className="text-[#77746d]">·</span>
-        <span className="text-[#a9a69f] hidden sm:inline">Direct Bank Transfer Orders Active · Verified by CEO Adnuel</span>
-        <span className="text-[#77746d] hidden sm:inline">·</span>
-        <button
-          type="button"
-          onClick={() => setIsAndroidModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#252521] hover:bg-[#c4a66b] hover:text-[#121210] text-[#e7e4de] text-[10px] font-mono uppercase tracking-wider transition-colors cursor-pointer"
-          title="Install Android App (APK / PWA)"
-        >
-          <span>📱</span>
-          <span className="font-bold">Android App</span>
-          <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded-2xs font-semibold">APK / PWA</span>
-        </button>
-      </div>
+    <div className="min-h-screen bg-[#0B0B0B] text-[#EDEDED] flex flex-col font-sans selection:bg-[#D4AF37]/30 selection:text-white relative">
+      {/* Subtle Velvet Emerald Atmosphere Light */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[400px] pointer-events-none rounded-full blur-[180px] bg-[#0F2E22]/30 z-0" />
 
-      {/* Main Header */}
-      <header className="sticky top-0 z-40 bg-[#f8f7f4]/95 backdrop-blur-md border-b border-[#e7e4de] transition-colors">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-          {/* Brand Lockup */}
-          <div className="flex items-center gap-2 sm:gap-6 lg:gap-10">
+      {/* Main Header - Zero-Border Glassmorphism */}
+      <header className="sticky top-0 z-40 bg-[#0B0B0B]/80 backdrop-blur-xl transition-all duration-300 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 h-20 flex items-center justify-between">
+          {/* Brand Wordmark (Editorial Serif, High-Fashion Tracking) */}
+          <div className="flex items-center gap-4 sm:gap-10">
             <a
               href="/"
               onClick={(e) => {
@@ -93,179 +64,112 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                 setIsMobileMenuOpen(false);
                 onNavigate('/');
               }}
-              className="group flex items-center gap-2 sm:gap-2.5 cursor-pointer shrink-0"
+              className="group flex items-center gap-3 cursor-pointer shrink-0"
             >
-              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#121210] text-[#f8f7f4] flex items-center justify-center font-serif text-sm sm:text-base font-bold rounded-xs transition-transform group-hover:scale-105 shadow-xs">
-                V
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base sm:text-xl font-extrabold tracking-[0.2em] sm:tracking-[0.25em] uppercase font-sans text-[#121210]">
-                  VANTÉRA
-                </span>
-                <span className="text-[9px] tracking-[0.2em] uppercase text-[#c4a66b] font-mono hidden sm:inline">
-                  All About Tech Finds
-                </span>
-              </div>
+              <span className="font-editorial text-xl sm:text-2xl font-bold tracking-[0.3em] uppercase text-[#F8F7F4] group-hover:text-[#D4AF37] transition-colors">
+                VANTÉRA
+              </span>
             </a>
 
-            {/* Desktop Navigation (Samsung-inspired Category Links) */}
-            <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-xs font-semibold uppercase tracking-wider text-[#77746d]">
+            {/* Desktop Navigation (Quiet, Widely-Spaced Sans) */}
+            <nav className="hidden lg:flex items-center gap-8 xl:gap-10 text-[11px] font-medium tracking-[0.22em] uppercase text-[#A9A69F]">
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('/');
+                }}
+                className={`transition-colors hover:text-[#D4AF37] py-1 ${
+                  activePath === '/' ? 'text-[#D4AF37] font-semibold' : 'text-[#8E8B82]'
+                }`}
+              >
+                Atelier
+              </a>
+              <a
+                href="#material-showcase"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const el = document.getElementById('material-showcase');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  else onNavigate('/#material-showcase');
+                }}
+                className="transition-colors hover:text-[#D4AF37] py-1 text-[#8E8B82]"
+              >
+                Materials
+              </a>
               <a
                 href="/shop"
                 onClick={(e) => {
                   e.preventDefault();
                   onNavigate('/shop');
                 }}
-                className={`transition-colors hover:text-[#121210] py-2 border-b-2 ${
-                  activePath === '/shop' ? 'border-[#121210] text-[#121210]' : 'border-transparent'
+                className={`transition-colors hover:text-[#D4AF37] py-1 ${
+                  activePath.includes('shop') ? 'text-[#D4AF37] font-semibold' : 'text-[#8E8B82]'
                 }`}
               >
-                Shop
+                Curations
               </a>
               <a
-                href="/category/phone-cases"
+                href="#vip-gateway"
                 onClick={(e) => {
                   e.preventDefault();
-                  onNavigate('/category/phone-cases');
+                  const el = document.getElementById('vip-gateway');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  else onNavigate('/#vip-gateway');
                 }}
-                className={`transition-colors hover:text-[#121210] py-2 border-b-2 ${
-                  activePath.includes('phone-cases') ? 'border-[#121210] text-[#121210]' : 'border-transparent'
-                }`}
+                className="transition-colors hover:text-[#D4AF37] py-1 text-[#8E8B82]"
               >
-                Smartphones & Accessories
+                VIP Registry
               </a>
               <a
-                href="/category/room-desk"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigate('/category/room-desk');
-                }}
-                className={`transition-colors hover:text-[#121210] py-2 border-b-2 ${
-                  activePath.includes('room-desk') ? 'border-[#121210] text-[#121210]' : 'border-transparent'
-                }`}
+                href="https://wa.me/2349132793670"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-[#D4AF37] py-1 text-[#5E8A75] hover:text-[#D4AF37] flex items-center gap-1.5"
               >
-                Smart Gadgets
-              </a>
-              <a
-                href="/shop?filter=featured"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigate('/shop?filter=featured');
-                }}
-                className="transition-colors hover:text-[#121210] py-2 border-b-2 border-transparent"
-              >
-                Featured Products
-              </a>
-              <a
-                href="/shop?filter=new"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigate('/shop?filter=new');
-                }}
-                className="transition-colors hover:text-[#121210] py-2 border-b-2 border-transparent"
-              >
-                New Arrivals
-              </a>
-              <a
-                href="/shop?category=festive-season"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigate('/shop?category=festive-season');
-                }}
-                className={`transition-colors hover:text-[#c4a66b] text-[#9d8048] font-bold py-2 border-b-2 inline-flex items-center gap-1.5 ${
-                  activePath.includes('festive-season') ? 'border-[#c4a66b] text-[#c4a66b]' : 'border-transparent'
-                }`}
-              >
-                <svg className="w-3.5 h-3.5 text-[#c4a66b]" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                <span>Festive Gifts</span>
-              </a>
-              <a
-                href="/shop?filter=deals"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigate('/shop?filter=deals');
-                }}
-                className="transition-colors hover:text-[#c4a66b] text-[#77746d] hover:text-[#121210] py-2 border-b-2 border-transparent"
-              >
-                Deals
+                <span>Concierge</span>
               </a>
             </nav>
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-1 sm:gap-3 shrink-0">
-            {/* Desktop Currency Selector (USD / NGN) */}
-            <div className="hidden sm:flex items-center border border-[#e7e4de] bg-[#fbfaf7] text-[11px] font-mono shadow-2xs">
+          {/* Right Actions - Ultra-refined Gold & Obsidian Controls */}
+          <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+            {/* Currency Selector (USD / NGN) */}
+            <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono tracking-widest text-[#7E7B74]">
               <button
                 type="button"
                 onClick={() => setCurrency('USD')}
-                className={`px-2.5 py-1.5 transition-colors cursor-pointer ${
+                className={`px-2 py-1 transition-colors cursor-pointer rounded-xs ${
                   currency === 'USD'
-                    ? 'bg-[#121210] !text-white font-bold'
-                    : 'text-[#77746d] hover:text-[#121210]'
+                    ? 'text-[#D4AF37] font-bold bg-[#D4AF37]/10'
+                    : 'text-[#6C6A64] hover:text-[#EDEDED]'
                 }`}
-                title="US Dollar ($)"
               >
-                USD ($)
+                USD
               </button>
+              <span className="text-white/10">/</span>
               <button
                 type="button"
                 onClick={() => setCurrency('NGN')}
-                className={`px-2.5 py-1.5 transition-colors cursor-pointer inline-flex items-center gap-0.5 ${
+                className={`px-2 py-1 transition-colors cursor-pointer rounded-xs ${
                   currency === 'NGN'
-                    ? 'bg-[#121210] !text-white font-bold'
-                    : 'text-[#77746d] hover:text-[#121210]'
+                    ? 'text-[#D4AF37] font-bold bg-[#D4AF37]/10'
+                    : 'text-[#6C6A64] hover:text-[#EDEDED]'
                 }`}
-                title="Nigerian Naira (NGN)"
               >
-                <span>NGN (</span>
-                <NairaGlyph className="w-2.5 h-2.5 inline-block -mt-0.5" />
-                <span>)</span>
+                NGN
               </button>
             </div>
 
-            {/* Android App Button */}
-            <button
-              type="button"
-              onClick={() => setIsAndroidModalOpen(true)}
-              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-[#e7e4de] bg-[#fbfaf7] text-[#121210] hover:border-[#121210] hover:bg-[#121210] hover:text-white transition-colors cursor-pointer shrink-0 shadow-2xs"
-              title="VANTÉRA Android App (APK / PWA)"
-            >
-              <span className="text-xs">📱</span>
-              <span className="font-semibold">Android</span>
-            </button>
-
-            {/* Mobile Compact Currency Toggle (hidden when drawer is open to avoid duplicate controls) */}
-            {!isMobileMenuOpen && (
-              <button
-                type="button"
-                onClick={() => setCurrency(currency === 'USD' ? 'NGN' : 'USD')}
-                className="sm:hidden px-2 py-1 text-[11px] font-mono font-bold border border-[#e7e4de] bg-[#fbfaf7] text-[#121210] rounded-xs cursor-pointer inline-flex items-center gap-1"
-                title="Switch Currency"
-              >
-                {currency === 'USD' ? (
-                  <span>$ USD</span>
-                ) : (
-                  <span className="inline-flex items-center gap-0.5">
-                    <NairaGlyph className="w-2.5 h-2.5 inline-block -mt-0.5" />
-                    <span>NGN</span>
-                  </span>
-                )}
-              </button>
-            )}
-
-            {/* Search Button */}
+            {/* Search Affordance */}
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              aria-label="Search the catalog"
-              className="p-1.5 sm:p-2 text-[#77746d] hover:text-[#121210] hover:bg-[#eae7e0]/60 rounded-full transition-colors cursor-pointer shrink-0"
-              title="Search"
+              aria-label="Search curated finds"
+              className="p-2 text-[#8E8B82] hover:text-[#D4AF37] transition-colors cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
 
@@ -274,200 +178,128 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
               <button
                 type="button"
                 onClick={() => onNavigate('/account')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[#e7e4de] bg-white hover:border-[#121210] transition-colors shrink-0"
-                title="Customer Account"
+                className="hidden sm:inline-flex items-center gap-2 text-[11px] tracking-[0.18em] uppercase text-[#C8C4BD] hover:text-[#D4AF37] transition-colors"
               >
-                <span className="w-2 h-2 rounded-full bg-[#1e7e34]"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#34A853]"></span>
                 <span>{user.name.split(' ')[0]}</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => onNavigate('/account')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#121210] font-semibold border border-transparent hover:border-[#e7e4de] hover:bg-white transition-colors shrink-0"
-                title="Sign In"
+                className="hidden sm:inline-flex items-center gap-1.5 text-[11px] tracking-[0.18em] uppercase text-[#8E8B82] hover:text-[#D4AF37] transition-colors"
               >
-                <svg className="w-3.5 h-3.5 text-[#77746d]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span>Sign In</span>
+                <span>Client Sign In</span>
               </button>
             )}
 
-            {/* Cart Drawer Trigger */}
+            {/* VIP Bag Trigger (Liquid Champagne Gold Accent) */}
             <button
               type="button"
               onClick={() => setIsCartOpen(true)}
-              aria-label={`Open shopping cart with ${itemCount} items`}
-              className="flex items-center gap-1.5 bg-[#121210] !text-white px-2 sm:px-3.5 py-1.5 sm:py-2 text-xs font-semibold tracking-wider transition-colors hover:bg-[#c4a66b] hover:!text-[#121210] cursor-pointer shadow-xs shrink-0"
+              aria-label={`Open Bag with ${itemCount} items`}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xs bg-[#161616] hover:bg-[#1E1E1E] text-[#EDEDED] text-[11px] tracking-[0.2em] uppercase font-medium transition-all duration-300 hover:shadow-[0_0_20px_rgba(212,175,55,0.2)] cursor-pointer group"
             >
-              <svg className="w-4 h-4 !text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-              <span className="!text-white hidden md:inline">Cart</span>
-              <span className="font-mono bg-white/20 !text-white px-1.5 py-0.2 rounded-xs text-[11px] font-bold">
-                {itemCount}
-              </span>
+              <span className="text-[#D4AF37] group-hover:scale-110 transition-transform">✦</span>
+              <span className="text-[#F8F7F4]">Bag</span>
+              <span className="font-mono text-[#D4AF37] font-bold">({itemCount})</span>
             </button>
 
-            {/* Mobile Hamburger Menu Toggle */}
+            {/* Mobile Navigation Toggle */}
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label="Toggle mobile navigation menu"
-              className="lg:hidden p-1.5 sm:p-2 text-[#121210] hover:bg-[#eae7e0]/60 rounded-xs transition-colors shrink-0"
+              aria-label="Toggle navigation menu"
+              className="lg:hidden p-2 text-[#EDEDED] hover:text-[#D4AF37] transition-colors"
             >
               {isMobileMenuOpen ? (
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               )}
             </button>
           </div>
         </div>
 
-        {/* Mobile Slide-Over Drawer */}
+        {/* Mobile Slide-Over Drawer in Obsidian Black */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden bg-white border-b border-[#e7e4de] px-6 py-6 shadow-xl space-y-6 animate-in slide-in-from-top-2 duration-200">
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono tracking-widest text-[#77746d]">Navigation</span>
-              <nav className="flex flex-col divide-y divide-[#e7e4de] text-sm font-semibold text-[#121210]">
-                <a
-                  href="/shop"
-                  onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/shop'); }}
-                  className="py-3 flex items-center justify-between hover:text-[#c4a66b]"
-                >
-                  <span>Shop All Products</span>
-                  <span>→</span>
-                </a>
-                <a
-                  href="/category/phone-cases"
-                  onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/category/phone-cases'); }}
-                  className="py-3 flex items-center justify-between hover:text-[#c4a66b]"
-                >
-                  <span>Smartphones & Accessories</span>
-                  <span>→</span>
-                </a>
-                <a
-                  href="/category/room-desk"
-                  onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/category/room-desk'); }}
-                  className="py-3 flex items-center justify-between hover:text-[#c4a66b]"
-                >
-                  <span>Smart Gadgets</span>
-                  <span>→</span>
-                </a>
-                <a
-                  href="/shop?filter=featured"
-                  onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/shop?filter=featured'); }}
-                  className="py-3 flex items-center justify-between hover:text-[#c4a66b]"
-                >
-                  <span>Featured Products</span>
-                  <span>→</span>
-                </a>
-                <a
-                  href="/shop?filter=new"
-                  onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/shop?filter=new'); }}
-                  className="py-3 flex items-center justify-between hover:text-[#c4a66b]"
-                >
-                  <span>New Arrivals</span>
-                  <span>→</span>
-                </a>
-                <a
-                  href="/shop?category=festive-season"
-                  onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/shop?category=festive-season'); }}
-                  className="py-3 flex items-center justify-between text-[#9d8048] hover:text-[#c4a66b] font-bold"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-[#c4a66b]" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    <span>Festive Bestsellers</span>
-                  </span>
-                  <span>→</span>
-                </a>
-                <a
-                  href="/shop?filter=deals"
-                  onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/shop?filter=deals'); }}
-                  className="py-3 flex items-center justify-between hover:text-[#c4a66b]"
-                >
-                  <span>Deals & Bundles</span>
-                  <span>%</span>
-                </a>
-              </nav>
-            </div>
-
-            <div className="pt-4 border-t border-[#e7e4de] space-y-4">
-              {/* Android App Button in Drawer */}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsAndroidModalOpen(true);
-                }}
-                className="w-full flex items-center justify-between p-3.5 bg-[#121210] text-[#f8f7f4] rounded-xs hover:bg-[#c4a66b] hover:text-[#121210] transition-colors text-left cursor-pointer shadow-xs group"
+          <div className="lg:hidden bg-[#0F0F0F] border-b border-white/5 px-6 py-8 space-y-6 animate-in slide-in-from-top-2 duration-300">
+            <span className="text-[10px] uppercase font-meta tracking-[0.25em] text-[#7E7B74]">Atelier Navigation</span>
+            <nav className="flex flex-col space-y-4 text-sm font-editorial tracking-[0.15em] text-[#EDEDED]">
+              <a
+                href="/"
+                onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/'); }}
+                className="py-2 hover:text-[#D4AF37] flex items-center justify-between"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xs bg-[#252521] flex items-center justify-center text-lg shrink-0">
-                    📱
-                  </div>
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-bold uppercase tracking-wider text-[#f8f7f4] flex items-center gap-2">
-                      <span>VANTÉRA Android App</span>
-                      <span className="text-[9px] bg-[#c4a66b] text-[#121210] font-sans font-bold px-1.5 py-0.5 rounded-2xs">
-                        NEW
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-[#a9a69f] font-sans">
-                      WebAPK standalone & APK install
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 text-xs font-sans font-semibold text-[#c4a66b] group-hover:text-[#121210] shrink-0 pl-2">
-                  <span>Get</span>
-                  <span>→</span>
-                </div>
-              </button>
-
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-[#77746d] font-sans font-medium">Payment Currency:</span>
-                <div className="flex border border-[#e7e4de] text-xs font-sans shadow-2xs">
-                  <button
-                    onClick={() => setCurrency('USD')}
-                    className={`px-3 py-1 font-semibold transition-colors cursor-pointer ${
-                      currency === 'USD' ? 'bg-[#121210] text-white' : 'text-[#77746d] hover:text-[#121210] bg-[#fbfaf7]'
-                    }`}
-                  >
-                    USD ($)
-                  </button>
-                  <button
-                    onClick={() => setCurrency('NGN')}
-                    className={`px-3 py-1 font-semibold transition-colors cursor-pointer inline-flex items-center gap-0.5 ${
-                      currency === 'NGN' ? 'bg-[#121210] text-white' : 'text-[#77746d] hover:text-[#121210] bg-[#fbfaf7]'
-                    }`}
-                  >
-                    <span>NGN (</span>
-                    <NairaGlyph className="w-2.5 h-2.5 inline-block -mt-0.5" />
-                    <span>)</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
+                <span>Atelier Overview</span>
+                <span className="text-[#D4AF37]">→</span>
+              </a>
+              <a
+                href="#material-showcase"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsMobileMenuOpen(false);
+                  const el = document.getElementById('material-showcase');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  else onNavigate('/#material-showcase');
+                }}
+                className="py-2 hover:text-[#D4AF37] flex items-center justify-between"
+              >
+                <span>Tactile Materials</span>
+                <span className="text-[#D4AF37]">→</span>
+              </a>
+              <a
+                href="/shop"
+                onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); onNavigate('/shop'); }}
+                className="py-2 hover:text-[#D4AF37] flex items-center justify-between"
+              >
+                <span>Curated Tech Finds</span>
+                <span className="text-[#D4AF37]">→</span>
+              </a>
+              <a
+                href="#vip-gateway"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsMobileMenuOpen(false);
+                  const el = document.getElementById('vip-gateway');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  else onNavigate('/#vip-gateway');
+                }}
+                className="py-2 hover:text-[#D4AF37] flex items-center justify-between text-[#D4AF37]"
+              >
+                <span>Private VIP Registry</span>
+                <span>✦</span>
+              </a>
+              <a
+                href="https://wa.me/2349132793670"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2 text-[#5E8A75] hover:text-[#D4AF37] flex items-center justify-between"
+              >
+                <span>WhatsApp VIP Concierge</span>
+                <span>↗</span>
+              </a>
+            </nav>
+            <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-mono">
+              <span className="text-[#7E7B74]">Currency:</span>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => { setIsMobileMenuOpen(false); onNavigate('/account'); }}
-                  className="flex-1 bg-[#121210] text-[#f8f7f4] py-2.5 text-xs uppercase tracking-wider font-semibold text-center hover:bg-[#c4a66b] hover:text-[#121210]"
+                  type="button"
+                  onClick={() => setCurrency('USD')}
+                  className={`px-3 py-1 rounded-xs ${currency === 'USD' ? 'text-[#D4AF37] bg-white/5 font-bold' : 'text-[#7E7B74]'}`}
                 >
-                  {user ? 'My Account' : 'Customer Sign In'}
+                  USD ($)
                 </button>
                 <button
-                  onClick={() => { setIsMobileMenuOpen(false); onNavigate('/track'); }}
-                  className="px-4 py-2.5 border border-[#e7e4de] text-xs uppercase tracking-wider text-[#121210]"
+                  type="button"
+                  onClick={() => setCurrency('NGN')}
+                  className={`px-3 py-1 rounded-xs ${currency === 'NGN' ? 'text-[#D4AF37] bg-white/5 font-bold' : 'text-[#7E7B74]'}`}
                 >
-                  Track Order
+                  NGN (₦)
                 </button>
               </div>
             </div>
@@ -475,18 +307,20 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
         )}
       </header>
 
-      {/* Search Modal */}
+
+      {/* Search Modal in Obsidian Luxury */}
       {isSearchOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-2xl mx-4 p-8 shadow-2xl border border-[#e7e4de] animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#121212] w-full max-w-2xl mx-4 p-8 rounded-xs shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_30px_rgba(212,175,55,0.08)] border border-white/5">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <span className="text-[10px] uppercase tracking-widest text-[#c4a66b] font-mono block">VANTÉRA SEARCH</span>
-                <h3 className="text-lg font-bold text-[#121210]">Explore the Technology Collection</h3>
+                <span className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-meta block">VANTÉRA ATELIER SEARCH</span>
+                <h3 className="font-editorial text-xl font-medium text-[#F8F7F4] mt-1">Discover Curated Tech Finds</h3>
               </div>
               <button
                 onClick={() => setIsSearchOpen(false)}
-                className="text-[#77746d] hover:text-[#121210] p-1 text-base font-mono"
+                className="text-[#8E8B82] hover:text-[#D4AF37] p-2 text-base transition-colors"
+                aria-label="Close search"
               >
                 ✕
               </button>
@@ -498,12 +332,12 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                   autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search laptops, earbuds, fast chargers, MagSafe mounts..."
-                  className="w-full border-b-2 border-[#121210] py-3 text-lg text-[#121210] placeholder-[#a9a69f] focus:outline-hidden pr-24 font-sans"
+                  placeholder="Search magnetic docks, titanium armor, soundstages..."
+                  className="w-full bg-[#181818] border border-white/10 rounded-xs py-3.5 px-4 text-sm text-[#F8F7F4] placeholder-[#6C6A64] focus:outline-hidden focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] font-sans pr-28 transition-all"
                 />
                 <button
                   type="submit"
-                  className="absolute right-0 top-2.5 bg-[#121210] text-[#f8f7f4] text-xs px-5 py-2 uppercase tracking-wider font-semibold hover:bg-[#c4a66b] hover:text-[#121210] transition-colors"
+                  className="absolute right-2 top-2 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] text-xs px-5 py-2 font-semibold tracking-wider uppercase rounded-xs hover:opacity-90 transition-opacity"
                 >
                   Search
                 </button>
@@ -511,16 +345,16 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
             </form>
 
             {/* Quick Suggestions */}
-            <div className="mt-6 pt-4 border-t border-[#e7e4de]">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[#77746d] block mb-2">Popular Searches</span>
+            <div className="mt-6 pt-4 border-t border-white/5">
+              <span className="text-[10px] uppercase font-meta tracking-[0.2em] text-[#7E7B74] block mb-2.5">Editorial Suggestions</span>
               <div className="flex flex-wrap gap-2">
                 {[
-                  'Foldable Laptop Stand',
+                  '3-in-1 Foldable MagSafe',
+                  'Titanium Armor Case',
                   'Wireless Earbuds',
-                  '20W Fast Charger',
-                  'Magnetic Tripod',
-                  'Phone Cases',
-                  'Bluetooth Speaker',
+                  'Sculptural Desk Lamp',
+                  'Fast USB-C Hub',
+                  'Acoustic Soundstage',
                 ].map((term) => (
                   <button
                     key={term}
@@ -530,7 +364,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                       setIsSearchOpen(false);
                       onNavigate(`/shop?q=${encodeURIComponent(term)}`);
                     }}
-                    className="text-xs bg-[#f4f2ee] hover:bg-[#121210] hover:text-white px-3 py-1.5 rounded-xs transition-colors text-[#252521]"
+                    className="text-xs bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-[#0B0B0B] text-[#A9A69F] px-3 py-1.5 rounded-xs transition-colors cursor-pointer"
                   >
                     {term}
                   </button>
@@ -542,31 +376,33 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
       )}
 
       {/* Main Page Slot */}
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 relative z-10">{children}</main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#e7e4de] bg-[#f4f2ee] mt-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-10">
-            {/* Brand column */}
-            <div className="md:col-span-2 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 bg-[#121210] text-[#f8f7f4] flex items-center justify-center font-serif text-xs font-bold rounded-xs">
-                  V
-                </div>
-                <span className="text-base font-bold tracking-[0.2em] uppercase text-[#121210]">
+      {/* Luxury Colophon Footer - Zero hard borders, Velvet Emerald ambient glow */}
+      <footer className="relative z-10 bg-gradient-to-b from-[#0B0B0B] via-[#091410] to-[#070D0B] pt-24 pb-16 text-[#A9A69F]">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] pointer-events-none rounded-full blur-[160px] bg-[#0F2E22]/35" />
+
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-16">
+            {/* Heritage Brand Statement */}
+            <div className="md:col-span-5 space-y-5">
+              <div className="flex items-center gap-3">
+                <span className="font-editorial text-2xl font-bold tracking-[0.3em] uppercase text-[#F8F7F4]">
                   VANTÉRA
                 </span>
+                <span className="text-[#D4AF37] text-xs">✦</span>
               </div>
-              <p className="font-serif italic text-sm text-[#252521]">All About Tech Finds.</p>
-              <p className="text-xs text-[#77746d] max-w-sm leading-relaxed">
-                A curated luxury storefront for cutting-edge tech finds, wireless charging, and everyday device essentials. Direct bank transfer verified and authorized under CEO Adnuel.
+              <p className="font-editorial italic text-sm text-[#D4AF37]/90 tracking-wide">
+                All About Tech Finds.
+              </p>
+              <p className="text-xs text-[#8E8B82] leading-relaxed max-w-md font-sans">
+                Curating fine digital craftsmanship, high-grade metallic armor, inductive charging sculptures, and viral workspace finds. Designed for individuals who demand tactile perfection and unyielding aesthetics.
               </p>
 
-              {/* Private Newsletter Subscription */}
+              {/* Private Registry Invitation */}
               <div className="pt-2 max-w-sm">
-                <span className="text-[10px] uppercase tracking-wider text-[#121210] font-semibold block mb-1.5 font-mono">
-                  Private Curation Newsletter
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] font-meta block mb-2">
+                  Atelier Private Gazette
                 </span>
                 <form
                   onSubmit={async (e) => {
@@ -595,135 +431,134 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                     type="email"
                     value={newsletterEmail}
                     onChange={(e) => setNewsletterEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="flex-1 bg-white border border-[#e7e4de] px-3 py-1.5 text-xs text-[#121210] focus:border-[#121210] focus:outline-hidden"
+                    placeholder="Enter private client email"
+                    className="flex-1 bg-[#141414] border border-white/10 px-3.5 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:outline-hidden focus:border-[#D4AF37] rounded-xs"
                     required
                   />
                   <button
                     type="submit"
                     disabled={newsletterStatus === 'submitting'}
-                    className="bg-[#121210] text-[#f8f7f4] px-3.5 py-1.5 text-xs uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210] transition-colors whitespace-nowrap"
+                    className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-xs hover:opacity-90 transition-opacity shrink-0 cursor-pointer"
                   >
-                    {newsletterStatus === 'submitting' ? '...' : 'Subscribe'}
+                    {newsletterStatus === 'submitting' ? '...' : 'Register'}
                   </button>
                 </form>
                 {newsletterStatus === 'success' && (
-                  <p className="text-[10px] text-[#1e7e34] mt-1">✓ Thank you for subscribing to VANTÉRA.</p>
+                  <p className="text-[10px] text-[#48BB78] mt-1.5">✓ Client registry updated. Welcome to VANTÉRA Privé.</p>
                 )}
                 {newsletterStatus === 'error' && (
-                  <p className="text-[10px] text-[#9b1c1c] mt-1">Please enter a valid email address.</p>
+                  <p className="text-[10px] text-[#F56565] mt-1.5">Please provide a valid client email address.</p>
                 )}
               </div>
             </div>
 
-            {/* Explore column */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">Explore Tech Finds</h3>
-              <ul className="space-y-2 text-xs text-[#77746d]">
+            {/* Collections */}
+            <div className="md:col-span-2 space-y-4">
+              <h4 className="font-meta text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D4AF37]">
+                Collections
+              </h4>
+              <ul className="space-y-2.5 text-xs text-[#8E8B82]">
                 <li>
-                  <a href="/shop" onClick={(e) => { e.preventDefault(); onNavigate('/shop'); }} className="hover:text-[#121210]">
-                    Shop All Finds
+                  <a href="/shop" onClick={(e) => { e.preventDefault(); onNavigate('/shop'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    All Tech Finds
                   </a>
                 </li>
                 <li>
-                  <a href="/category/phone-cases" onClick={(e) => { e.preventDefault(); onNavigate('/category/phone-cases'); }} className="hover:text-[#121210]">
-                    Phone Protection & MagSafe
+                  <a href="/category/charging" onClick={(e) => { e.preventDefault(); onNavigate('/category/charging'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    MagSafe & Power Docks
                   </a>
                 </li>
                 <li>
-                  <a href="/category/charging" onClick={(e) => { e.preventDefault(); onNavigate('/category/charging'); }} className="hover:text-[#121210]">
-                    Charging & Power Hubs
+                  <a href="/category/phone-cases" onClick={(e) => { e.preventDefault(); onNavigate('/category/phone-cases'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    Titanium Phone Armor
                   </a>
                 </li>
                 <li>
-                  <a href="/category/room-desk" onClick={(e) => { e.preventDefault(); onNavigate('/category/room-desk'); }} className="hover:text-[#121210]">
-                    Desk & Workspace Gear
+                  <a href="/category/room-desk" onClick={(e) => { e.preventDefault(); onNavigate('/category/room-desk'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    Sculptural Desk Gear
                   </a>
                 </li>
                 <li>
-                  <a href="/category/trending" onClick={(e) => { e.preventDefault(); onNavigate('/category/trending'); }} className="hover:text-[#121210]">
-                    Trending Viral Finds
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            {/* Information column */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">Information</h3>
-              <ul className="space-y-2 text-xs text-[#77746d]">
-                <li>
-                  <a href="/about" onClick={(e) => { e.preventDefault(); onNavigate('/about'); }} className="hover:text-[#121210]">
-                    About VANTÉRA
-                  </a>
-                </li>
-                <li>
-                  <a href="/contact" onClick={(e) => { e.preventDefault(); onNavigate('/contact'); }} className="hover:text-[#121210]">
-                    Contact & WhatsApp
-                  </a>
-                </li>
-                <li>
-                  <a href="/faq" onClick={(e) => { e.preventDefault(); onNavigate('/faq'); }} className="hover:text-[#121210]">
-                    Frequently asked questions
-                  </a>
-                </li>
-                <li>
-                  <a href="/shipping" onClick={(e) => { e.preventDefault(); onNavigate('/shipping'); }} className="hover:text-[#121210]">
-                    Shipping & delivery
-                  </a>
-                </li>
-                <li>
-                  <a href="/returns" onClick={(e) => { e.preventDefault(); onNavigate('/returns'); }} className="hover:text-[#121210]">
-                    Returns & refunds
+                  <a href="/category/audio" onClick={(e) => { e.preventDefault(); onNavigate('/category/audio'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    Acoustic Soundstages
                   </a>
                 </li>
               </ul>
             </div>
 
-            {/* Customer Care column */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#121210]">Customer Care</h3>
-              <div className="space-y-2 text-xs text-[#77746d]">
+            {/* Atelier Information */}
+            <div className="md:col-span-2 space-y-4">
+              <h4 className="font-meta text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D4AF37]">
+                Atelier
+              </h4>
+              <ul className="space-y-2.5 text-xs text-[#8E8B82]">
+                <li>
+                  <a href="/about" onClick={(e) => { e.preventDefault(); onNavigate('/about'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    Design Philosophy
+                  </a>
+                </li>
+                <li>
+                  <a href="/faq" onClick={(e) => { e.preventDefault(); onNavigate('/faq'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    Acquisition & Dispatch
+                  </a>
+                </li>
+                <li>
+                  <a href="/shipping" onClick={(e) => { e.preventDefault(); onNavigate('/shipping'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    Insured Global Transit
+                  </a>
+                </li>
+                <li>
+                  <a href="/track" onClick={(e) => { e.preventDefault(); onNavigate('/track'); }} className="hover:text-[#F8F7F4] transition-colors">
+                    Order Verification
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* VIP Client Services */}
+            <div className="md:col-span-3 space-y-4">
+              <h4 className="font-meta text-[11px] font-semibold uppercase tracking-[0.22em] text-[#D4AF37]">
+                VIP Concierge
+              </h4>
+              <div className="space-y-3 text-xs text-[#8E8B82]">
                 <div>
-                  <span className="block text-[10px] uppercase tracking-wide text-[#a9a69f]">Direct Email</span>
-                  <a href="mailto:emmanueladarikwu@gmail.com" className="text-[#121210] hover:underline font-mono">
+                  <span className="block text-[10px] uppercase font-meta tracking-[0.2em] text-[#6C6A64]">Direct Atelier Email</span>
+                  <a href="mailto:emmanueladarikwu@gmail.com" className="text-[#EDEDED] hover:text-[#D4AF37] font-mono transition-colors">
                     emmanueladarikwu@gmail.com
                   </a>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase tracking-wide text-[#a9a69f]">WhatsApp VIP Concierge</span>
-                  <a href="https://wa.me/2349132793670" target="_blank" rel="noopener noreferrer" className="text-[#1e7e34] hover:underline font-mono">
-                    +234 913 279 3670
+                  <span className="block text-[10px] uppercase font-meta tracking-[0.2em] text-[#6C6A64]">WhatsApp VIP Concierge</span>
+                  <a href="https://wa.me/2349132793670" target="_blank" rel="noopener noreferrer" className="text-[#5E8A75] hover:text-[#D4AF37] font-mono transition-colors flex items-center gap-1.5">
+                    <span>+234 913 279 3670</span>
+                    <span className="text-[10px]">↗</span>
                   </a>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase tracking-wide text-[#a9a69f]">Bank Wire Orders</span>
-                  <span className="text-[#121210] font-mono text-[11px]">GTBank: 1033269410</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase tracking-wide text-[#a9a69f]">Order Verification</span>
-                  <span className="text-[#1e7e34] font-medium text-[11px]">Instant CEO Verification</span>
+                  <span className="block text-[10px] uppercase font-meta tracking-[0.2em] text-[#6C6A64]">Settlement Methods</span>
+                  <span className="text-[#EDEDED] font-meta text-[11px]">Direct Bank Wire & Card at Allocation</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-12 pt-6 border-t border-[#e7e4de] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#77746d]">
+          {/* Bottom Colophon - Zero hard borders */}
+          <div className="mt-20 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#6C6A64]">
             <div>
-              © 2026 VANTÉRA. All rights reserved. All About Tech Finds.
+              © 2026 VANTÉRA. All rights reserved. Curated Luxury Tech Finds.
             </div>
             <div className="flex items-center gap-4 flex-wrap">
-              <a href="/privacy" onClick={(e) => { e.preventDefault(); onNavigate('/privacy'); }} className="hover:underline">Privacy Policy</a>
+              <a href="/privacy" onClick={(e) => { e.preventDefault(); onNavigate('/privacy'); }} className="hover:text-[#D4AF37] transition-colors">Privacy</a>
               <span>·</span>
-              <a href="/terms" onClick={(e) => { e.preventDefault(); onNavigate('/terms'); }} className="hover:underline">Terms of Service</a>
+              <a href="/terms" onClick={(e) => { e.preventDefault(); onNavigate('/terms'); }} className="hover:text-[#D4AF37] transition-colors">Terms</a>
               <span>·</span>
-              <a href="/track" onClick={(e) => { e.preventDefault(); onNavigate('/track'); }} className="hover:underline">Track Order</a>
+              <a href="/track" onClick={(e) => { e.preventDefault(); onNavigate('/track'); }} className="hover:text-[#D4AF37] transition-colors">Track Order</a>
               <span>·</span>
               <button
                 type="button"
                 onClick={() => setIsAndroidModalOpen(true)}
-                className="text-[#121210] hover:text-[#c4a66b] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                title="Install Android WebAPK or download native Android Studio project"
+                className="text-[#8E8B82] hover:text-[#D4AF37] transition-colors cursor-pointer inline-flex items-center gap-1"
+                title="VANTÉRA Android Experience"
               >
                 <span>📱</span>
                 <span>Android App</span>

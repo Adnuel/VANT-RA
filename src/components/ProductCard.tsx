@@ -11,7 +11,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, onQuickView }) => {
-  const { addToCart, setIsCartOpen } = useCart();
+  const { addToCart } = useCart();
   const { currency, formatAmount } = useCurrency();
   const [selectedFinishIndex, setSelectedFinishIndex] = useState<number>(0);
   const [isHovered, setIsHovered] = useState<boolean>(false);
@@ -41,34 +41,34 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
     }
   };
 
-  // Curated color finishes for Samsung-inspired visual finish options
+  // Curated color finishes with luxury naming
   const colorSwatches: Record<string, { name: string; hex: string }[]> = {
     'phone-cases': [
       { name: 'Titanium Noir', hex: '#1e1e1e' },
-      { name: 'Desert Gold', hex: '#d4af37' },
+      { name: 'Champagne Gold', hex: '#d4af37' },
       { name: 'Silver Frost', hex: '#e5e7eb' },
     ],
     'charging': [
-      { name: 'Obsidian Matte', hex: '#0f172a' },
+      { name: 'Obsidian Matte', hex: '#0b0b0b' },
       { name: 'Pure Chalk', hex: '#f8fafc' },
     ],
     'audio': [
-      { name: 'Phantom Black', hex: '#18181b' },
+      { name: 'Phantom Black', hex: '#141414' },
       { name: 'Titanium Silver', hex: '#94a3b8' },
     ],
     'room-desk': [
-      { name: 'Space Gray', hex: '#4b5563' },
+      { name: 'Space Gray', hex: '#374151' },
       { name: 'Raw Aluminum', hex: '#d1d5db' },
     ],
     'photography': [
-      { name: 'Matte Stealth', hex: '#18181b' },
+      { name: 'Matte Stealth', hex: '#141414' },
       { name: 'Brushed Alloy', hex: '#71717a' },
     ],
   };
 
   const swatches = colorSwatches[product.category] || [
-    { name: 'Matte Black', hex: '#18181b' },
-    { name: 'Anodized Silver', hex: '#d4d4d8' },
+    { name: 'Obsidian Noir', hex: '#141414' },
+    { name: 'Champagne Alloy', hex: '#d4af37' },
   ];
 
   return (
@@ -76,72 +76,74 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
       onClick={handleCardClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="group relative flex flex-col justify-between border border-[#e7e4de] bg-white transition-all duration-300 hover:border-[#121210] hover:shadow-xl cursor-pointer rounded-xs overflow-hidden"
+      className="group relative flex flex-col justify-between bg-[#111111]/90 zero-border-card text-[#EDEDED] transition-all duration-500 hover:shadow-[0_25px_50px_rgba(15,46,34,0.3)] hover:-translate-y-1 cursor-pointer overflow-hidden rounded-xs"
     >
       {/* Top Visual Container */}
-      <div className="relative aspect-square w-full overflow-hidden bg-[#f4f2ee] flex items-center justify-center p-6">
+      <div className="relative aspect-square w-full overflow-hidden bg-[#0a0a0a] flex items-center justify-center p-7">
+        <div className="absolute inset-0 bg-radial from-[#151515] to-[#080808] opacity-80" />
+        
         {product.image ? (
           <img
             src={product.image}
             alt={product.imageAlt || product.title}
-            className="h-full w-full object-contain transition-transform duration-700 ease-out group-hover:scale-105"
+            className="relative z-10 h-full w-full object-contain transition-transform duration-700 ease-out group-hover:scale-108"
             loading="lazy"
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center bg-[#eae7e0] p-6 text-center text-[#77746d]">
-            <div className="mb-2 text-3xl font-serif text-[#c4a66b]">V</div>
-            <span className="text-[10px] uppercase tracking-wider font-mono">VANTÉRA Craft</span>
+          <div className="relative z-10 flex h-full w-full flex-col items-center justify-center bg-[#141414] p-6 text-center text-[#77746d]">
+            <div className="mb-2 text-3xl font-editorial text-[#D4AF37]">V</div>
+            <span className="text-[10px] uppercase tracking-[0.2em] font-meta text-[#A0A09A]">VANTÉRA ATELIER</span>
           </div>
         )}
 
-        {/* Hover Quick View / Tech Specs Bar (Samsung Luxury Action) */}
+        {/* Hover Quick View / Tech Specs Bar */}
         <div
-          className={`absolute inset-x-3 bottom-3 transition-all duration-200 z-20 ${
+          className={`absolute inset-x-4 bottom-4 transition-all duration-300 z-20 ${
             isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
           }`}
         >
           <button
             type="button"
             onClick={handleQuickViewClick}
-            className="w-full bg-[#121210]/95 backdrop-blur-md text-[#f8f7f4] py-2 text-[11px] font-mono uppercase tracking-wider font-bold hover:bg-[#c4a66b] hover:text-[#121210] transition-colors rounded-xs shadow-md flex items-center justify-center gap-1.5"
+            className="w-full bg-[#0B0B0B]/95 backdrop-blur-md text-[#D4AF37] border border-[#D4AF37]/30 py-2.5 text-[10px] font-meta uppercase tracking-[0.25em] font-medium hover:bg-[#D4AF37] hover:text-[#0B0B0B] transition-colors rounded-xs shadow-xl flex items-center justify-center gap-2"
           >
-            <span>Tech Specs & Quick View</span>
+            <span>Dossier & Specifications</span>
             <span>↗</span>
           </button>
         </div>
       </div>
 
       {/* Product Body */}
-      <div className="flex flex-1 flex-col justify-between p-5 space-y-4">
+      <div className="flex flex-1 flex-col justify-between p-6 space-y-4">
         <div>
           {/* Zero-Pill Unboxed Category Kicker */}
-          <div className="text-[10px] font-mono tracking-widest uppercase text-[#77746d] flex items-center gap-1.5 mb-1.5">
+          <div className="text-[10px] font-meta tracking-[0.25em] uppercase text-[#73736E] flex items-center gap-2 mb-2">
             <span>{product.category.replace('-', ' ')}</span>
             {product.festiveHolidayTag ? (
               <>
-                <span aria-hidden="true" className="text-[#c4a66b]">·</span>
-                <span className="text-[#9d8048] font-bold">★ {product.festiveHolidayTag}</span>
+                <span aria-hidden="true" className="text-[#D4AF37]">·</span>
+                <span className="text-[#D4AF37] font-bold">★ {product.festiveHolidayTag}</span>
               </>
             ) : product.trending ? (
               <>
-                <span aria-hidden="true" className="text-[#c4a66b]">·</span>
-                <span className="text-[#9d8048] font-bold">Flagship Edit</span>
+                <span aria-hidden="true" className="text-[#D4AF37]">·</span>
+                <span className="text-[#D4AF37]">Flagship Curation</span>
               </>
             ) : null}
           </div>
 
-          <h3 className="text-sm font-bold text-[#121210] group-hover:text-[#c4a66b] transition-colors leading-snug line-clamp-2">
+          <h3 className="font-editorial text-base text-[#F5F5F0] group-hover:text-[#D4AF37] transition-colors leading-snug line-clamp-2">
             {product.title}
           </h3>
 
-          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#77746d]">
+          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#8E8E88] font-meta font-light">
             {product.description}
           </p>
 
           {/* Interactive Finish Dots */}
-          <div className="pt-3 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
+          <div className="pt-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
               {swatches.map((swatch, idx) => (
                 <button
                   key={idx}
@@ -150,38 +152,38 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
                     e.stopPropagation();
                     setSelectedFinishIndex(idx);
                   }}
-                  className={`w-3.5 h-3.5 rounded-full border border-gray-300 transition-all ${
+                  className={`w-3 h-3 rounded-full border border-white/20 transition-all ${
                     selectedFinishIndex === idx
-                      ? 'scale-125 ring-1 ring-[#121210] ring-offset-1'
-                      : 'hover:scale-110 opacity-70 hover:opacity-100'
+                      ? 'scale-125 ring-1 ring-[#D4AF37] ring-offset-1 ring-offset-[#0B0B0B]'
+                      : 'hover:scale-110 opacity-60 hover:opacity-100'
                   }`}
                   style={{ backgroundColor: swatch.hex }}
                   title={swatch.name}
                 />
               ))}
             </div>
-            <span className="text-[10px] font-mono text-[#77746d] truncate max-w-[120px]">
+            <span className="text-[10px] font-meta tracking-wider text-[#73736E] truncate max-w-[130px] uppercase">
               {swatches[selectedFinishIndex]?.name}
             </span>
           </div>
         </div>
 
         {/* Price & Action Row */}
-        <div className="pt-3 border-t border-[#e7e4de] flex items-center justify-between gap-2">
+        <div className="pt-4 flex items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[9px] uppercase tracking-wider text-[#77746d] font-mono">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] uppercase tracking-[0.2em] text-[#73736E] font-meta">
                 {product.referencePriceCents && product.referencePriceCents > product.retailPriceCents
-                  ? 'Festive Deal'
+                  ? 'Privé Reserve'
                   : `Price (${currency})`}
               </span>
               {product.referencePriceCents && product.referencePriceCents > product.retailPriceCents && (
-                <span className="text-[9px] font-mono line-through text-[#a9a69f]">
+                <span className="text-[10px] font-meta line-through text-[#555550]">
                   {formatAmount(product.referencePriceCents)}
                 </span>
               )}
             </div>
-            <div className="text-base font-extrabold text-[#121210] font-sans">
+            <div className="text-base font-editorial font-bold text-[#D4AF37]">
               {formatAmount(product.retailPriceCents)}
             </div>
           </div>
@@ -190,15 +192,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
             <button
               type="button"
               onClick={handleAddToCart}
-              aria-label={`Add ${product.title} to shopping cart`}
-              className="inline-flex items-center gap-1.5 bg-[#121210] text-[#f8f7f4] px-3.5 py-2 text-xs font-semibold uppercase tracking-wider transition-all hover:bg-[#c4a66b] hover:text-[#121210] cursor-pointer shadow-xs active:scale-95"
+              aria-label={`Add ${product.title} to shopping bag`}
+              className="gold-gradient-bg text-[#0B0B0B] px-4 py-2 text-[10px] font-meta font-bold uppercase tracking-[0.2em] hover:brightness-110 cursor-pointer shadow-md active:scale-95 transition-all"
             >
-              <span>Add</span>
-              <span aria-hidden="true" className="text-sm leading-none">+</span>
+              <span>Acquire</span>
             </button>
           ) : (
-            <span className="text-xs text-[#a9a69f] font-mono italic">
-              Coming Soon
+            <span className="text-[11px] text-[#555550] font-meta uppercase tracking-wider italic">
+              Reserved
             </span>
           )}
         </div>
