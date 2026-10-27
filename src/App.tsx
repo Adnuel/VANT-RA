@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DeviceProvider } from './contexts/DeviceContext.tsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
 import { CurrencyProvider } from './contexts/CurrencyContext.tsx';
 import { CartProvider } from './contexts/CartContext.tsx';
@@ -108,12 +109,14 @@ function MainRouter() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CurrencyProvider>
-        <CartProvider>
-          <MainRouter />
-        </CartProvider>
-      </CurrencyProvider>
-    </AuthProvider>
+    <DeviceProvider>
+      <AuthProvider>
+        <CurrencyProvider>
+          <CartProvider>
+            <MainRouter />
+          </CartProvider>
+        </CurrencyProvider>
+      </AuthProvider>
+    </DeviceProvider>
   );
 }

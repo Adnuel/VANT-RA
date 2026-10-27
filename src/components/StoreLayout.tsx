@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
 import { CartDrawer } from './CartDrawer.tsx';
 import { AndroidInstallModal } from './AndroidInstallModal.tsx';
-import { downloadProjectZip } from '../lib/downloadZip.ts';
+import { useDevice } from '../contexts/DeviceContext.tsx';
 
 interface StoreLayoutProps {
   children: React.ReactNode;
@@ -33,6 +33,15 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
   const { itemCount, setIsCartOpen } = useCart();
   const { user, logoutCustomer } = useAuth();
   const { currency, setCurrency } = useCurrency();
+  const {
+    isPhone,
+    isTablet,
+    isDesktop,
+    activeMode,
+    setActiveMode,
+    deviceType,
+    isSimulatedPhone,
+  } = useDevice();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -133,7 +142,50 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
           </div>
 
           {/* Right Actions - Ultra-refined Gold & Obsidian Controls */}
-          <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6 shrink-0">
+            {/* Device Layout Switcher (Automatic detection or manual override) */}
+            <div className="hidden md:flex items-center gap-1 text-[9px] font-mono tracking-wider bg-[#141414] p-1 rounded-xs border border-white/5">
+              <span className="text-[#6C6A64] px-1 font-meta">DEVICE:</span>
+              <button
+                type="button"
+                onClick={() => setActiveMode('auto')}
+                title={`Automatic Responsive: Currently detected as ${deviceType}`}
+                className={`px-2 py-0.5 rounded-xs transition-colors cursor-pointer ${
+                  activeMode === 'auto'
+                    ? 'text-[#D4AF37] font-bold bg-[#D4AF37]/15'
+                    : 'text-[#6C6A64] hover:text-[#EDEDED]'
+                }`}
+              >
+                AUTO
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMode('phone')}
+                title="Switch to Phone Size & Layout"
+                className={`px-2 py-0.5 rounded-xs transition-colors cursor-pointer flex items-center gap-1 ${
+                  activeMode === 'phone'
+                    ? 'text-[#D4AF37] font-bold bg-[#D4AF37]/15'
+                    : 'text-[#6C6A64] hover:text-[#EDEDED]'
+                }`}
+              >
+                <span>📱</span>
+                <span>PHONE</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMode('desktop')}
+                title="Switch to Desktop Size & Layout"
+                className={`px-2 py-0.5 rounded-xs transition-colors cursor-pointer flex items-center gap-1 ${
+                  activeMode === 'desktop'
+                    ? 'text-[#D4AF37] font-bold bg-[#D4AF37]/15'
+                    : 'text-[#6C6A64] hover:text-[#EDEDED]'
+                }`}
+              >
+                <span>💻</span>
+                <span>DESKTOP</span>
+              </button>
+            </div>
+
             {/* Currency Selector (USD / NGN) */}
             <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono tracking-widest text-[#7E7B74]">
               <button
@@ -284,23 +336,52 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                 <span>↗</span>
               </a>
             </nav>
-            <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-mono">
-              <span className="text-[#7E7B74]">Currency:</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrency('USD')}
-                  className={`px-3 py-1 rounded-xs ${currency === 'USD' ? 'text-[#D4AF37] bg-white/5 font-bold' : 'text-[#7E7B74]'}`}
-                >
-                  USD ($)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrency('NGN')}
-                  className={`px-3 py-1 rounded-xs ${currency === 'NGN' ? 'text-[#D4AF37] bg-white/5 font-bold' : 'text-[#7E7B74]'}`}
-                >
-                  NGN (₦)
-                </button>
+            <div className="pt-4 border-t border-white/5 space-y-3 text-xs font-mono">
+              <div className="flex items-center justify-between">
+                <span className="text-[#7E7B74]">Currency:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrency('USD')}
+                    className={`px-3 py-1 rounded-xs ${currency === 'USD' ? 'text-[#D4AF37] bg-white/5 font-bold' : 'text-[#7E7B74]'}`}
+                  >
+                    USD ($)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency('NGN')}
+                    className={`px-3 py-1 rounded-xs ${currency === 'NGN' ? 'text-[#D4AF37] bg-white/5 font-bold' : 'text-[#7E7B74]'}`}
+                  >
+                    NGN (₦)
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                <span className="text-[#7E7B74]">Device Layout:</span>
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setActiveMode('auto')}
+                    className={`px-2 py-1 rounded-xs ${activeMode === 'auto' ? 'text-[#D4AF37] bg-[#D4AF37]/15 font-bold' : 'text-[#7E7B74]'}`}
+                  >
+                    AUTO
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMode('phone')}
+                    className={`px-2 py-1 rounded-xs ${activeMode === 'phone' ? 'text-[#D4AF37] bg-[#D4AF37]/15 font-bold' : 'text-[#7E7B74]'}`}
+                  >
+                    PHONE
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMode('desktop')}
+                    className={`px-2 py-1 rounded-xs ${activeMode === 'desktop' ? 'text-[#D4AF37] bg-[#D4AF37]/15 font-bold' : 'text-[#7E7B74]'}`}
+                  >
+                    DESKTOP
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -375,8 +456,185 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
         </div>
       )}
 
-      {/* Main Page Slot */}
-      <main className="flex-1 relative z-10">{children}</main>
+      {/* Main Page Slot with Automatic Device Size & Responsive Switching */}
+      {isSimulatedPhone ? (
+        <div className="py-8 px-4 flex flex-col items-center bg-[#070707] min-h-[calc(100vh-80px)]">
+          {/* Simulated phone indicator pill */}
+          <div className="mb-4 bg-[#141414] border border-[#D4AF37]/30 px-4 py-1.5 rounded-full text-[11px] font-meta uppercase text-[#D4AF37] flex items-center gap-3 shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-[#34A853] animate-pulse"></span>
+            <span>📱 PHONE SIZE ACTIVE (390px × 844px)</span>
+            <button
+              onClick={() => setActiveMode('auto')}
+              className="text-[#EDEDED] hover:text-[#D4AF37] underline text-[10px] ml-2 cursor-pointer font-bold"
+            >
+              Back to Auto
+            </button>
+            <button
+              onClick={() => setActiveMode('desktop')}
+              className="text-[#EDEDED] hover:text-[#D4AF37] underline text-[10px] cursor-pointer"
+            >
+              Desktop
+            </button>
+          </div>
+
+          {/* Smartphone Bezel & Viewport Frame */}
+          <div className="w-full max-w-[400px] bg-[#0B0B0B] rounded-[44px] border-[10px] border-[#222224] shadow-[0_25px_80px_rgba(0,0,0,0.98),0_0_60px_rgba(212,175,55,0.15)] overflow-hidden relative min-h-[820px] flex flex-col">
+            {/* Dynamic Island & Status Bar */}
+            <div className="sticky top-0 z-50 bg-[#0B0B0B]/95 backdrop-blur-md px-6 pt-3 pb-2 flex items-center justify-between text-[11px] font-mono text-[#A9A69F] border-b border-white/5">
+              <span>9:41</span>
+              <div className="w-24 h-4 bg-black rounded-full border border-white/10" />
+              <div className="flex items-center gap-1.5">
+                <span>5G</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            <main className="flex-1 relative z-10 pb-20">{children}</main>
+
+            {/* Mobile Native App Bottom Navigation Bar inside phone simulator */}
+            <nav
+              aria-label="Mobile Navigation"
+              className="sticky bottom-0 inset-x-0 z-40 bg-[#0E0E0E]/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-around py-2 px-3 shadow-[0_-10px_30px_rgba(0,0,0,0.8)]"
+            >
+              <button
+                type="button"
+                onClick={() => onNavigate('/')}
+                className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 transition-colors cursor-pointer ${
+                  activePath === '/' ? 'text-[#D4AF37]' : 'text-[#8E8B82] hover:text-[#EDEDED]'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={activePath === '/' ? 2.2 : 1.7} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span className="text-[9px] font-meta uppercase tracking-wider font-medium">Atelier</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('/shop')}
+                className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 transition-colors cursor-pointer ${
+                  activePath.includes('shop') || activePath.includes('category') ? 'text-[#D4AF37]' : 'text-[#8E8B82] hover:text-[#EDEDED]'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={activePath.includes('shop') ? 2.2 : 1.7} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                <span className="text-[9px] font-meta uppercase tracking-wider font-medium">Finds</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen(true)}
+                className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 text-[#8E8B82] hover:text-[#D4AF37] transition-colors cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="text-[9px] font-meta uppercase tracking-wider font-medium">Search</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(true)}
+                className="relative flex flex-col items-center justify-center gap-1 py-1 px-2.5 text-[#8E8B82] hover:text-[#D4AF37] transition-colors cursor-pointer"
+              >
+                <div className="relative">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  {itemCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-mono text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                      {itemCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[9px] font-meta uppercase tracking-wider font-medium">Bag</span>
+              </button>
+              <a
+                href="https://wa.me/2349132793670"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 text-[#5E8A75] hover:text-[#D4AF37] transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.815.82 2.8.82 3.18 0 5.767-2.586 5.768-5.766 0-3.18-2.587-5.766-5.772-5.766zm0-1.672c4.103 0 7.437 3.334 7.437 7.438 0 4.103-3.334 7.438-7.438 7.438-1.218 0-2.378-.303-3.398-.862l-4.633 1.216 1.237-4.521c-.636-1.077-.978-2.308-.978-3.271 0-4.104 3.334-7.438 7.438-7.438z" />
+                </svg>
+                <span className="text-[9px] font-meta uppercase tracking-wider font-medium">VIP</span>
+              </a>
+            </nav>
+          </div>
+        </div>
+      ) : (
+        <>
+          <main className={`flex-1 relative z-10 ${isPhone ? 'pb-20' : ''}`}>{children}</main>
+
+          {/* Native Mobile App Bottom Navigation Bar for Real Phone View */}
+          <nav
+            aria-label="Mobile Navigation"
+            className="fixed bottom-0 inset-x-0 z-40 bg-[#0E0E0E]/95 backdrop-blur-xl border-t border-white/10 md:hidden flex items-center justify-around py-2 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.8)]"
+          >
+            <button
+              type="button"
+              onClick={() => onNavigate('/')}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 transition-colors cursor-pointer ${
+                activePath === '/' ? 'text-[#D4AF37]' : 'text-[#8E8B82] hover:text-[#EDEDED]'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={activePath === '/' ? 2.2 : 1.7} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span className="text-[10px] font-meta uppercase tracking-wider font-medium">Atelier</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('/shop')}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 transition-colors cursor-pointer ${
+                activePath.includes('shop') || activePath.includes('category') ? 'text-[#D4AF37]' : 'text-[#8E8B82] hover:text-[#EDEDED]'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={activePath.includes('shop') ? 2.2 : 1.7} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              <span className="text-[10px] font-meta uppercase tracking-wider font-medium">Finds</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 text-[#8E8B82] hover:text-[#D4AF37] transition-colors cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span className="text-[10px] font-meta uppercase tracking-wider font-medium">Search</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="relative flex flex-col items-center justify-center gap-1 py-1 px-2.5 text-[#8E8B82] hover:text-[#D4AF37] transition-colors cursor-pointer"
+            >
+              <div className="relative">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                {itemCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-mono text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                    {itemCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-meta uppercase tracking-wider font-medium">Bag</span>
+            </button>
+            <a
+              href="https://wa.me/2349132793670"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center justify-center gap-1 py-1 px-2.5 text-[#5E8A75] hover:text-[#D4AF37] transition-colors"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.815.82 2.8.82 3.18 0 5.767-2.586 5.768-5.766 0-3.18-2.587-5.766-5.772-5.766zm0-1.672c4.103 0 7.437 3.334 7.437 7.438 0 4.103-3.334 7.438-7.438 7.438-1.218 0-2.378-.303-3.398-.862l-4.633 1.216 1.237-4.521c-.636-1.077-.978-2.308-.978-3.271 0-4.104 3.334-7.438 7.438-7.438z" />
+              </svg>
+              <span className="text-[10px] font-meta uppercase tracking-wider font-medium">VIP</span>
+            </a>
+          </nav>
+        </>
+      )}
 
       {/* Luxury Colophon Footer - Zero hard borders, Velvet Emerald ambient glow */}
       <footer className="relative z-10 bg-gradient-to-b from-[#0B0B0B] via-[#091410] to-[#070D0B] pt-24 pb-16 text-[#A9A69F]">
@@ -563,6 +821,18 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                 <span>📱</span>
                 <span>Android App</span>
               </button>
+              <span>·</span>
+              <div className="inline-flex items-center gap-1 text-[10px] font-mono">
+                <span className="text-[#6C6A64]">DEVICE:</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveMode(activeMode === 'phone' ? 'desktop' : activeMode === 'desktop' ? 'auto' : 'phone')}
+                  className="text-[#D4AF37] hover:underline cursor-pointer uppercase font-semibold"
+                  title="Click to cycle between Auto, Phone, and Desktop view"
+                >
+                  {activeMode.toUpperCase()} ({isPhone ? '📱 PHONE' : '💻 DESKTOP'})
+                </button>
+              </div>
             </div>
           </div>
         </div>

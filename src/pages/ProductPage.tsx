@@ -96,6 +96,9 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                 alt={product.imageAlt || product.title}
                 className="relative z-10 max-h-full max-w-full object-contain transition-transform duration-700 ease-out group-hover:scale-108"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/products/charging-phone-stand.jpg';
+                }}
               />
             ) : (
               <div className="relative z-10 text-center text-[#77746d]">

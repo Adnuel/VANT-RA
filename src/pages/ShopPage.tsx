@@ -124,24 +124,24 @@ export const ShopPage: React.FC<ShopPageProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 font-sans">
       {/* Masthead */}
-      <div className="border-b border-[#e7e4de] pb-8">
-        <div className="text-[10px] uppercase tracking-widest font-mono text-[#c4a66b] mb-2">
+      <div className="border-b border-white/5 pb-8">
+        <div className="text-[10px] uppercase tracking-[0.25em] font-meta text-[#D4AF37] mb-2">
           {activeFilter !== 'all'
             ? `COLLECTION / ${activeFilter.toUpperCase()}`
             : selectedCategory === 'all'
-            ? 'FULL CATALOGUE'
+            ? 'ATELIER PERMANENT COLLECTION'
             : `CATEGORY / ${selectedCategory.toUpperCase()}`}
         </div>
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#121210]">
+        <h1 className="text-3xl sm:text-5xl font-editorial font-bold tracking-[0.14em] uppercase text-[#F8F7F4]">
           {getPageHeading()}
         </h1>
-        <p className="mt-2 text-xs sm:text-sm text-[#77746d] max-w-2xl leading-relaxed">
+        <p className="mt-2 text-xs sm:text-sm text-[#8E8B82] max-w-2xl leading-relaxed font-light">
           {selectedCategory === 'phones'
             ? 'Flagship phones inventory is currently under VIP preview and marked Coming Soon. Check back for verified models and direct delivery.'
             : 'Explore high-grade phone protection, MagSafe ecosystem hardware, ambient spatial desk illumination, audio equipment, and high-speed charging.'}
         </p>
 
-        {/* Samsung-style Segment Filter Tabs */}
+        {/* Segment Filter Tabs */}
         <div className="flex items-center gap-2 pt-6 flex-wrap">
           <button
             type="button"
@@ -150,10 +150,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setSelectedCategory('all');
               onNavigate('/shop');
             }}
-            className={`px-4 py-2 text-xs font-semibold tracking-wider uppercase transition-all rounded-full cursor-pointer ${
+            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer ${
               activeFilter === 'all' && selectedCategory === 'all'
-                ? 'bg-[#121210] !text-white shadow-xs'
-                : 'bg-white border border-[#e7e4de] text-[#77746d] hover:border-[#121210] hover:text-[#121210]'
+                ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
+                : 'bg-[#141414] border border-white/10 text-[#8E8B82] hover:text-[#EDEDED]'
             }`}
           >
             All Products ({products.length})
@@ -164,15 +164,13 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('all');
               setSelectedCategory('festive-season');
             }}
-            className={`px-4 py-2 text-xs font-semibold tracking-wider uppercase transition-all rounded-full cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer inline-flex items-center gap-1.5 ${
               selectedCategory === 'festive-season'
-                ? 'bg-[#121210] !text-white shadow-xs font-bold'
-                : 'bg-white border border-[#c4a66b] text-[#9d8048] hover:bg-[#c4a66b] hover:text-[#121210]'
+                ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
+                : 'bg-[#141414] border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10'
             }`}
           >
-            <svg className="w-3.5 h-3.5 text-[#c4a66b]" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
+            <span className="text-[#D4AF37]">✦</span>
             <span>Festive Bestsellers</span>
           </button>
           <button
@@ -181,10 +179,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('featured');
               onNavigate('/shop?filter=featured');
             }}
-            className={`px-4 py-2 text-xs font-semibold tracking-wider uppercase transition-all rounded-full cursor-pointer ${
+            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer ${
               activeFilter === 'featured'
-                ? 'bg-[#121210] !text-white shadow-xs'
-                : 'bg-white border border-[#e7e4de] text-[#77746d] hover:border-[#121210] hover:text-[#121210]'
+                ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
+                : 'bg-[#141414] border border-white/10 text-[#8E8B82] hover:text-[#EDEDED]'
             }`}
           >
             Featured Highlights
@@ -195,10 +193,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('new');
               onNavigate('/shop?filter=new');
             }}
-            className={`px-4 py-2 text-xs font-semibold tracking-wider uppercase transition-all rounded-full cursor-pointer ${
+            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer ${
               activeFilter === 'new'
-                ? 'bg-[#121210] !text-white shadow-xs'
-                : 'bg-white border border-[#e7e4de] text-[#77746d] hover:border-[#121210] hover:text-[#121210]'
+                ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
+                : 'bg-[#141414] border border-white/10 text-[#8E8B82] hover:text-[#EDEDED]'
             }`}
           >
             New Arrivals
@@ -209,10 +207,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('deals');
               onNavigate('/shop?filter=deals');
             }}
-            className={`px-4 py-2 text-xs font-bold tracking-wider uppercase transition-all rounded-full cursor-pointer ${
+            className={`px-4 py-2 text-xs font-meta uppercase tracking-wider transition-all rounded-xs cursor-pointer ${
               activeFilter === 'deals'
-                ? 'bg-[#121210] !text-white shadow-xs'
-                : 'bg-white border border-[#c4a66b] text-[#9d8048] hover:bg-[#c4a66b]/10'
+                ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] font-bold shadow-xs'
+                : 'bg-[#141414] border border-white/10 text-[#8E8B82] hover:text-[#EDEDED]'
             }`}
           >
             Special Offers & Deals %
@@ -230,10 +228,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setSelectedCategory('all');
               onNavigate('/shop');
             }}
-            className={`px-3 py-1.5 text-xs tracking-wider uppercase transition-colors shrink-0 rounded-xs cursor-pointer ${
+            className={`px-3 py-1.5 text-xs font-meta tracking-wider uppercase transition-colors shrink-0 rounded-xs cursor-pointer ${
               selectedCategory === 'all'
-                ? 'bg-[#121210] !text-white font-medium'
-                : 'bg-white border border-[#e7e4de] text-[#77746d] hover:border-[#121210] hover:text-[#121210]'
+                ? 'bg-[#1C1C1C] text-[#D4AF37] font-bold border border-[#D4AF37]/40'
+                : 'bg-[#121212] border border-white/5 text-[#8E8B82] hover:text-[#EDEDED]'
             }`}
           >
             Every Category
@@ -250,10 +248,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
                   setSelectedCategory(cat.id);
                   onNavigate(`/category/${cat.id}`);
                 }}
-                className={`px-3 py-1.5 text-xs tracking-wider uppercase transition-colors shrink-0 rounded-xs cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-meta tracking-wider uppercase transition-colors shrink-0 rounded-xs cursor-pointer ${
                   isSelected
-                    ? 'bg-[#121210] !text-white font-medium'
-                    : 'bg-white border border-[#e7e4de] text-[#77746d] hover:border-[#121210] hover:text-[#121210]'
+                    ? 'bg-[#1C1C1C] text-[#D4AF37] font-bold border border-[#D4AF37]/40'
+                    : 'bg-[#121212] border border-white/5 text-[#8E8B82] hover:text-[#EDEDED]'
                 }`}
               >
                 {cat.label} ({count})
@@ -271,12 +269,12 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products in this collection..."
-              className="w-full bg-white border border-[#e7e4de] px-3.5 py-2 text-xs text-[#121210] placeholder-[#a9a69f] focus:border-[#121210] focus:outline-hidden"
+              className="w-full bg-[#141414] border border-white/10 px-3.5 py-2.5 text-xs text-[#EDEDED] placeholder-[#6C6A64] focus:border-[#D4AF37] focus:outline-hidden rounded-xs transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 text-xs text-[#77746d] hover:text-[#121210]"
+                className="absolute right-3 top-3 text-xs text-[#8E8B82] hover:text-[#D4AF37]"
               >
                 ✕
               </button>
@@ -285,39 +283,39 @@ export const ShopPage: React.FC<ShopPageProps> = ({
 
           {/* Sort selection */}
           <div className="flex items-center gap-3">
-            <span className="text-xs text-[#77746d] shrink-0 font-mono">SORT:</span>
+            <span className="text-xs text-[#6C6A64] shrink-0 font-meta tracking-wider">SORT:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-white border border-[#e7e4de] px-3 py-2 text-xs text-[#121210] focus:border-[#121210] focus:outline-hidden cursor-pointer"
+              className="bg-[#141414] border border-white/10 px-3 py-2 text-xs text-[#EDEDED] focus:border-[#D4AF37] focus:outline-hidden cursor-pointer rounded-xs"
             >
-              <option value="featured">Featured / Curated Order</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="name-asc">Alphabetical: A - Z</option>
+              <option value="featured" className="bg-[#141414] text-[#EDEDED]">Featured / Curated Order</option>
+              <option value="price-asc" className="bg-[#141414] text-[#EDEDED]">Price: Low to High</option>
+              <option value="price-desc" className="bg-[#141414] text-[#EDEDED]">Price: High to Low</option>
+              <option value="name-asc" className="bg-[#141414] text-[#EDEDED]">Alphabetical: A - Z</option>
             </select>
           </div>
         </div>
       </div>
 
       {/* Results status */}
-      <div className="flex items-center justify-between text-xs text-[#77746d] pt-2">
+      <div className="flex items-center justify-between text-xs text-[#6C6A64] pt-2 font-meta">
         <span>
-          Showing <strong>{sortedProducts.length}</strong> of {products.length} products
+          Showing <strong className="text-[#EDEDED]">{sortedProducts.length}</strong> of {products.length} products
         </span>
         {searchQuery && (
           <span>
-            Filtering by: <em className="text-[#121210]">"{searchQuery}"</em>
+            Filtering by: <em className="text-[#D4AF37]">"{searchQuery}"</em>
           </span>
         )}
       </div>
 
-      {/* Products Grid */}
+      {/* Products Grid: 2 columns on phone screens, 2 on sm, 4 on desktop */}
       {sortedProducts.length === 0 ? (
-        <div className="border border-[#e7e4de] bg-white p-16 text-center space-y-4">
-          <div className="font-serif text-3xl text-[#77746d]">V</div>
-          <h3 className="text-lg font-bold text-[#121210]">No products matched your criteria</h3>
-          <p className="text-xs text-[#77746d] max-w-sm mx-auto">
+        <div className="border border-white/5 bg-[#121212] p-16 text-center space-y-4 rounded-xs">
+          <div className="font-editorial text-4xl text-[#D4AF37]">V</div>
+          <h3 className="text-lg font-editorial font-bold text-[#F8F7F4]">No products matched your criteria</h3>
+          <p className="text-xs text-[#8E8B82] max-w-sm mx-auto font-light">
             Try adjusting your search terms or selecting another curated category from the list above.
           </p>
           <button
@@ -327,13 +325,13 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setActiveFilter('all');
               onNavigate('/shop');
             }}
-            className="bg-[#121210] text-[#f8f7f4] px-5 py-2.5 text-xs uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210] cursor-pointer"
+            className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-[#0B0B0B] px-6 py-2.5 text-xs font-meta uppercase tracking-wider font-bold rounded-xs hover:shadow-lg transition-all cursor-pointer"
           >
             Clear all filters
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {sortedProducts.map((product) => (
             <ProductCard
               key={product.id}

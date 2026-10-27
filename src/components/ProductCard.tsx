@@ -79,7 +79,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
       className="group relative flex flex-col justify-between bg-[#111111]/90 zero-border-card text-[#EDEDED] transition-all duration-500 hover:shadow-[0_25px_50px_rgba(15,46,34,0.3)] hover:-translate-y-1 cursor-pointer overflow-hidden rounded-xs"
     >
       {/* Top Visual Container */}
-      <div className="relative aspect-square w-full overflow-hidden bg-[#0a0a0a] flex items-center justify-center p-7">
+      <div className="relative aspect-square w-full overflow-hidden bg-[#0a0a0a] flex items-center justify-center p-3 sm:p-7">
         <div className="absolute inset-0 bg-radial from-[#151515] to-[#080808] opacity-80" />
         
         {product.image ? (
@@ -89,9 +89,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
             className="relative z-10 h-full w-full object-contain transition-transform duration-700 ease-out group-hover:scale-108"
             loading="lazy"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/products/charging-phone-stand.jpg';
+            }}
           />
         ) : (
-          <div className="relative z-10 flex h-full w-full flex-col items-center justify-center bg-[#141414] p-6 text-center text-[#77746d]">
+          <div className="relative z-10 flex h-full w-full flex-col items-center justify-center bg-[#141414] p-4 text-center text-[#77746d]">
             <div className="mb-2 text-3xl font-editorial text-[#D4AF37]">V</div>
             <span className="text-[10px] uppercase tracking-[0.2em] font-meta text-[#A0A09A]">VANTÉRA ATELIER</span>
           </div>
@@ -99,23 +102,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
 
         {/* Hover Quick View / Tech Specs Bar */}
         <div
-          className={`absolute inset-x-4 bottom-4 transition-all duration-300 z-20 ${
+          className={`absolute inset-x-2 sm:inset-x-4 bottom-2 sm:bottom-4 transition-all duration-300 z-20 ${
             isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
           }`}
         >
           <button
             type="button"
             onClick={handleQuickViewClick}
-            className="w-full bg-[#0B0B0B]/95 backdrop-blur-md text-[#D4AF37] border border-[#D4AF37]/30 py-2.5 text-[10px] font-meta uppercase tracking-[0.25em] font-medium hover:bg-[#D4AF37] hover:text-[#0B0B0B] transition-colors rounded-xs shadow-xl flex items-center justify-center gap-2"
+            className="w-full bg-[#0B0B0B]/95 backdrop-blur-md text-[#D4AF37] border border-[#D4AF37]/30 py-2 sm:py-2.5 text-[9px] sm:text-[10px] font-meta uppercase tracking-[0.2em] font-medium hover:bg-[#D4AF37] hover:text-[#0B0B0B] transition-colors rounded-xs shadow-xl flex items-center justify-center gap-1.5"
           >
-            <span>Dossier & Specifications</span>
+            <span>Dossier</span>
             <span>↗</span>
           </button>
         </div>
       </div>
 
       {/* Product Body */}
-      <div className="flex flex-1 flex-col justify-between p-6 space-y-4">
+      <div className="flex flex-1 flex-col justify-between p-3.5 sm:p-6 space-y-3 sm:space-y-4">
         <div>
           {/* Zero-Pill Unboxed Category Kicker */}
           <div className="text-[10px] font-meta tracking-[0.25em] uppercase text-[#73736E] flex items-center gap-2 mb-2">
@@ -193,7 +196,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
               type="button"
               onClick={handleAddToCart}
               aria-label={`Add ${product.title} to shopping bag`}
-              className="gold-gradient-bg text-[#0B0B0B] px-4 py-2 text-[10px] font-meta font-bold uppercase tracking-[0.2em] hover:brightness-110 cursor-pointer shadow-md active:scale-95 transition-all"
+              className="gold-gradient-bg text-[#0B0B0B] px-2.5 sm:px-4 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-meta font-bold uppercase tracking-[0.18em] hover:brightness-110 cursor-pointer shadow-md active:scale-95 transition-all shrink-0 rounded-xs"
             >
               <span>Acquire</span>
             </button>

@@ -47,7 +47,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
         id: 'titanium-radial-grooves',
         name: 'Aerospace Titanium Alloy',
         subtitle: 'Micro-Precision Radial Thermal Grooves',
-        image: '/src/assets/images/material_macro_titanium_grooves_1793125422158.jpg',
+        image: '/products/charging-phone-stand.jpg',
         specPill: 'GRADE-5 TITANIUM · 0.02MM LATHE',
         craftsmanshipNotes:
           'Sculpted from forged solid titanium bars using multi-axis CNC lathe cutters. The concentric ridges dissipate heat under 15W MagSafe continuous induction while providing an unmistakable haptic texture.',
@@ -59,7 +59,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
         id: 'ceramic-velvet-matrix',
         name: 'Obsidian Ceramic & Velvet Emerald',
         subtitle: 'Diamond-Lapped Mirror Surface & Hand-Finished Hide',
-        image: '/src/assets/images/material_macro_ceramic_matrix_1793125423087.jpg',
+        image: '/products/transparent-magsafe-compatible-case.jpg',
         specPill: 'ZIRCONIUM MATRIX · LIQUID GOLD SEAM',
         craftsmanshipNotes:
           'High-density zirconium oxide sintered at 1,500°C for sapphire-level scratch immunity, seamlessly paired with Italian velvet emerald hide through an immaculate liquid gold hand-stitched border.',
@@ -71,7 +71,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
         id: 'champagne-conductive-brass',
         name: 'Liquid Champagne Brass',
         subtitle: 'Micro-Brushed Magnetic Induction Architecture',
-        image: '/src/assets/images/material_macro_brass_conductive_1793125423921.jpg',
+        image: '/products/magnetic-phone-mount.jpg',
         specPill: 'HIGH-CONDUCTIVITY BRASS · CIRCULAR GRAIN',
         craftsmanshipNotes:
           'Solid unlacquered champagne brass machined with microscopic circular brush grain to catch directional studio light. Serves as the conductive grounding ring for ultra-fast wireless energy transfer.',
@@ -101,6 +101,15 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setPanPosition({ x, y });
+  };
+
+  const handleTouchMoveOverMacro = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!e.touches || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
     setPanPosition({ x, y });
   };
 
@@ -170,10 +179,13 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
 
             <div className="relative rounded-xs overflow-hidden max-w-xl sm:max-w-2xl mx-auto shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_50px_rgba(15,46,34,0.35)] transition-transform duration-700 ease-out group-hover:scale-[1.015]">
               <img
-                src="/src/assets/images/hero_obsidian_gold_monolith_1793125421730.jpg"
+                src="/vantera-flagship-hero.jpg"
                 alt="VANTÉRA Sculptural Obsidian and Champagne Gold Wireless Dock Station"
                 className="w-full h-auto object-cover"
                 loading="eager"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/products/charging-phone-stand.jpg';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0B] via-transparent to-transparent opacity-60" />
             </div>
@@ -531,8 +543,10 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
 
             {/* Left: Interactive Macro Pan & Zoom Viewport */}
             <div
-              className="lg:w-7/12 relative bg-black flex items-center justify-center overflow-hidden cursor-crosshair min-h-[350px] sm:min-h-[460px]"
+              className="lg:w-7/12 relative bg-black flex items-center justify-center overflow-hidden cursor-crosshair min-h-[350px] sm:min-h-[460px] touch-none"
               onMouseMove={handleMouseMoveOverMacro}
+              onTouchMove={handleTouchMoveOverMacro}
+              onTouchStart={handleTouchMoveOverMacro}
             >
               <div
                 className="w-full h-full relative transition-transform duration-100 ease-out flex items-center justify-center"
