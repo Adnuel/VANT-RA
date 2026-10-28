@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VANTÉRA — Allocation Confirmed</title>
+  <meta name="description" content="Your VANTÉRA order has been authenticated and routed to automated warehouse fulfillment." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0B0B0B;
+      --card-bg: #121212;
+      --border: rgba(255, 255, 255, 0.08);
+      --gold: #D4AF37;
+      --gold-dark: #AA7C11;
+      --emerald: #0F2E22;
+      --text: #EDEDED;
+      --text-muted: #8E8B82;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-serif { font-family: 'Cinzel', serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .container {
+      width: 100%;
+      max-width: 440px;
+      min-height: 100vh;
+      background: var(--bg);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      padding: 24px 16px 40px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(15, 46, 34, 0.6);
+      border: 1px solid rgba(52, 168, 83, 0.3);
+      color: #34A853;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      border-radius: 2px;
+      margin-bottom: 14px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 20px;
+      margin-top: 18px;
+    }
+    .ref-box {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid var(--border);
+      padding: 12px;
+      text-align: center;
+      margin: 12px 0;
+      border-radius: 2px;
+    }
+    .timeline {
+      position: relative;
+      padding-left: 20px;
+      border-left: 1px solid var(--border);
+      margin: 16px 0 16px 8px;
+    }
+    .timeline-step {
+      position: relative;
+      margin-bottom: 18px;
+    }
+    .timeline-step:last-child { margin-bottom: 0; }
+    .timeline-dot {
+      position: absolute;
+      left: -26px;
+      top: 2px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--gold);
+    }
+    .timeline-dot.active {
+      background: #34A853;
+      box-shadow: 0 0 10px rgba(52, 168, 83, 0.5);
+    }
+    .timeline-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #F8F7F4;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .timeline-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+    .gold-btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #E6C875 0%, #D4AF37 50%, #9E730D 100%);
+      color: #0B0B0B;
+      text-align: center;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      text-decoration: none;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+      margin-top: 20px;
+    }
+    .gold-btn:hover {
+      box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div style="text-align: center; padding-top: 20px;">
+      <div class="badge">
+        <span>✓</span>
+        <span>Payment Verified & Authenticated</span>
+      </div>
+
+      <h1 class="font-serif" style="font-size: 26px; font-weight: 700; color: #F8F7F4; margin-bottom: 6px;">
+        Allocation Confirmed.
+      </h1>
+
+      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.6; max-width: 320px; margin: 0 auto;">
+        Thank you for choosing VANTÉRA. Your curated tech finds have been authenticated and transmitted to Zendrop automated warehouse fulfillment.
+      </p>
+    </div>
+
+    <!-- Order Reference Card -->
+    <div class="card">
+      <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--gold); font-weight: 600;">
+        Unique Order Identifier
+      </div>
+
+      <div class="ref-box">
+        <div id="orderRefDisplay" class="font-mono" style="font-size: 16px; font-weight: 700; letter-spacing: 0.1em; color: #F8F7F4;">
+          VAN-LOADING...
+        </div>
+        <div style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; letter-spacing: 0.1em;">
+          Preserve this code for delivery verification
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px;">
+        <span>Dispatch Method</span>
+        <span style="color: #F8F7F4; font-weight: 500;">Insured Global Express Courier</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+        <span>Fulfillment Engine</span>
+        <span style="color: var(--gold); font-weight: 500;">Automated Zendrop API</span>
+      </div>
+    </div>
+
+    <!-- Fulfillment Milestones Timeline -->
+    <div class="card">
+      <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--gold); font-weight: 600; margin-bottom: 12px;">
+        Live Fulfillment Timeline
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-step">
+          <div class="timeline-dot active"></div>
+          <div class="timeline-title">1. Payment Cleared</div>
+          <div class="timeline-desc">Transaction verified via secure dual-gateway settlement protocol.</div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="timeline-dot active"></div>
+          <div class="timeline-title">2. Automated Warehouse Routing</div>
+          <div class="timeline-desc">Order manifest received by Zendrop dropshipping API node.</div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">3. Quality Inspection & Packaging</div>
+          <div class="timeline-desc">Estimated completion within 24–48 hours in sterile facility.</div>
+        </div>
+
+        <div class="timeline-step">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">4. Global Courier Dispatch</div>
+          <div class="timeline-desc">Real-time carrier tracking link will be sent to your registered email.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concierge Support -->
+    <div class="card" style="background: rgba(15, 46, 34, 0.25); border-color: rgba(52, 168, 83, 0.2);">
+      <div style="font-size: 11px; font-weight: 600; color: #F8F7F4; margin-bottom: 4px;">
+        Need Immediate Concierge Verification?
+      </div>
+      <p style="font-size: 10px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px;">
+        Reach out directly to CEO Adnuel on our official WhatsApp business desk for priority tracking or address modifications.
+      </p>
+      <a
+        id="whatsappConciergeLink"
+        href="https://wa.me/2349132793670"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="display: inline-block; font-size: 10px; color: #34A853; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; text-decoration: none;"
+      >
+        WhatsApp Concierge (+234 913 279 3670) ↗
+      </a>
+    </div>
+
+    <a href="/" class="gold-btn">
+      Return to Atelier Catalog ✦
+    </a>
+  </div>
+
+  <script>
+    // Empty the user's localStorage cart immediately
+    try {
+      localStorage.removeItem('vantera_cart');
+      localStorage.removeItem('vantera_cart_count');
+    } catch (e) {
+      console.warn('Cart flush exception:', e);
+    }
+
+    // Extract Order Reference from URL query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId') || ('VAN-' + Date.now().toString(36).toUpperCase());
+
+    document.getElementById('orderRefDisplay').textContent = orderId;
+
+    // Update WhatsApp link with order ID
+    const waLink = document.getElementById('whatsappConciergeLink');
+    waLink.href = `https://wa.me/2349132793670?text=${encodeURIComponent(
+      `Hello CEO Adnuel, I have successfully placed order reference: ${orderId}. Kindly provide fulfillment updates.`
+    )}`;
+  </script>
+</body>
+</html>

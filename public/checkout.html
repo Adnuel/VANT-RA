@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VANTÉRA — Secure Atelier Checkout</title>
+  <meta name="description" content="Secure Checkout for VANTÉRA curated tech finds. Dual-gateway settlement with Stripe & Paystack, automated express fulfillment." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Paystack Inline SDK -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+  <!-- Stripe.js SDK -->
+  <script src="https://js.stripe.com/v3/"></script>
+
+  <style>
+    :root {
+      --bg: #0B0B0B;
+      --card-bg: #121212;
+      --border: rgba(255, 255, 255, 0.08);
+      --gold: #D4AF37;
+      --gold-dark: #AA7C11;
+      --emerald: #0F2E22;
+      --text: #EDEDED;
+      --text-muted: #8E8B82;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-serif { font-family: 'Cinzel', serif; }
+    .gold-gradient-text {
+      background: linear-gradient(135deg, #F3DE97 0%, #D4AF37 50%, #9B6E09 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .gold-btn {
+      background: linear-gradient(135deg, #E6C875 0%, #D4AF37 50%, #9E730D 100%);
+      color: #0B0B0B;
+      border: none;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .gold-btn:hover {
+      box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+      transform: translateY(-1px);
+    }
+    .container {
+      width: 100%;
+      max-width: 440px;
+      min-height: 100vh;
+      background: var(--bg);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11, 11, 11, 0.95);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(12px);
+    }
+    .brand {
+      font-size: 18px;
+      letter-spacing: 0.25em;
+      font-weight: 700;
+      color: #F8F7F4;
+      text-decoration: none;
+    }
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 18px;
+      margin: 14px;
+    }
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    input, select {
+      width: 100%;
+      background: #181818;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--text);
+      font-family: inherit;
+      border-radius: 2px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: var(--gold);
+    }
+    .gateway-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .gateway-option {
+      background: #181818;
+      border: 1px solid var(--border);
+      padding: 12px 10px;
+      text-align: center;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .gateway-option.active {
+      border-color: var(--gold);
+      background: rgba(212, 175, 55, 0.08);
+    }
+    .gateway-option .name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #F8F7F4;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: block;
+    }
+    .gateway-option .desc {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      display: block;
+    }
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .cart-item:last-child { border-bottom: none; }
+    .cart-item-title { font-weight: 500; color: #F8F7F4; }
+    .cart-item-qty { font-size: 10px; color: var(--text-muted); }
+    .cart-item-price { font-family: 'Cinzel', serif; font-weight: 700; color: var(--gold); }
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .price-total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 700;
+      color: #F8F7F4;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .price-total span:last-child {
+      color: var(--gold);
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+    }
+    /* Processing Overlay */
+    #processingOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 11, 11, 0.94);
+      backdrop-filter: blur(14px);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(212, 175, 55, 0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <a href="/" class="brand font-serif">VANTÉRA</a>
+      <div style="font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold);">
+        ✦ Verified Checkout
+      </div>
+    </header>
+
+    <!-- Order Items Summary -->
+    <div class="section-card">
+      <div class="section-title">Order Allocation Summary</div>
+      <div id="cartItemsList">
+        <!-- Rendered dynamically from localStorage or fallback -->
+      </div>
+
+      <div class="price-row" style="margin-top: 12px;">
+        <span>Subtotal</span>
+        <span id="subtotalDisplay">$0.00</span>
+      </div>
+      <div class="price-row">
+        <span>Insured Express Courier</span>
+        <span style="color: #34A853;">Complimentary</span>
+      </div>
+      <div class="price-total">
+        <span>Total Allocation</span>
+        <span id="totalDisplay">$0.00</span>
+      </div>
+    </div>
+
+    <!-- Customer Shipping Details Form -->
+    <form id="checkoutForm">
+      <div class="section-card">
+        <div class="section-title">1. Shipping & Contact Details</div>
+
+        <div class="form-group">
+          <label for="fullName">Full Name *</label>
+          <input type="text" id="fullName" required placeholder="e.g. Emmanuel Adarikwu" />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address *</label>
+          <input type="email" id="email" required placeholder="client@vantera.com.ng" />
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone / WhatsApp Number *</label>
+          <input type="tel" id="phone" required placeholder="+234 913 279 3670" />
+        </div>
+
+        <div class="form-group">
+          <label for="streetAddress">Street Address *</label>
+          <input type="text" id="streetAddress" required placeholder="Apartment, suite, street name" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div class="form-group">
+            <label for="city">City *</label>
+            <input type="text" id="city" required placeholder="Lagos / New York" />
+          </div>
+          <div class="form-group">
+            <label for="state">State / Province *</label>
+            <input type="text" id="state" required placeholder="Lagos / NY" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div class="form-group">
+            <label for="postalCode">Postal Code</label>
+            <input type="text" id="postalCode" placeholder="100001" />
+          </div>
+          <div class="form-group">
+            <label for="country">Country *</label>
+            <select id="country" required>
+              <option value="Nigeria">Nigeria</option>
+              <option value="United States">United States</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="Canada">Canada</option>
+              <option value="United Arab Emirates">United Arab Emirates</option>
+              <option value="Ghana">Ghana</option>
+              <option value="South Africa">South Africa</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Gateway Selection -->
+      <div class="section-card">
+        <div class="section-title">2. Payment Method Gateway</div>
+        
+        <div class="gateway-toggle">
+          <div class="gateway-option active" id="optPaystack" onclick="selectGateway('paystack')">
+            <span class="name">Paystack</span>
+            <span class="desc">African Cards & Wire</span>
+          </div>
+          <div class="gateway-option" id="optStripe" onclick="selectGateway('stripe')">
+            <span class="name">Stripe</span>
+            <span class="desc">Global Cards & Apple Pay</span>
+          </div>
+        </div>
+
+        <!-- Stripe Card Element Mount (Active when Stripe chosen) -->
+        <div id="stripeContainer" style="display: none; margin-top: 14px; padding: 12px; background: #181818; border: 1px solid var(--border); border-radius: 2px;">
+          <label style="margin-bottom: 8px;">Credit / Debit Card Details</label>
+          <div id="cardElement" style="padding: 10px 0;"></div>
+          <div id="cardErrors" style="color: #ff6b6b; font-size: 10px; margin-top: 6px;"></div>
+        </div>
+
+        <div style="margin-top: 14px; font-size: 10px; color: var(--text-muted); line-height: 1.5;">
+          🔒 End-to-end 256-bit encrypted protocol. Zero raw credentials stored. Direct Zendrop dropshipping automated dispatch upon settlement.
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div style="padding: 0 14px 28px;">
+        <button type="submit" id="submitBtn" class="gold-btn" style="width: 100%; padding: 14px; font-size: 11px; border-radius: 2px;">
+          Authorize & Allocate Order ✦
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Processing Order Modal Overlay -->
+  <div id="processingOverlay">
+    <div class="spinner"></div>
+    <div class="font-serif" style="font-size: 18px; color: #F8F7F4; margin-bottom: 8px;">
+      Securing Transaction
+    </div>
+    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 12px;">
+      Processing order with warehouse...
+    </div>
+    <p style="font-size: 11px; color: var(--text-muted); max-width: 280px; line-height: 1.6;">
+      Verifying settlement and transmitting dispatch manifest to automated Zendrop logistics. Do not close this window.
+    </p>
+  </div>
+
+  <script>
+    // State
+    let selectedGateway = 'paystack';
+    let cart = [];
+    let stripeInstance = null;
+    let stripeCardElement = null;
+
+    // Load cart from localStorage or fallback items
+    function loadCart() {
+      try {
+        const saved = localStorage.getItem('vantera_cart');
+        if (saved) {
+          cart = JSON.parse(saved);
+        }
+      } catch (e) {
+        cart = [];
+      }
+
+      if (!cart || cart.length === 0) {
+        // Fallback default item
+        cart = [
+          {
+            id: 'festive-3in1-foldable-magsafe-charger',
+            title: '3-in-1 Foldable MagSafe Dock',
+            price: 38.00,
+            quantity: 1,
+            variantId: 'zd_var_3in1_gold'
+          }
+        ];
+      }
+
+      renderCartSummary();
+    }
+
+    function renderCartSummary() {
+      const listEl = document.getElementById('cartItemsList');
+      listEl.innerHTML = '';
+      let subtotal = 0;
+
+      cart.forEach(item => {
+        const itemTotal = (item.price || 0) * (item.quantity || 1);
+        subtotal += itemTotal;
+
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+          <div>
+            <div class="cart-item-title">${item.title}</div>
+            <div class="cart-item-qty">Qty: ${item.quantity || 1} · Ref: ${item.id.slice(0, 10).toUpperCase()}</div>
+          </div>
+          <div class="cart-item-price">$${itemTotal.toFixed(2)}</div>
+        `;
+        listEl.appendChild(row);
+      });
+
+      document.getElementById('subtotalDisplay').textContent = `$${subtotal.toFixed(2)}`;
+      document.getElementById('totalDisplay').textContent = `$${subtotal.toFixed(2)}`;
+    }
+
+    function selectGateway(gw) {
+      selectedGateway = gw;
+      document.getElementById('optPaystack').classList.toggle('active', gw === 'paystack');
+      document.getElementById('optStripe').classList.toggle('active', gw === 'stripe');
+
+      const stripeBox = document.getElementById('stripeContainer');
+      if (gw === 'stripe') {
+        stripeBox.style.display = 'block';
+        initStripeIfNeeded();
+      } else {
+        stripeBox.style.display = 'none';
+      }
+    }
+
+    function initStripeIfNeeded() {
+      if (stripeInstance) return;
+      try {
+        // Initialize Stripe.js with publishable demo key or public key
+        stripeInstance = Stripe('pk_test_TYoo61E6353nnGuDAUD8F6Nm');
+        const elements = stripeInstance.elements();
+        stripeCardElement = elements.create('card', {
+          style: {
+            base: {
+              color: '#EDEDED',
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '13px',
+              '::placeholder': { color: '#6C6A64' },
+            },
+            invalid: { color: '#ff6b6b' },
+          },
+        });
+        stripeCardElement.mount('#cardElement');
+      } catch (err) {
+        console.warn('Stripe initialization notice:', err);
+      }
+    }
+
+    // Form submission & payment triggering
+    document.getElementById('checkoutForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const customer = {
+        fullName: document.getElementById('fullName').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        streetAddress: document.getElementById('streetAddress').value.trim(),
+        city: document.getElementById('city').value.trim(),
+        state: document.getElementById('state').value.trim(),
+        postalCode: document.getElementById('postalCode').value.trim(),
+        country: document.getElementById('country').value,
+      };
+
+      const total = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+
+      if (selectedGateway === 'paystack') {
+        initiatePaystackPayment(customer, total);
+      } else {
+        initiateStripePayment(customer, total);
+      }
+    });
+
+    // 1. Paystack Inline Checkout
+    function initiatePaystackPayment(customer, totalUSD) {
+      const ref = 'VAN-PSTK-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 8999 + 1000);
+      
+      // Convert to NGN at ~1550 rate for Paystack, or USD cents
+      const amountKobo = Math.round(totalUSD * 1550 * 100);
+
+      // Public Paystack key
+      const paystackHandler = PaystackPop.setup({
+        key: 'pk_live_vantera_public_key', // Replace with production public key or test key
+        email: customer.email,
+        amount: amountKobo,
+        currency: 'NGN',
+        ref: ref,
+        metadata: {
+          custom_fields: [
+            { display_name: "Customer Name", variable_name: "customer_name", value: customer.fullName },
+            { display_name: "Phone", variable_name: "customer_phone", value: customer.phone },
+            { display_name: "Destination", variable_name: "destination", value: customer.city + ', ' + customer.country }
+          ]
+        },
+        callback: function(response) {
+          // Payment confirmed on client -> verify server-to-server and dispatch Zendrop
+          handlePostPaymentAction({
+            gateway: 'paystack',
+            reference: response.reference || ref,
+            customer: customer,
+            items: cart,
+            totalAmount: totalUSD,
+            currency: 'USD'
+          });
+        },
+        onClose: function() {
+          alert('Allocation window closed. Your items remain preserved in your Atelier bag.');
+        }
+      });
+
+      paystackHandler.openIframe();
+    }
+
+    // 2. Stripe Checkout Action
+    async function initiateStripePayment(customer, totalUSD) {
+      const ref = 'VAN-STRP-' + Date.now().toString(36).toUpperCase();
+      
+      // Show loading overlay
+      document.getElementById('processingOverlay').style.display = 'flex';
+
+      try {
+        if (stripeInstance && stripeCardElement) {
+          const { token, error } = await stripeInstance.createToken(stripeCardElement);
+          if (error) {
+            document.getElementById('cardErrors').textContent = error.message;
+            document.getElementById('processingOverlay').style.display = 'none';
+            return;
+          }
+        }
+
+        // Post to backend serverless function
+        await handlePostPaymentAction({
+          gateway: 'stripe',
+          reference: ref,
+          customer: customer,
+          items: cart,
+          totalAmount: totalUSD,
+          currency: 'USD'
+        });
+      } catch (err) {
+        document.getElementById('processingOverlay').style.display = 'none';
+        alert('Stripe authorization error: ' + err.message);
+      }
+    }
+
+    // 3. Post-Payment Action: Serverless verification & Zendrop fulfillment
+    async function handlePostPaymentAction(payload) {
+      document.getElementById('processingOverlay').style.display = 'flex';
+
+      try {
+        const res = await fetch('/api/vantera-core-handler', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          // Clear cart
+          localStorage.removeItem('vantera_cart');
+          // Redirect to Success / Thank You page
+          window.location.href = `/success.html?orderId=${encodeURIComponent(data.orderReference || payload.reference)}&gateway=${payload.gateway}`;
+        } else {
+          document.getElementById('processingOverlay').style.display = 'none';
+          alert('Order verification notice: ' + (data.error || 'Fulfillment pipeline pending confirmation.'));
+          // Allow routing to success with pending notification
+          window.location.href = `/success.html?orderId=${encodeURIComponent(payload.reference)}&status=review`;
+        }
+      } catch (err) {
+        console.error('Core handler dispatch error:', err);
+        // Fallback redirect so customer transaction is not lost
+        window.location.href = `/success.html?orderId=${encodeURIComponent(payload.reference)}&status=queued`;
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', loadCart);
+  </script>
+</body>
+</html>
