@@ -3,7 +3,7 @@
  * Route: POST /api/vantera-core-handler
  *
  * Responsibilities:
- * 1. Verify payment validity server-to-server with Paystack or Stripe.
+ * 1. Verify payment validity server-to-server exclusively with Paystack.
  * 2. Translate verified order payload into Zendrop Dropshipping API format.
  * 3. Dispatch automated fulfillment request to Zendrop.
  * 4. Return secure status response to frontend without leaking private API keys.
@@ -71,10 +71,10 @@ export async function onRequestPost(context) {
       );
     }
 
-    // 2. Server-to-Server Payment Verification
+    // 2. Server-to-Server Payment Verification via Paystack
     let verifiedPayment = null;
 
-    if (gateway === 'paystack') {
+    if (!gateway || gateway.toLowerCase() === 'paystack') {
       const paystackKey = env.PAYSTACK_SECRET_KEY;
       if (!paystackKey) {
         console.warn('[Cloudflare Serverless] PAYSTACK_SECRET_KEY missing in environment variables.');
@@ -124,59 +124,11 @@ export async function onRequestPost(context) {
           paidAt: paystackData.data.paid_at,
         };
       }
-    } else if (gateway === 'stripe') {
-      const stripeKey = env.STRIPE_SECRET_KEY;
-      if (!stripeKey) {
-        console.warn('[Cloudflare Serverless] STRIPE_SECRET_KEY missing in environment variables.');
-      }
-
-      // Query Stripe Payment Intent Verify API
-      const stripeRes = await fetch(
-        `https://api.stripe.com/v1/payment_intents/${encodeURIComponent(reference)}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${stripeKey || ''}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
-      );
-
-      const stripeData = await stripeRes.json();
-
-      if (!stripeRes.ok || (stripeData.status !== 'succeeded' && stripeData.status !== 'processing')) {
-        if (!stripeKey || stripeData.error?.message?.includes('Invalid API Key')) {
-          console.warn('[Cloudflare Serverless] Stripe running in sandbox fallback mode.');
-          verifiedPayment = {
-            id: reference,
-            amount: totalAmount,
-            currency: currency,
-            status: 'paid_sandbox',
-            gateway: 'stripe',
-          };
-        } else {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: `Stripe verification failed: ${stripeData.error?.message || 'Payment intent not succeeded.'}`,
-            }),
-            { status: 402, headers: corsHeaders }
-          );
-        }
-      } else {
-        verifiedPayment = {
-          id: stripeData.id || reference,
-          amount: (stripeData.amount || 0) / 100,
-          currency: (stripeData.currency || currency).toUpperCase(),
-          status: stripeData.status,
-          gateway: 'stripe',
-        };
-      }
     } else {
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Unsupported payment gateway: "${gateway}". Choose "paystack" or "stripe".`,
+          error: `Unsupported payment gateway: "${gateway}". VANTÉRA exclusively settles transactions through Paystack.`,
         }),
         { status: 400, headers: corsHeaders }
       );

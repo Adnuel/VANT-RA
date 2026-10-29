@@ -525,7 +525,7 @@ app.post('/api/coupons/apply', (req: Request, res: Response) => {
 });
 
 /* ========================================================================== */
-/* CLOUDFLARE PAGES EQUIVALENT CORE HANDLER: STRIPE, PAYSTACK & ZENDROP       */
+/* CLOUDFLARE PAGES EQUIVALENT CORE HANDLER: PAYSTACK & ZENDROP               */
 /* ========================================================================== */
 app.post('/api/vantera-core-handler', async (req: Request, res: Response) => {
   try {
@@ -541,10 +541,10 @@ app.post('/api/vantera-core-handler', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Order line items cannot be empty.' });
     }
 
-    // 1. Payment Verification (Paystack / Stripe)
+    // 1. Payment Verification exclusively via Paystack
     let verifiedPayment: any = null;
 
-    if (gateway === 'paystack') {
+    if (!gateway || gateway.toLowerCase() === 'paystack') {
       const paystackKey = process.env.PAYSTACK_SECRET_KEY;
       if (paystackKey) {
         try {
@@ -575,39 +575,11 @@ app.post('/api/vantera-core-handler', async (req: Request, res: Response) => {
           gateway: 'paystack',
         };
       }
-    } else if (gateway === 'stripe') {
-      const stripeKey = process.env.STRIPE_SECRET_KEY;
-      if (stripeKey) {
-        try {
-          const sRes = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(reference)}`, {
-            headers: { Authorization: `Bearer ${stripeKey}` },
-          });
-          const sData = await sRes.json();
-          if (sRes.ok && (sData.status === 'succeeded' || sData.status === 'processing')) {
-            verifiedPayment = {
-              id: sData.id,
-              amount: sData.amount / 100,
-              currency: sData.currency.toUpperCase(),
-              status: sData.status,
-              gateway: 'stripe',
-            };
-          }
-        } catch (e) {
-          console.warn('[Core Handler] Stripe verify exception:', e);
-        }
-      }
-
-      if (!verifiedPayment) {
-        verifiedPayment = {
-          id: reference,
-          amount: totalAmount,
-          currency,
-          status: 'verified_authorized',
-          gateway: 'stripe',
-        };
-      }
     } else {
-      return res.status(400).json({ success: false, error: `Unsupported gateway: ${gateway}` });
+      return res.status(400).json({
+        success: false,
+        error: `Unsupported gateway: ${gateway}. VANTÉRA processes transactions exclusively through Paystack.`,
+      });
     }
 
     // 2. Automated Zendrop Dropshipping Dispatch
