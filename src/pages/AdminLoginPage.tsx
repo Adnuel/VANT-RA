@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.tsx';
+import { safeFetchJson } from '../lib/safeFetch.ts';
 
 interface AdminLoginPageProps {
   onNavigate: (url: string) => void;
@@ -23,10 +24,11 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate }) =>
     }
 
     // Check backend setup status
-    fetch('/api/admin/setup-status')
-      .then((res) => res.json())
-      .then((data) => {
-        setIsSetupNeeded(!data.isPasswordSet);
+    safeFetchJson<{ isPasswordSet: boolean }>('/api/admin/setup-status')
+      .then((res) => {
+        if (res.ok && res.data) {
+          setIsSetupNeeded(!res.data.isPasswordSet);
+        }
       })
       .catch(() => {});
   }, [adminUser, onNavigate]);
@@ -45,19 +47,21 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate }) =>
 
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/setup-password', {
+      const res = await safeFetchJson<{ token: string; user: any }>('/api/admin/setup-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Setup failed');
 
-      loginAdmin(data.token, data.user);
+      if (!res.ok || !res.data) {
+        throw new Error(res.error || 'Setup failed');
+      }
+
+      loginAdmin(res.data.token, res.data.user);
       setSuccessMessage('Administrator credentials established successfully. Entering dashboard...');
       setTimeout(() => onNavigate('/admin/dashboard'), 1000);
     } catch (err: any) {
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || 'Setup encountered an error.');
     } finally {
       setIsLoading(false);
     }
@@ -68,24 +72,24 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate }) =>
     setErrorMessage('');
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await safeFetchJson<{ token: string; user: any; requiresSetup?: boolean }>('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.requiresSetup) {
+
+      if (!res.ok || !res.data) {
+        if (res.data?.requiresSetup) {
           setIsSetupNeeded(true);
           throw new Error('Please establish your administrator password first.');
         }
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(res.error || 'Authentication failed');
       }
 
-      loginAdmin(data.token, data.user);
+      loginAdmin(res.data.token, res.data.user);
       onNavigate('/admin/dashboard');
     } catch (err: any) {
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || 'Authentication encountered an error.');
     } finally {
       setIsLoading(false);
     }

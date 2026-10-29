@@ -10,6 +10,30 @@
       "updatedAt": "2026-10-15T08:25:57.640Z",
       "passwordHash": "cb8bdcba849e6cefcbddda46bb14b9fff671ecedae4d924a9e7432ce89bb5cce61d9d6f7c600412e45865eefecbacbecf49337b744da44e9d434f762dbe8360a",
       "salt": "62a9e5b638bc36c2acba8e4eb31fa8ce"
+    },
+    {
+      "id": "usr_5da5696a0293c0b9",
+      "email": "testregister@example.com",
+      "name": "Adnuel Test",
+      "phone": "+2348000000000",
+      "role": "customer",
+      "passwordHash": "5c0e2fd3a669e12894e3a1a7c4ad8b3bd5f9d07b1b66f1e64ab4261d04d6e91306733e590a389e883613bfe0477c4d54b738df474abcb3366538297d01c3acb2",
+      "salt": "bd031d6c2646b4edaeca657cc384fdce",
+      "isPasswordSet": true,
+      "createdAt": "2026-10-29T11:10:01.045Z",
+      "updatedAt": "2026-10-29T11:10:01.045Z"
+    },
+    {
+      "id": "usr_3b11ed14a9f314af",
+      "email": "chinedu@example.com",
+      "name": "Chinedu Eze",
+      "phone": "+2348031234567",
+      "role": "customer",
+      "passwordHash": "5ea0cf4c7ad6fe3e435a7051271d6dbef8c7c98ace11044feae29651be4fb7bbc5a9e2fc15fe8f5850a8940e9f4b6e67c60be1fe528f5f3821232ab2fdce5ee8",
+      "salt": "1cf980e898a10e1071f452e3af8d65a0",
+      "isPasswordSet": true,
+      "createdAt": "2026-10-29T11:16:34.045Z",
+      "updatedAt": "2026-10-29T11:16:34.045Z"
     }
   ],
   "deliveryAddresses": [],
@@ -1786,6 +1810,20 @@
   ],
   "auditLogs": [
     {
+      "id": "log_1793272594045_96sn",
+      "timestamp": "2026-10-29T11:16:34.045Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: chinedu@example.com"
+    },
+    {
+      "id": "log_1793272201045_txdh",
+      "timestamp": "2026-10-29T11:10:01.045Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: testregister@example.com"
+    },
+    {
       "id": "log_1792853204680_gcbf",
       "timestamp": "2026-10-24T14:46:44.680Z",
       "actor": "Adnuel",
@@ -1921,6 +1959,24 @@
   ],
   "notifications": [
     {
+      "recipient": "chinedu@example.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, Chinedu Eze! Your customer account has been created.",
+      "id": "notif_1793272594045_7ft4",
+      "status": "dispatched",
+      "timestamp": "2026-10-29T11:16:34.045Z"
+    },
+    {
+      "recipient": "testregister@example.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, Adnuel Test! Your customer account has been created.",
+      "id": "notif_1793272201045_tgni",
+      "status": "dispatched",
+      "timestamp": "2026-10-29T11:10:01.045Z"
+    },
+    {
       "orderId": "ord_2560957137718fe7",
       "recipient": "emmanueladarikwu@gmail.com",
       "channel": "email",
@@ -2002,6 +2058,58 @@
     }
   ],
   "events": [
+    {
+      "id": "evt_1793272622132_4d7990a9",
+      "type": "customer_login",
+      "timestamp": "2026-10-29T11:17:02.132Z",
+      "customerId": "usr_3b11ed14a9f314af",
+      "customerEmail": "chinedu@example.com",
+      "customerName": "Chinedu Eze",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793272594045_6974501a",
+      "type": "customer_registered",
+      "timestamp": "2026-10-29T11:16:34.045Z",
+      "customerId": "usr_3b11ed14a9f314af",
+      "customerEmail": "chinedu@example.com",
+      "customerName": "Chinedu Eze",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793272203960_44268464",
+      "type": "customer_login",
+      "timestamp": "2026-10-29T11:10:03.960Z",
+      "customerId": "usr_5da5696a0293c0b9",
+      "customerEmail": "testregister@example.com",
+      "customerName": "Adnuel Test",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793272201045_5acf0460",
+      "type": "customer_registered",
+      "timestamp": "2026-10-29T11:10:01.045Z",
+      "customerId": "usr_5da5696a0293c0b9",
+      "customerEmail": "testregister@example.com",
+      "customerName": "Adnuel Test",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
     {
       "id": "evt_1792749113393_532a1d3c",
       "type": "product_viewed",
@@ -2258,6 +2366,17 @@
   ],
   "carts": [
     {
+      "id": "ses_1793272561851_0odbt3wp",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1793272561851_0odbt3wp",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-29T11:16:02.278Z",
+      "updatedAt": "2026-10-29T11:16:02.278Z"
+    },
+    {
       "id": "ses_1792749259163_voi7v5jm",
       "customerId": null,
       "customerEmail": null,
@@ -2391,6 +2510,13 @@
     }
   ],
   "visitorSessions": [
+    {
+      "sessionId": "ses_1793272561851_0odbt3wp",
+      "firstSeen": "2026-10-29T11:16:02.276Z",
+      "lastActive": "2026-10-29T11:16:02.276Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
     {
       "sessionId": "ses_1792749259163_voi7v5jm",
       "firstSeen": "2026-10-23T09:54:19.641Z",

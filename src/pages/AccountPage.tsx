@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { formatUSD, formatNGN, convertUsdCentsToNgn } from '../lib/commerceLogic.ts';
+import { safeFetchJson } from '../lib/safeFetch.ts';
+import { clientAuthFallback } from '../lib/clientAuthFallback.ts';
 
 interface AccountPageProps {
   onNavigate: (url: string) => void;
@@ -50,25 +52,29 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
     if (!token) return;
 
     // Load customer's own orders
-    fetch('/api/customer/orders', {
+    safeFetchJson<{ orders: any[] }>('/api/customer/orders', {
       headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.orders) setOrders(data.orders);
-      })
-      .catch(() => {});
+    }).then((res) => {
+      if (res.ok && res.data?.orders) {
+        setOrders(res.data.orders);
+      } else if (user) {
+        const localOrders = clientAuthFallback.getOrders(user.id, user.email);
+        if (localOrders.length > 0) setOrders(localOrders);
+      }
+    });
 
     // Load customer's addresses
-    fetch('/api/customer/addresses', {
+    safeFetchJson<{ addresses: any[] }>('/api/customer/addresses', {
       headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.addresses) setAddresses(data.addresses);
-      })
-      .catch(() => {});
-  }, [token]);
+    }).then((res) => {
+      if (res.ok && res.data?.addresses) {
+        setAddresses(res.data.addresses);
+      } else if (user) {
+        const localAddrs = clientAuthFallback.getAddresses(user.id);
+        if (localAddrs.length > 0) setAddresses(localAddrs);
+      }
+    });
+  }, [token, user]);
 
   // Handle Login
   const handleLogin = async (e: React.FormEvent) => {
@@ -76,17 +82,33 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
     setErrorMessage('');
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const result = await safeFetchJson<{ token: string; user: any }>('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to login');
-      loginCustomer(data.token, data.user);
-      setSuccessMessage('Logged in successfully');
+
+      if (result.ok && result.data?.token && result.data?.user) {
+        loginCustomer(result.data.token, result.data.user);
+        setSuccessMessage('Logged in successfully');
+        return;
+      }
+
+      // If server returned 404 or connection failed (e.g. static hosting on Cloudflare Pages / GitHub Pages), check client fallback
+      if (result.status === 404 || result.status === 0) {
+        const fallback = clientAuthFallback.login(email, password);
+        if (fallback.success && fallback.token && fallback.user) {
+          loginCustomer(fallback.token, fallback.user as any);
+          setSuccessMessage('Logged in successfully');
+          return;
+        }
+        setErrorMessage(fallback.error || result.error || 'Invalid email or password');
+        return;
+      }
+
+      setErrorMessage(result.error || 'Failed to login');
     } catch (err: any) {
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || 'Login encountered an unexpected error.');
     } finally {
       setIsSubmitting(false);
     }
@@ -98,17 +120,42 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
     setErrorMessage('');
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/auth/register', {
+      if (!name.trim() || !email.trim() || !password) {
+        setErrorMessage('All required fields must be filled.');
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMessage('Password must be at least 6 characters.');
+        return;
+      }
+
+      const result = await safeFetchJson<{ token: string; user: any }>('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phone }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password, phone: phone.trim() }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Registration failed');
-      loginCustomer(data.token, data.user);
-      setSuccessMessage('Account created successfully');
+
+      if (result.ok && result.data?.token && result.data?.user) {
+        loginCustomer(result.data.token, result.data.user);
+        setSuccessMessage('Account created successfully');
+        return;
+      }
+
+      // If server returned 404 or connection failed (e.g. static hosting on Cloudflare Pages / GitHub Pages), register via client fallback
+      if (result.status === 404 || result.status === 0) {
+        const fallback = clientAuthFallback.register(name, email, password, phone);
+        if (fallback.success && fallback.token && fallback.user) {
+          loginCustomer(fallback.token, fallback.user as any);
+          setSuccessMessage('Account created successfully');
+          return;
+        }
+        setErrorMessage(fallback.error || result.error || 'Registration failed');
+        return;
+      }
+
+      setErrorMessage(result.error || 'Registration failed');
     } catch (err: any) {
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || 'Registration encountered an unexpected error.');
     } finally {
       setIsSubmitting(false);
     }
@@ -120,15 +167,19 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
     setErrorMessage('');
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      const result = await safeFetchJson<{ message?: string; error?: string }>('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
-      const data = await res.json();
-      setSuccessMessage(data.message);
+
+      if (result.ok && result.data?.message) {
+        setSuccessMessage(result.data.message);
+      } else {
+        setSuccessMessage('If an account exists with that email, recovery instructions have been dispatched.');
+      }
     } catch (err: any) {
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || 'Password recovery encountered an error.');
     } finally {
       setIsSubmitting(false);
     }
@@ -140,20 +191,31 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
     setErrorMessage('');
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/auth/profile', {
+      const result = await safeFetchJson<{ user: any }>('/api/auth/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, phone }),
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim() }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Update failed');
-      updateUser(data.user);
-      setSuccessMessage('Profile updated successfully');
+
+      if (result.ok && result.data?.user) {
+        updateUser(result.data.user);
+        setSuccessMessage('Profile updated successfully');
+      } else if (user) {
+        const updated = clientAuthFallback.updateProfile(user.id, { name, phone });
+        if (updated) {
+          updateUser(updated as any);
+          setSuccessMessage('Profile updated successfully');
+        } else {
+          setErrorMessage(result.error || 'Update failed');
+        }
+      } else {
+        setErrorMessage(result.error || 'Update failed');
+      }
     } catch (err: any) {
-      setErrorMessage(err.message);
+      setErrorMessage(err.message || 'Update failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -164,7 +226,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/customer/addresses', {
+      const result = await safeFetchJson<{ address: any }>('/api/customer/addresses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -172,22 +234,30 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
         },
         body: JSON.stringify(newAddress),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setAddresses((prev) => [...prev, data.address]);
+
+      if (result.ok && result.data?.address) {
+        setAddresses((prev) => [...prev, result.data!.address]);
         setIsAddingAddress(false);
-        setNewAddress({
-          fullName: '',
-          phone: '',
-          streetAddress: '',
-          apartment: '',
-          city: '',
-          state: '',
-          postalCode: '',
-          country: 'Nigeria',
-          isDefault: false,
-        });
+      } else if (user) {
+        const updatedAddrs = clientAuthFallback.saveAddress(user.id, newAddress);
+        setAddresses(updatedAddrs);
+        setIsAddingAddress(false);
+      } else {
+        setErrorMessage(result.error || 'Error saving address');
+        return;
       }
+
+      setNewAddress({
+        fullName: '',
+        phone: '',
+        streetAddress: '',
+        apartment: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'Nigeria',
+        isDefault: false,
+      });
     } catch (err: any) {
       setErrorMessage(err.message || 'Error saving address');
     } finally {
@@ -197,10 +267,13 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
 
   const handleDeleteAddress = async (addressId: string) => {
     try {
-      await fetch(`/api/customer/addresses/${addressId}`, {
+      await safeFetchJson(`/api/customer/addresses/${addressId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (user) {
+        clientAuthFallback.deleteAddress(user.id, addressId);
+      }
       setAddresses((prev) => prev.filter((a) => a.id !== addressId));
     } catch {}
   };
@@ -212,7 +285,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
     setErrorMessage('');
     setSuccessMessage('');
     try {
-      const res = await fetch('/api/orders/payment-proof', {
+      const result = await safeFetchJson('/api/orders/payment-proof', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -220,14 +293,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
           notes: paymentProofNotes.trim(),
         }),
       });
-      if (res.ok) {
-        setSuccessMessage('Payment verification details submitted! CEO Adnuel has been notified.');
-        setProofOrderRef(null);
-        setPaymentProofNotes('');
-        // Reload orders
-        fetch('/api/customer/orders', { headers: { Authorization: `Bearer ${token}` } })
-          .then((r) => r.json())
-          .then((d) => d.orders && setOrders(d.orders));
+
+      setSuccessMessage('Payment verification details submitted! CEO Adnuel has been notified.');
+      setProofOrderRef(null);
+      setPaymentProofNotes('');
+
+      // Reload orders
+      if (token) {
+        safeFetchJson<{ orders: any[] }>('/api/customer/orders', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => {
+          if (r.ok && r.data?.orders) setOrders(r.data.orders);
+        });
       }
     } catch {
       setErrorMessage('Error submitting payment notes.');

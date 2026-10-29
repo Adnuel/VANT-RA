@@ -1598,6 +1598,17 @@ app.get('/api/download-android-project', async (_req: Request, res: Response) =>
   }
 });
 
+// Explicit API 404 handler to guarantee all unhandled /api/* routes return JSON rather than SPA HTML
+app.all('/api/*', (_req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
+});
+
+// Global API error handler
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Unhandled server error:', err);
+  res.status(err?.status || 500).json({ error: err?.message || 'Internal server error' });
+});
+
 /* ========================================================================== */
 /* VITE MIDDLEWARE & SERVER STARTUP                                           */
 /* ========================================================================== */
