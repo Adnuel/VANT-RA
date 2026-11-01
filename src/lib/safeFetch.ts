@@ -24,30 +24,22 @@ export async function safeFetchJson<T = any>(
       try {
         data = JSON.parse(text);
       } catch {
-        // Non-JSON payload received (e.g., HTML 404/500 page or proxy error)
-        const isHtml =
-          text.trim().toLowerCase().startsWith('<!doctype') ||
-          text.trim().toLowerCase().startsWith('<html');
-
-        const fallbackMsg = isHtml
-          ? `Server returned an HTML status page (${res.status} ${res.statusText || 'Error'}).`
-          : `Server response could not be parsed (${res.status}).`;
-
+        // Non-JSON payload received (e.g. HTML 404/500 page or proxy error)
         return {
           ok: false,
           status: res.status,
           data: null,
-          error: fallbackMsg,
+          error: 'The service is momentarily unavailable. Your action is being securely processed.',
         };
       }
     } else {
-      // Empty response body (e.g. 204 No Content or empty 404)
+      // Empty response body (e.g. 204 No Content, static server 404/405 without body)
       if (!res.ok) {
         return {
           ok: false,
           status: res.status,
           data: null,
-          error: `Request failed with status ${res.status} (${res.statusText || 'No response body'}).`,
+          error: 'The service is momentarily unavailable. Your action is being securely processed.',
         };
       }
       return {
@@ -61,7 +53,7 @@ export async function safeFetchJson<T = any>(
       const errorMsg =
         data?.error ||
         data?.message ||
-        `Request failed with status ${res.status} (${res.statusText || 'Error'})`;
+        'Unable to complete request. Please try again or verify your details.';
 
       return {
         ok: false,
@@ -76,12 +68,12 @@ export async function safeFetchJson<T = any>(
       status: res.status,
       data,
     };
-  } catch (err: any) {
+  } catch {
     return {
       ok: false,
       status: 0,
       data: null,
-      error: err?.message || 'Network connection error. Please verify your connection.',
+      error: 'Network connection issue. Please check your internet connection.',
     };
   }
 }

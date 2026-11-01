@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { formatUSD, formatNGN, convertUsdCentsToNgn } from '../lib/commerceLogic.ts';
+import { safeFetchJson } from '../lib/safeFetch.ts';
 
 interface TrackOrderPageProps {
   onNavigate: (url: string) => void;
@@ -18,14 +19,42 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate }) =>
     setIsLoading(true);
 
     try {
-      const res = await fetch(`/api/orders/track/${encodeURIComponent(reference.trim().toUpperCase())}`);
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Order reference not found');
+      const cleanRef = reference.trim().toUpperCase();
+      const result = await safeFetchJson<{ order: any }>(`/api/orders/track/${encodeURIComponent(cleanRef)}`);
+      if (result.ok && result.data?.order) {
+        setOrderData(result.data.order);
+        return;
       }
-      setOrderData(data.order);
-    } catch (err: any) {
-      setErrorMessage(err.message);
+
+      // Check locally cached orders for offline/client fallback
+      const cachedAccountsRaw = localStorage.getItem('vantera_customer_registry_v1');
+      let foundLocalOrder: any = null;
+      if (cachedAccountsRaw) {
+        try {
+          const accounts = JSON.parse(cachedAccountsRaw);
+          for (const acct of Object.values(accounts) as any[]) {
+            const ordersRaw = localStorage.getItem('vantera_customer_orders_' + acct.user?.id) ||
+                              localStorage.getItem('vantera_customer_orders_' + acct.user?.email);
+            if (ordersRaw) {
+              const ordersList = JSON.parse(ordersRaw);
+              const matched = ordersList.find((o: any) => o.orderReference?.toUpperCase() === cleanRef);
+              if (matched) {
+                foundLocalOrder = matched;
+                break;
+              }
+            }
+          }
+        } catch {}
+      }
+
+      if (foundLocalOrder) {
+        setOrderData(foundLocalOrder);
+      } else {
+        setErrorMessage(result.error || 'Order reference not found. Please verify the code.');
+        setOrderData(null);
+      }
+    } catch {
+      setErrorMessage('Unable to look up order reference. Please verify the code.');
       setOrderData(null);
     } finally {
       setIsLoading(false);

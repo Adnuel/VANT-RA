@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { formatPrice, convertUsdCentsToNgn, formatNGN, formatUSD } from '../lib/commerceLogic.ts';
+import { safeFetchJson } from '../lib/safeFetch.ts';
 
 export type Currency = 'USD' | 'NGN';
 
@@ -28,11 +29,10 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Fetch verified exchange rate from backend
   useEffect(() => {
-    fetch('/api/currency-settings')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.settings?.ngnExchangeRate) {
-          setExchangeRate(data.settings.ngnExchangeRate);
+    safeFetchJson<{ settings?: { ngnExchangeRate?: number } }>('/api/currency-settings')
+      .then((res) => {
+        if (res.ok && res.data?.settings?.ngnExchangeRate) {
+          setExchangeRate(res.data.settings.ngnExchangeRate);
         }
       })
       .catch(() => {

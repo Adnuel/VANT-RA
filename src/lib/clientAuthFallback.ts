@@ -51,11 +51,41 @@ function saveStoredRegistry(registry: Record<string, StoredAccount>) {
 }
 
 export const clientAuthFallback = {
-  register(name: string, email: string, password: string, phone?: string): { success: boolean; token?: string; user?: ClientUser; error?: string } {
+  register(
+    name: string,
+    email: string,
+    password: string,
+    phone?: string
+  ): { success: boolean; token?: string; user?: ClientUser; error?: string } {
     const normalizedEmail = email.trim().toLowerCase();
     const registry = getStoredRegistry();
 
+    // If account already exists in local registry
     if (registry[normalizedEmail]) {
+      // If the password matches, smoothly log the customer into their account
+      if (registry[normalizedEmail].passwordHash === clientHash(password)) {
+        const existing = registry[normalizedEmail].user;
+        if (name && name.trim()) existing.name = name.trim();
+        if (phone && phone.trim()) existing.phone = phone.trim();
+        saveStoredRegistry(registry);
+
+        const token =
+          'vantera_tok_' +
+          btoa(
+            JSON.stringify({
+              id: existing.id,
+              email: existing.email,
+              exp: Date.now() + 86400000 * 30,
+            })
+          );
+
+        return {
+          success: true,
+          token,
+          user: existing,
+        };
+      }
+
       return {
         success: false,
         error: 'An account with this email address already exists. Please sign in.',
@@ -64,7 +94,7 @@ export const clientAuthFallback = {
 
     const newUser: ClientUser = {
       id: 'usr_clt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      name: name.trim(),
+      name: name.trim() || normalizedEmail.split('@')[0],
       email: normalizedEmail,
       phone: phone?.trim() || '',
       role: 'customer',
@@ -78,7 +108,16 @@ export const clientAuthFallback = {
 
     saveStoredRegistry(registry);
 
-    const token = 'vantera_tok_' + btoa(JSON.stringify({ id: newUser.id, email: newUser.email, exp: Date.now() + 86400000 * 30 }));
+    const token =
+      'vantera_tok_' +
+      btoa(
+        JSON.stringify({
+          id: newUser.id,
+          email: newUser.email,
+          exp: Date.now() + 86400000 * 30,
+        })
+      );
+
     return {
       success: true,
       token,
@@ -86,7 +125,10 @@ export const clientAuthFallback = {
     };
   },
 
-  login(email: string, password: string): { success: boolean; token?: string; user?: ClientUser; error?: string } {
+  login(
+    email: string,
+    password: string
+  ): { success: boolean; token?: string; user?: ClientUser; error?: string } {
     const normalizedEmail = email.trim().toLowerCase();
     const registry = getStoredRegistry();
     const account = registry[normalizedEmail];
@@ -94,18 +136,27 @@ export const clientAuthFallback = {
     if (!account) {
       return {
         success: false,
-        error: 'Invalid email or password. If you are new to VANTÉRA, please create an account.',
+        error: 'No account found with this email. Please open a new account first.',
       };
     }
 
     if (account.passwordHash !== clientHash(password)) {
       return {
         success: false,
-        error: 'Invalid email or password.',
+        error: 'Invalid email or password. Please verify your credentials and try again.',
       };
     }
 
-    const token = 'vantera_tok_' + btoa(JSON.stringify({ id: account.user.id, email: account.user.email, exp: Date.now() + 86400000 * 30 }));
+    const token =
+      'vantera_tok_' +
+      btoa(
+        JSON.stringify({
+          id: account.user.id,
+          email: account.user.email,
+          exp: Date.now() + 86400000 * 30,
+        })
+      );
+
     return {
       success: true,
       token,
@@ -159,7 +210,9 @@ export const clientAuthFallback = {
 
   getOrders(userId: string, email: string): any[] {
     try {
-      const raw = localStorage.getItem(STORAGE_ORDERS_PREFIX + userId) || localStorage.getItem(STORAGE_ORDERS_PREFIX + email.toLowerCase());
+      const raw =
+        localStorage.getItem(STORAGE_ORDERS_PREFIX + userId) ||
+        localStorage.getItem(STORAGE_ORDERS_PREFIX + email.toLowerCase());
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];

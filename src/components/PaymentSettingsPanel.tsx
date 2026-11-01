@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { safeFetchJson } from '../lib/safeFetch.ts';
 
 interface PaymentSettings {
   paystackEnabled: boolean;
@@ -43,14 +44,13 @@ export const PaymentSettingsPanel: React.FC<PaymentSettingsPanelProps> = ({ toke
   };
 
   useEffect(() => {
-    fetch('/api/admin/payment-settings', { headers })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.paymentSettings) {
-          setSettings(data.paymentSettings);
+    safeFetchJson<{ paymentSettings?: PaymentSettings }>('/api/admin/payment-settings', { headers })
+      .then((res) => {
+        if (res.ok && res.data?.paymentSettings) {
+          setSettings(res.data.paymentSettings);
         }
       })
-      .catch((err) => {
+      .catch(() => {
         setErrorMessage('Failed to load payment settings');
       })
       .finally(() => {
@@ -65,18 +65,22 @@ export const PaymentSettingsPanel: React.FC<PaymentSettingsPanelProps> = ({ toke
     setErrorMessage('');
 
     try {
-      const res = await fetch('/api/admin/payment-settings', {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(settings),
-      });
+      const res = await safeFetchJson<{ paymentSettings?: PaymentSettings; error?: string }>(
+        '/api/admin/payment-settings',
+        {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(settings),
+        }
+      );
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save payment settings');
+      if (!res.ok || !res.data) {
+        throw new Error(res.error || 'Failed to save payment settings');
       }
 
-      setSettings(data.paymentSettings);
+      if (res.data.paymentSettings) {
+        setSettings(res.data.paymentSettings);
+      }
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err: any) {

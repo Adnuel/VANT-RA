@@ -144,8 +144,14 @@ async function vanteraFetchProducts() {
   try {
     const res = await fetch('/api/products');
     if (res.ok) {
-      const data = await res.json();
-      if (data.products && Array.isArray(data.products) && data.products.length > 0) {
+      const text = await res.text();
+      let data = null;
+      if (text && text.trim().startsWith('{')) {
+        try {
+          data = JSON.parse(text);
+        } catch {}
+      }
+      if (data && data.products && Array.isArray(data.products) && data.products.length > 0) {
         return data.products.map((p) => ({
           id: p.id,
           title: p.title,

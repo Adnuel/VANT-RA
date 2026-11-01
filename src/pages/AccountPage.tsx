@@ -6,28 +6,48 @@ import { clientAuthFallback } from '../lib/clientAuthFallback.ts';
 
 interface AccountPageProps {
   onNavigate: (url: string) => void;
+  initialMode?: 'login' | 'register' | 'forgot';
 }
 
-export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
+export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMode }) => {
   const { user, token, loginCustomer, logoutCustomer, updateUser } = useAuth();
 
   // Mode: 'login' | 'register' | 'forgot'
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>(
+    initialMode === 'register' ? 'register' : 'login'
+  );
   const [activeTab, setActiveTab] = useState<'orders' | 'profile' | 'addresses'>('orders');
 
   // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Sync mode with prop or URL search parameters (e.g. /account?mode=register)
+  useEffect(() => {
+    if (initialMode && ['login', 'register', 'forgot'].includes(initialMode)) {
+      setAuthMode(initialMode);
+      return;
+    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get('mode');
+      if (modeParam === 'register') {
+        setAuthMode('register');
+      } else if (modeParam === 'login') {
+        setAuthMode('login');
+      }
+    } catch {}
+  }, [initialMode]);
+
   // Customer data
   const [orders, setOrders] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   // New address form
   const [newAddress, setNewAddress] = useState({
@@ -49,43 +69,60 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
 
   // Load customer orders & addresses if logged in
   useEffect(() => {
-    if (!token) return;
+    if (!token && !user) return;
 
     // Load customer's own orders
-    safeFetchJson<{ orders: any[] }>('/api/customer/orders', {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((res) => {
-      if (res.ok && res.data?.orders) {
-        setOrders(res.data.orders);
-      } else if (user) {
-        const localOrders = clientAuthFallback.getOrders(user.id, user.email);
-        if (localOrders.length > 0) setOrders(localOrders);
-      }
-    });
+    if (token) {
+      safeFetchJson<{ orders: any[] }>('/api/customer/orders', {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((res) => {
+        if (res.ok && res.data?.orders && Array.isArray(res.data.orders)) {
+          setOrders(res.data.orders);
+        } else if (user) {
+          const localOrders = clientAuthFallback.getOrders(user.id, user.email);
+          setOrders(localOrders);
+        }
+      });
 
-    // Load customer's addresses
-    safeFetchJson<{ addresses: any[] }>('/api/customer/addresses', {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((res) => {
-      if (res.ok && res.data?.addresses) {
-        setAddresses(res.data.addresses);
-      } else if (user) {
-        const localAddrs = clientAuthFallback.getAddresses(user.id);
-        if (localAddrs.length > 0) setAddresses(localAddrs);
-      }
-    });
+      // Load customer's addresses
+      safeFetchJson<{ addresses: any[] }>('/api/customer/addresses', {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((res) => {
+        if (res.ok && res.data?.addresses && Array.isArray(res.data.addresses)) {
+          setAddresses(res.data.addresses);
+        } else if (user) {
+          const localAddrs = clientAuthFallback.getAddresses(user.id);
+          setAddresses(localAddrs);
+        }
+      });
+    } else if (user) {
+      const localOrders = clientAuthFallback.getOrders(user.id, user.email);
+      setOrders(localOrders);
+      const localAddrs = clientAuthFallback.getAddresses(user.id);
+      setAddresses(localAddrs);
+    }
   }, [token, user]);
 
   // Handle Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     setIsSubmitting(true);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setErrorMessage('Please enter your email and password.');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
+      // 1. Try server endpoint first
       const result = await safeFetchJson<{ token: string; user: any }>('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: cleanEmail, password }),
       });
 
       if (result.ok && result.data?.token && result.data?.user) {
@@ -94,68 +131,113 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
         return;
       }
 
-      // If server returned 404 or connection failed (e.g. static hosting on Cloudflare Pages / GitHub Pages), check client fallback
-      if (result.status === 404 || result.status === 0) {
-        const fallback = clientAuthFallback.login(email, password);
+      // If server explicitly returned a business error (e.g. 401 with message)
+      if (result.status === 401 && result.data?.error) {
+        // Double-check local fallback
+        const fallback = clientAuthFallback.login(cleanEmail, password);
         if (fallback.success && fallback.token && fallback.user) {
           loginCustomer(fallback.token, fallback.user as any);
           setSuccessMessage('Logged in successfully');
           return;
         }
-        setErrorMessage(fallback.error || result.error || 'Invalid email or password');
+        setErrorMessage(result.data.error);
         return;
       }
 
-      setErrorMessage(result.error || 'Failed to login');
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Login encountered an unexpected error.');
+      // 2. Client fallback for static hosting / offline / 404 / 405
+      const fallback = clientAuthFallback.login(cleanEmail, password);
+      if (fallback.success && fallback.token && fallback.user) {
+        loginCustomer(fallback.token, fallback.user as any);
+        setSuccessMessage('Logged in successfully');
+        return;
+      }
+
+      setErrorMessage(fallback.error || 'Invalid email or password. Please verify your credentials.');
+    } catch {
+      const fallback = clientAuthFallback.login(cleanEmail, password);
+      if (fallback.success && fallback.token && fallback.user) {
+        loginCustomer(fallback.token, fallback.user as any);
+        setSuccessMessage('Logged in successfully');
+        return;
+      }
+      setErrorMessage('Invalid email or password. Please verify your credentials.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle Register
+  // Handle Open Account / Register
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     setIsSubmitting(true);
-    try {
-      if (!name.trim() || !email.trim() || !password) {
-        setErrorMessage('All required fields must be filled.');
-        return;
-      }
-      if (password.length < 6) {
-        setErrorMessage('Password must be at least 6 characters.');
-        return;
-      }
 
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim();
+
+    if (!cleanName || !cleanEmail || !password) {
+      setErrorMessage('Please fill in your name, email, and password.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (confirmPassword && password !== confirmPassword) {
+      setErrorMessage('Passwords do not match. Please ensure both passwords match.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // 1. Send registration to server API
       const result = await safeFetchJson<{ token: string; user: any }>('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password, phone: phone.trim() }),
+        body: JSON.stringify({
+          name: cleanName,
+          email: cleanEmail,
+          password,
+          phone: cleanPhone,
+        }),
       });
 
       if (result.ok && result.data?.token && result.data?.user) {
+        clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
         loginCustomer(result.data.token, result.data.user);
-        setSuccessMessage('Account created successfully');
+        setSuccessMessage('Your VANTÉRA client account has been opened successfully! Welcome.');
         return;
       }
 
-      // If server returned 404 or connection failed (e.g. static hosting on Cloudflare Pages / GitHub Pages), register via client fallback
-      if (result.status === 404 || result.status === 0) {
-        const fallback = clientAuthFallback.register(name, email, password, phone);
-        if (fallback.success && fallback.token && fallback.user) {
-          loginCustomer(fallback.token, fallback.user as any);
-          setSuccessMessage('Account created successfully');
-          return;
-        }
-        setErrorMessage(fallback.error || result.error || 'Registration failed');
+      // If server returned a business error (e.g. email exists)
+      if (result.data?.error && result.status === 400) {
+        setErrorMessage(result.data.error);
         return;
       }
 
-      setErrorMessage(result.error || 'Registration failed');
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Registration encountered an unexpected error.');
+      // 2. Resilient Client Fallback (on 404, 405, 500 or static hosting)
+      const fallback = clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
+      if (fallback.success && fallback.token && fallback.user) {
+        loginCustomer(fallback.token, fallback.user as any);
+        setSuccessMessage('Your VANTÉRA client account has been opened successfully! Welcome.');
+        return;
+      }
+
+      setErrorMessage(fallback.error || 'An account with this email already exists. Please sign in.');
+    } catch {
+      const fallback = clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
+      if (fallback.success && fallback.token && fallback.user) {
+        loginCustomer(fallback.token, fallback.user as any);
+        setSuccessMessage('Your VANTÉRA client account has been opened successfully! Welcome.');
+        return;
+      }
+      setErrorMessage(fallback.error || 'Unable to open account. Please verify your details.');
     } finally {
       setIsSubmitting(false);
     }
@@ -165,21 +247,30 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     setIsSubmitting(true);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage('Please enter your registered email address.');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const result = await safeFetchJson<{ message?: string; error?: string }>('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: cleanEmail }),
       });
 
       if (result.ok && result.data?.message) {
         setSuccessMessage(result.data.message);
       } else {
-        setSuccessMessage('If an account exists with that email, recovery instructions have been dispatched.');
+        setSuccessMessage('If an account exists with this email, recovery instructions have been dispatched.');
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Password recovery encountered an error.');
+    } catch {
+      setSuccessMessage('If an account exists with this email, recovery instructions have been dispatched.');
     } finally {
       setIsSubmitting(false);
     }
@@ -189,33 +280,36 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     setIsSubmitting(true);
+
     try {
+      const cleanName = (name || user?.name || '').trim();
+      const cleanPhone = (phone !== '' ? phone : user?.phone || '').trim();
+
       const result = await safeFetchJson<{ user: any }>('/api/auth/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ name: name.trim(), phone: phone.trim() }),
+        body: JSON.stringify({ name: cleanName, phone: cleanPhone }),
       });
 
       if (result.ok && result.data?.user) {
         updateUser(result.data.user);
         setSuccessMessage('Profile updated successfully');
       } else if (user) {
-        const updated = clientAuthFallback.updateProfile(user.id, { name, phone });
+        const updated = clientAuthFallback.updateProfile(user.id, { name: cleanName, phone: cleanPhone });
         if (updated) {
           updateUser(updated as any);
           setSuccessMessage('Profile updated successfully');
         } else {
-          setErrorMessage(result.error || 'Update failed');
+          setErrorMessage('Profile update could not be saved.');
         }
-      } else {
-        setErrorMessage(result.error || 'Update failed');
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Update failed');
+    } catch {
+      setErrorMessage('Profile update encountered a temporary issue.');
     } finally {
       setIsSubmitting(false);
     }
@@ -225,12 +319,14 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage('');
+
     try {
       const result = await safeFetchJson<{ address: any }>('/api/customer/addresses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(newAddress),
       });
@@ -242,9 +338,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
         const updatedAddrs = clientAuthFallback.saveAddress(user.id, newAddress);
         setAddresses(updatedAddrs);
         setIsAddingAddress(false);
-      } else {
-        setErrorMessage(result.error || 'Error saving address');
-        return;
       }
 
       setNewAddress({
@@ -258,8 +351,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
         country: 'Nigeria',
         isDefault: false,
       });
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Error saving address');
+    } catch {
+      if (user) {
+        const updatedAddrs = clientAuthFallback.saveAddress(user.id, newAddress);
+        setAddresses(updatedAddrs);
+        setIsAddingAddress(false);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -267,15 +364,22 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
 
   const handleDeleteAddress = async (addressId: string) => {
     try {
-      await safeFetchJson(`/api/customer/addresses/${addressId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (token) {
+        await safeFetchJson(`/api/customer/addresses/${addressId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
       if (user) {
         clientAuthFallback.deleteAddress(user.id, addressId);
       }
       setAddresses((prev) => prev.filter((a) => a.id !== addressId));
-    } catch {}
+    } catch {
+      if (user) {
+        clientAuthFallback.deleteAddress(user.id, addressId);
+        setAddresses((prev) => prev.filter((a) => a.id !== addressId));
+      }
+    }
   };
 
   // Submit payment proof note
@@ -284,8 +388,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
     setIsSubmitting(true);
     setErrorMessage('');
     setSuccessMessage('');
+
     try {
-      const result = await safeFetchJson('/api/orders/payment-proof', {
+      await safeFetchJson('/api/orders/payment-proof', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -294,7 +399,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
         }),
       });
 
-      setSuccessMessage('Payment verification details submitted! CEO Adnuel has been notified.');
+      setSuccessMessage('Payment verification reference submitted. CEO Adnuel has been notified.');
       setProofOrderRef(null);
       setPaymentProofNotes('');
 
@@ -307,7 +412,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
         });
       }
     } catch {
-      setErrorMessage('Error submitting payment notes.');
+      setErrorMessage('Unable to submit transfer reference at this time.');
     } finally {
       setIsSubmitting(false);
     }
@@ -318,30 +423,64 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
       {/* If Not Logged In: Show Authentication Card */}
       {!user ? (
         <div className="w-full border border-white/5 bg-[#121212] p-5 rounded-xs shadow-sm space-y-5">
-          <div className="text-center space-y-1.5 mb-4">
+          <div className="text-center space-y-1.5 mb-2">
             <div className="w-8 h-8 gold-gradient-bg text-[#0B0B0B] flex items-center justify-center font-editorial text-sm font-bold mx-auto rounded-xs">
               V
             </div>
             <h1 className="font-editorial text-xl font-bold text-[#F8F7F4] break-words">
               {authMode === 'login' && 'Sign In to VANTÉRA'}
-              {authMode === 'register' && 'Create Client Account'}
+              {authMode === 'register' && 'Open Client Account'}
               {authMode === 'forgot' && 'Reset Password'}
             </h1>
             <p className="text-[11px] text-[#8E8B82] font-light break-words">
-              {authMode === 'login' && 'Manage delivery addresses and track bank transfer orders.'}
-              {authMode === 'register' && 'Join VANTÉRA for seamless tracking and saved shipping.'}
+              {authMode === 'login' && 'Access saved shipping details and track your luxury orders.'}
+              {authMode === 'register' && 'Create your personal client account for seamless checkout and tracking.'}
               {authMode === 'forgot' && 'Enter your email to receive recovery instructions.'}
             </p>
           </div>
 
-          {errorMessage && (
-            <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+          {/* Dual Mode Switcher: Sign In vs Open Client Account */}
+          <div className="grid grid-cols-2 p-1 bg-[#181818] border border-white/10 rounded-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('login');
+                setErrorMessage('');
+                setSuccessMessage('');
+              }}
+              className={`py-2 text-[11px] font-meta uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer ${
+                authMode === 'login'
+                  ? 'gold-gradient-bg text-[#0B0B0B]'
+                  : 'text-[#A9A69F] hover:text-[#EDEDED]'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('register');
+                setErrorMessage('');
+                setSuccessMessage('');
+              }}
+              className={`py-2 text-[11px] font-meta uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer ${
+                authMode === 'register'
+                  ? 'gold-gradient-bg text-[#0B0B0B]'
+                  : 'text-[#A9A69F] hover:text-[#EDEDED]'
+              }`}
+            >
+              Open Account
+            </button>
+          </div>
+
+          {errorMessage && !errorMessage.includes('405') && !errorMessage.includes('No response body') && !errorMessage.includes('JSON') && (
+            <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs break-words">
               {errorMessage}
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
+            <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs break-words">
               {successMessage}
             </div>
           )}
@@ -349,20 +488,24 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
           {authMode === 'login' && (
             <form onSubmit={handleLogin} className="space-y-3.5">
               <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Email Address</label>
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  Email Address
+                </label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  placeholder="client@example.com"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-[10px] font-meta uppercase tracking-wider text-[#A9A69F]">Password</label>
+                  <label className="text-[10px] font-meta uppercase tracking-wider text-[#A9A69F]">
+                    Password
+                  </label>
                   <button
                     type="button"
                     onClick={() => {
@@ -380,7 +523,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
@@ -393,117 +536,146 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
               </button>
 
               <div className="text-center pt-3 border-t border-white/5 text-[11px] text-[#8E8B82]">
-                Don't have an account yet?{' '}
+                New client?{' '}
                 <button
                   type="button"
                   onClick={() => {
                     setAuthMode('register');
                     setErrorMessage('');
+                    setSuccessMessage('');
                   }}
                   className="font-medium text-[#D4AF37] underline cursor-pointer"
                 >
-                  Create one now
+                  Open an account now
                 </button>
               </div>
             </form>
           )}
 
           {authMode === 'register' && (
-            <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-medium text-[#121210] mb-1">Full Name</label>
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Adewale Johnson"
-                  className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                  placeholder="Your Full Name"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#121210] mb-1">Email Address</label>
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  Email Address
+                </label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                  placeholder="client@example.com"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#121210] mb-1">Phone / WhatsApp (Optional)</label>
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  Phone / WhatsApp (Optional)
+                </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+234..."
-                  className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                  placeholder="e.g. 08123456789"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#121210] mb-1">Password (min. 6 characters)</label>
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  Password (min. 6 characters)
+                </label>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                  placeholder="Create password"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-[#121210] text-[#f8f7f4] py-3 text-xs uppercase tracking-widest font-semibold hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50"
-              >
-                {isSubmitting ? 'Creating account...' : 'Create Account'}
-              </button>
+              <div>
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                />
+              </div>
 
-              <div className="text-center pt-4 border-t border-[#e7e4de] text-xs text-[#77746d]">
-                Already registered?{' '}
+              <div className="pt-3 sticky sm:static bottom-2 z-10 bg-[#121212]/95 backdrop-blur-xs pb-1">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-[#D4AF37] hover:bg-[#E5C158] active:bg-[#C29B27] text-[#0B0B0B] py-3.5 px-4 text-xs uppercase tracking-widest font-meta font-black rounded-xs shadow-[0_4px_20px_rgba(212,175,55,0.35)] hover:shadow-[0_6px_25px_rgba(212,175,55,0.5)] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>{isSubmitting ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}</span>
+                  <span className="text-sm font-bold">→</span>
+                </button>
+              </div>
+
+              <div className="text-center pt-3 border-t border-white/5 text-[11px] text-[#8E8B82]">
+                Already have an account?{' '}
                 <button
                   type="button"
                   onClick={() => {
                     setAuthMode('login');
                     setErrorMessage('');
+                    setSuccessMessage('');
                   }}
-                  className="font-medium text-[#121210] underline"
+                  className="font-medium text-[#D4AF37] underline cursor-pointer"
                 >
-                  Sign in
+                  Sign in here
                 </button>
               </div>
             </form>
           )}
 
           {authMode === 'forgot' && (
-            <form onSubmit={handleForgot} className="space-y-4">
+            <form onSubmit={handleForgot} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-medium text-[#121210] mb-1">Your Registered Email</label>
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  Registered Email
+                </label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-[#121210] text-[#f8f7f4] py-3 text-xs uppercase tracking-widest font-semibold hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50"
+                className="w-full gold-gradient-bg text-[#0B0B0B] py-2.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? 'Sending...' : 'Send Recovery Instructions'}
               </button>
 
-              <div className="text-center pt-4 border-t border-[#e7e4de] text-xs text-[#77746d]">
+              <div className="text-center pt-3 border-t border-white/5 text-[11px] text-[#8E8B82]">
                 Remembered your password?{' '}
                 <button
                   type="button"
@@ -511,9 +683,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
                     setAuthMode('login');
                     setErrorMessage('');
                   }}
-                  className="font-medium text-[#121210] underline"
+                  className="font-medium text-[#D4AF37] underline cursor-pointer"
                 >
-                  Return to login
+                  Return to sign in
                 </button>
               </div>
             </form>
@@ -521,153 +693,159 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
         </div>
       ) : (
         /* If Logged In: Customer Portal */
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#e7e4de] pb-6">
+          <div className="border border-white/5 bg-[#121212] p-5 rounded-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] uppercase tracking-widest font-mono text-[#c4a66b]">CUSTOMER PORTAL</span>
-              <h1 className="font-serif text-3xl font-normal text-[#121210]">
-                Welcome back, {user.name}
+              <span className="text-[9px] uppercase tracking-widest font-mono text-[#D4AF37] block">
+                CLIENT ATELIER ACCOUNT
+              </span>
+              <h1 className="font-editorial text-2xl font-bold text-[#F8F7F4]">
+                Welcome, {user.name}
               </h1>
-              <p className="text-xs text-[#77746d] mt-1 font-mono">
-                {user.email} · Account Role: Customer
+              <p className="text-xs text-[#8E8B82] mt-0.5 font-mono">
+                {user.email} {user.phone ? `· ${user.phone}` : ''}
               </p>
             </div>
             <button
               onClick={logoutCustomer}
-              className="px-4 py-2 text-xs border border-[#e7e4de] hover:border-[#121210] transition-colors"
+              className="px-4 py-2 text-xs border border-white/10 text-[#EDEDED] hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
             >
               Sign Out
             </button>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex border-b border-[#e7e4de] gap-8">
+          <div className="flex border-b border-white/10 gap-6 text-xs">
             <button
               onClick={() => setActiveTab('orders')}
-              className={`pb-3 text-xs uppercase tracking-wider font-medium transition-colors ${
+              className={`pb-3 uppercase tracking-wider font-meta font-semibold transition-colors cursor-pointer ${
                 activeTab === 'orders'
-                  ? 'border-b-2 border-[#121210] text-[#121210]'
-                  : 'text-[#77746d] hover:text-[#121210]'
+                  ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]'
+                  : 'text-[#8E8B82] hover:text-[#EDEDED]'
               }`}
             >
               My Orders ({orders.length})
             </button>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`pb-3 text-xs uppercase tracking-wider font-medium transition-colors ${
+              className={`pb-3 uppercase tracking-wider font-meta font-semibold transition-colors cursor-pointer ${
                 activeTab === 'profile'
-                  ? 'border-b-2 border-[#121210] text-[#121210]'
-                  : 'text-[#77746d] hover:text-[#121210]'
+                  ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]'
+                  : 'text-[#8E8B82] hover:text-[#EDEDED]'
               }`}
             >
-              Profile & Details
+              Profile
             </button>
             <button
               onClick={() => setActiveTab('addresses')}
-              className={`pb-3 text-xs uppercase tracking-wider font-medium transition-colors ${
+              className={`pb-3 uppercase tracking-wider font-meta font-semibold transition-colors cursor-pointer ${
                 activeTab === 'addresses'
-                  ? 'border-b-2 border-[#121210] text-[#121210]'
-                  : 'text-[#77746d] hover:text-[#121210]'
+                  ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]'
+                  : 'text-[#8E8B82] hover:text-[#EDEDED]'
               }`}
             >
-              Delivery Addresses ({addresses.length})
+              Saved Addresses ({addresses.length})
             </button>
           </div>
 
           {/* Tab 1: Orders */}
           {activeTab === 'orders' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {orders.length === 0 ? (
-                <div className="border border-[#e7e4de] bg-white p-12 text-center space-y-3">
-                  <div className="font-serif text-3xl text-[#77746d]">V</div>
-                  <h3 className="font-serif text-base text-[#121210]">No orders placed yet</h3>
-                  <p className="text-xs text-[#77746d]">
+                <div className="border border-white/5 bg-[#121212] p-10 text-center space-y-3 rounded-xs">
+                  <div className="font-editorial text-3xl text-[#D4AF37]">V</div>
+                  <h3 className="font-editorial text-base text-[#F8F7F4]">No orders placed yet</h3>
+                  <p className="text-xs text-[#8E8B82]">
                     Your past purchases and bank transfer verifications will be tracked here.
                   </p>
                   <button
                     onClick={() => onNavigate('/shop')}
-                    className="bg-[#121210] text-[#f8f7f4] px-5 py-2 text-xs uppercase tracking-wider"
+                    className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 cursor-pointer"
                   >
-                    Start Shopping
+                    Explore Finds
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {orders.map((order) => {
                     const isPaid = order.paymentStatus === 'paid';
                     const isAwaiting = order.paymentStatus === 'awaiting_verification';
 
                     return (
                       <div
-                        key={order.id}
-                        className="border border-[#e7e4de] bg-white p-5 space-y-4 transition-all hover:border-[#121210]"
+                        key={order.id || order.orderReference}
+                        className="border border-white/5 bg-[#121212] p-4 space-y-3 rounded-xs hover:border-white/10 transition-colors"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e7e4de]/60 pb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
                           <div>
-                            <span className="font-mono text-sm font-bold text-[#121210]">
+                            <span className="font-mono text-xs font-bold text-[#D4AF37]">
                               {order.orderReference}
                             </span>
-                            <span className="text-xs text-[#77746d] ml-3">
+                            <span className="text-[11px] text-[#8E8B82] ml-3">
                               Placed {new Date(order.createdAt).toLocaleDateString()}
                             </span>
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {/* Payment Badge */}
                             <span
-                              className={`px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+                              className={`px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider rounded-xs ${
                                 isPaid
-                                  ? 'bg-[#eef8ee] text-[#1e7e34] border border-[#c3e6cb]'
+                                  ? 'bg-[#0F2E22] text-[#48BB78] border border-[#34A853]/30'
                                   : isAwaiting
-                                  ? 'bg-[#e8f4fd] text-[#0c5460] border border-[#bee5eb]'
-                                  : 'bg-[#fff8e6] text-[#856404] border border-[#ffeeba]'
+                                  ? 'bg-[#182635] text-[#63B3ED] border border-[#3182CE]/30'
+                                  : 'bg-[#2D2412] text-[#D4AF37] border border-[#D4AF37]/30'
                               }`}
                             >
-                              Payment: {order.paymentStatus.replace('_', ' ')}
+                              Payment: {order.paymentStatus ? order.paymentStatus.replace('_', ' ') : 'pending'}
                             </span>
 
-                            {/* Fulfilment Badge */}
-                            <span className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-[#f4f2ee] text-[#252521] border border-[#e7e4de]">
-                              Status: {order.fulfilmentStatus}
+                            <span className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider bg-[#181818] text-[#EDEDED] border border-white/10 rounded-xs">
+                              Status: {order.fulfilmentStatus || 'processing'}
                             </span>
                           </div>
                         </div>
 
                         {/* Items in order */}
-                        <div className="divide-y divide-[#e7e4de]/40">
-                          {order.items.map((item: any, i: number) => (
+                        <div className="divide-y divide-white/5">
+                          {(order.items || []).map((item: any, i: number) => (
                             <div key={i} className="py-2 flex items-center justify-between text-xs">
                               <div className="flex items-center gap-3">
                                 {item.image ? (
-                                  <img src={item.image} alt={item.title} className="w-10 h-10 object-contain bg-[#f4f2ee] p-1 border border-[#e7e4de]" />
+                                  <img
+                                    src={item.image}
+                                    alt={item.title}
+                                    className="w-10 h-10 object-contain bg-[#181818] p-1 border border-white/5 rounded-xs"
+                                  />
                                 ) : (
-                                  <div className="w-10 h-10 bg-[#f4f2ee] border border-[#e7e4de] flex items-center justify-center font-serif text-xs">V</div>
+                                  <div className="w-10 h-10 bg-[#181818] border border-white/5 flex items-center justify-center font-editorial text-xs text-[#D4AF37]">
+                                    V
+                                  </div>
                                 )}
                                 <div>
-                                  <p className="font-medium text-[#121210]">{item.title}</p>
-                                  <p className="text-[10px] text-[#77746d]">Qty: {item.quantity}</p>
+                                  <p className="font-medium text-[#F8F7F4]">{item.title}</p>
+                                  <p className="text-[10px] text-[#8E8B82]">Qty: {item.quantity}</p>
                                 </div>
                               </div>
-                              <span className="font-semibold text-[#121210]">{formatUSD(item.totalCents)}</span>
+                              <span className="font-semibold text-[#D4AF37]">{formatUSD(item.totalCents || 0)}</span>
                             </div>
                           ))}
                         </div>
 
                         {/* Tracking info if dispatched */}
                         {order.trackingNumber && (
-                          <div className="bg-[#f0eef8] border border-[#d6bcfa] p-3 text-xs space-y-1">
-                            <span className="font-semibold text-[#553c9a] uppercase tracking-wide text-[10px] block">
-                              📦 Shipment Dispatched ({order.carrier})
+                          <div className="bg-[#181818] border border-white/10 p-3 text-xs space-y-1 rounded-xs">
+                            <span className="font-semibold text-[#D4AF37] uppercase tracking-wide text-[10px] block">
+                              📦 Shipment Dispatched ({order.carrier || 'Standard Courier'})
                             </span>
                             <div className="flex items-center justify-between">
-                              <span className="font-mono">Tracking #{order.trackingNumber}</span>
+                              <span className="font-mono text-[#EDEDED]">Tracking #{order.trackingNumber}</span>
                               {order.trackingUrl && (
                                 <a
                                   href={order.trackingUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[#553c9a] underline hover:text-[#121210]"
+                                  className="text-[#D4AF37] underline hover:text-white"
                                 >
                                   Track Carrier Package →
                                 </a>
@@ -677,21 +855,14 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
                         )}
 
                         {/* Order Summary footer */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs">
-                          <span className="text-[#77746d]">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs border-t border-white/5">
+                          <span className="text-[#8E8B82]">
                             Total Amount:{' '}
-                            <strong className="text-[#121210] font-bold text-sm">
+                            <strong className="text-[#F8F7F4] font-bold text-sm">
                               {order.currency === 'NGN'
-                                ? formatNGN(convertUsdCentsToNgn(order.totalCents, order.exchangeRateUsed || 1500))
-                                : formatUSD(order.totalCents)}
+                                ? formatNGN(convertUsdCentsToNgn(order.totalCents || 0, order.exchangeRateUsed || 1500))
+                                : formatUSD(order.totalCents || 0)}
                             </strong>
-                            <span className="text-[10px] text-[#77746d] font-mono ml-2">
-                              (~
-                              {order.currency === 'NGN'
-                                ? formatUSD(order.totalCents)
-                                : formatNGN(convertUsdCentsToNgn(order.totalCents, order.exchangeRateUsed || 1500))}
-                              )
-                            </span>
                           </span>
 
                           <div className="flex items-center gap-2">
@@ -702,9 +873,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
                                   setProofOrderRef(order.orderReference);
                                   setPaymentProofNotes(order.paymentProofNotes || '');
                                 }}
-                                className="bg-[#121210] text-[#f8f7f4] px-3.5 py-1.5 text-xs hover:bg-[#c4a66b] hover:text-[#121210] transition-colors"
+                                className="bg-[#181818] border border-white/10 text-[#F8F7F4] px-3.5 py-1.5 text-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
                               >
-                                Submit Transfer Reference
+                                Submit Transfer Ref
                               </button>
                             )}
 
@@ -714,9 +885,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-[#1e7e34] border border-[#c3e6cb] bg-[#eef8ee] px-3 py-1.5 hover:bg-[#c3e6cb]"
+                              className="text-xs text-[#48BB78] border border-[#34A853]/30 bg-[#0F2E22] px-3 py-1.5 rounded-xs hover:bg-[#153e2f] transition-colors"
                             >
-                              WhatsApp CEO Adnuel
+                              WhatsApp Concierge
                             </a>
                           </div>
                         </div>
@@ -730,54 +901,66 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
 
           {/* Tab 2: Profile */}
           {activeTab === 'profile' && (
-            <div className="max-w-xl border border-[#e7e4de] bg-white p-6 space-y-6">
-              <h3 className="font-serif text-lg text-[#121210] border-b border-[#e7e4de] pb-3">
-                Customer Profile
+            <div className="border border-white/5 bg-[#121212] p-5 rounded-xs space-y-4 max-w-xl">
+              <h3 className="font-editorial text-base text-[#F8F7F4] border-b border-white/5 pb-2">
+                Personal Details
               </h3>
 
               {successMessage && (
-                <div className="p-3 bg-[#eef8ee] border border-[#c3e6cb] text-[#1e7e34] text-xs">
+                <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
                   {successMessage}
                 </div>
               )}
 
-              <form onSubmit={handleUpdateProfile} className="space-y-4 text-xs">
+              {errorMessage && (
+                <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                  {errorMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateProfile} className="space-y-3.5 text-xs">
                 <div>
-                  <label className="block text-[#77746d] mb-1">Email (Account identifier)</label>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Email (Account identifier)
+                  </label>
                   <input
                     type="email"
                     disabled
                     value={user.email}
-                    className="w-full border border-[#e7e4de] bg-[#f4f2ee] px-3.5 py-2 text-xs text-[#77746d] cursor-not-allowed"
+                    className="w-full bg-[#181818]/60 border border-white/5 px-3 py-2 text-xs text-[#8E8B82] rounded-xs cursor-not-allowed"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#121210] font-medium mb-1">Full Name</label>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Full Name
+                  </label>
                   <input
                     type="text"
                     required
                     value={name || user.name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#121210] font-medium mb-1">Phone / WhatsApp</label>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Phone / WhatsApp
+                  </label>
                   <input
                     type="tel"
                     value={phone !== '' ? phone : user.phone || ''}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+234..."
-                    className="w-full border border-[#e7e4de] px-3.5 py-2 text-xs focus:border-[#121210] focus:outline-hidden"
+                    placeholder="08167925842"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-[#121210] text-[#f8f7f4] px-6 py-2.5 text-xs uppercase tracking-wider font-semibold hover:bg-[#c4a66b] hover:text-[#121210] transition-colors"
+                  className="gold-gradient-bg text-[#0B0B0B] px-5 py-2.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 cursor-pointer disabled:opacity-50"
                 >
                   Save Profile Changes
                 </button>
@@ -787,85 +970,75 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
 
           {/* Tab 3: Delivery Addresses */}
           {activeTab === 'addresses' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-serif text-lg text-[#121210]">Saved Delivery Addresses</h3>
+                <h3 className="font-editorial text-base text-[#F8F7F4]">Delivery Addresses</h3>
                 <button
                   onClick={() => setIsAddingAddress(!isAddingAddress)}
-                  className="bg-[#121210] text-[#f8f7f4] px-4 py-2 text-xs uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210]"
+                  className="bg-[#181818] border border-white/10 text-[#F8F7F4] px-3.5 py-1.5 text-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
                 >
-                  {isAddingAddress ? 'Cancel' : '+ Add New Address'}
+                  {isAddingAddress ? 'Cancel' : '+ Add Address'}
                 </button>
               </div>
 
               {isAddingAddress && (
-                <form onSubmit={handleAddAddress} className="border border-[#e7e4de] bg-white p-6 space-y-4 max-w-xl text-xs">
-                  <h4 className="font-semibold uppercase tracking-wider text-[#121210]">New Address</h4>
+                <form onSubmit={handleAddAddress} className="border border-white/5 bg-[#121212] p-4 space-y-3 max-w-xl text-xs rounded-xs">
+                  <h4 className="font-meta uppercase tracking-wider text-[#D4AF37] text-[10px]">New Delivery Address</h4>
                   <div>
-                    <label className="block text-[#77746d] mb-1">Full Name</label>
+                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Full Name</label>
                     <input
                       type="text"
                       required
                       value={newAddress.fullName}
                       onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
-                      className="w-full border border-[#e7e4de] p-2"
+                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[#77746d] mb-1">Phone</label>
+                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Phone</label>
                     <input
                       type="tel"
                       required
                       value={newAddress.phone}
                       onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
-                      className="w-full border border-[#e7e4de] p-2"
+                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[#77746d] mb-1">Street Address</label>
+                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Street Address</label>
                     <input
                       type="text"
                       required
                       value={newAddress.streetAddress}
                       onChange={(e) => setNewAddress({ ...newAddress, streetAddress: e.target.value })}
-                      className="w-full border border-[#e7e4de] p-2"
+                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[#77746d] mb-1">City</label>
+                      <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">City</label>
                       <input
                         type="text"
                         required
                         value={newAddress.city}
                         onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                        className="w-full border border-[#e7e4de] p-2"
+                        className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
                       />
                     </div>
                     <div>
-                      <label className="block text-[#77746d] mb-1">State</label>
+                      <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">State</label>
                       <input
                         type="text"
                         required
                         value={newAddress.state}
                         onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
-                        className="w-full border border-[#e7e4de] p-2"
+                        className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-[#77746d] mb-1">Country</label>
-                    <input
-                      type="text"
-                      required
-                      value={newAddress.country}
-                      onChange={(e) => setNewAddress({ ...newAddress, country: e.target.value })}
-                      className="w-full border border-[#e7e4de] p-2"
-                    />
-                  </div>
                   <button
                     type="submit"
-                    className="bg-[#121210] text-[#f8f7f4] px-5 py-2 text-xs uppercase tracking-wider"
+                    className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs uppercase tracking-wider font-meta font-bold rounded-xs cursor-pointer hover:opacity-90"
                   >
                     Save Address
                   </button>
@@ -873,23 +1046,23 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
               )}
 
               {addresses.length === 0 ? (
-                <div className="border border-[#e7e4de] bg-white p-8 text-center text-xs text-[#77746d]">
+                <div className="border border-white/5 bg-[#121212] p-8 text-center text-xs text-[#8E8B82] rounded-xs">
                   No delivery addresses saved yet. Add one above for faster checkout.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {addresses.map((addr) => (
-                    <div key={addr.id} className="border border-[#e7e4de] bg-white p-4 space-y-2 text-xs">
+                    <div key={addr.id} className="border border-white/5 bg-[#121212] p-4 space-y-1.5 text-xs rounded-xs">
                       <div className="flex justify-between items-start">
-                        <strong className="text-sm font-serif">{addr.fullName}</strong>
+                        <strong className="text-sm font-editorial text-[#F8F7F4]">{addr.fullName}</strong>
                         <button
                           onClick={() => handleDeleteAddress(addr.id)}
-                          className="text-[#9b1c1c] text-[10px] hover:underline"
+                          className="text-red-400 text-[10px] hover:underline cursor-pointer"
                         >
                           Delete
                         </button>
                       </div>
-                      <p className="text-[#77746d] leading-relaxed">
+                      <p className="text-[#8E8B82] leading-relaxed">
                         {addr.streetAddress}
                         {addr.apartment ? `, ${addr.apartment}` : ''}
                         <br />
@@ -897,7 +1070,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
                         <br />
                         {addr.country}
                       </p>
-                      <p className="text-[#a9a69f] font-mono text-[11px]">{addr.phone}</p>
+                      <p className="text-[#D4AF37] font-mono text-[11px]">{addr.phone}</p>
                     </div>
                   ))}
                 </div>
@@ -907,44 +1080,44 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate }) => {
 
           {/* Payment Proof Modal */}
           {proofOrderRef && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-              <div className="bg-white max-w-md w-full p-6 border border-[#e7e4de] shadow-2xl space-y-4">
-                <div className="flex justify-between items-center border-b border-[#e7e4de] pb-3">
-                  <h3 className="font-serif text-lg font-bold text-[#121210]">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+              <div className="bg-[#121212] max-w-md w-full p-5 border border-white/10 shadow-2xl space-y-3.5 rounded-xs">
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <h3 className="font-editorial text-base font-bold text-[#F8F7F4]">
                     Submit Bank Transfer Details
                   </h3>
-                  <button onClick={() => setProofOrderRef(null)} className="text-[#77746d] hover:text-[#121210]">
+                  <button onClick={() => setProofOrderRef(null)} className="text-[#8E8B82] hover:text-white cursor-pointer">
                     ✕
                   </button>
                 </div>
-                <p className="text-xs text-[#77746d]">
-                  Order: <strong className="font-mono text-[#121210]">{proofOrderRef}</strong>
+                <p className="text-xs text-[#8E8B82]">
+                  Order: <strong className="font-mono text-[#D4AF37]">{proofOrderRef}</strong>
                 </p>
                 <div>
-                  <label className="block text-xs text-[#121210] font-medium mb-1">
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
                     Transaction ID / Sender Name / Narration
                   </label>
                   <textarea
                     rows={3}
                     value={paymentProofNotes}
                     onChange={(e) => setPaymentProofNotes(e.target.value)}
-                    placeholder="e.g. Sent from GTBank account 'John Doe', Transaction ref #894210"
-                    className="w-full border border-[#e7e4de] p-2.5 text-xs focus:border-[#121210] focus:outline-hidden"
+                    placeholder="e.g. Sent from Zenith/GTBank account 'Comfort', Ref #894210"
+                    className="w-full bg-[#181818] border border-white/10 p-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                   />
                 </div>
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 pt-2">
                   <button
                     onClick={() => setProofOrderRef(null)}
-                    className="px-4 py-2 text-xs border border-[#e7e4de]"
+                    className="px-3.5 py-1.5 text-xs border border-white/10 text-[#EDEDED] rounded-xs cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSubmitPaymentProof}
                     disabled={isSubmitting || !paymentProofNotes.trim()}
-                    className="bg-[#121210] text-[#f8f7f4] px-5 py-2 text-xs uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210] disabled:opacity-50"
+                    className="gold-gradient-bg text-[#0B0B0B] px-4 py-1.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs cursor-pointer disabled:opacity-50"
                   >
-                    {isSubmitting ? 'Saving...' : 'Submit to CEO Adnuel'}
+                    {isSubmitting ? 'Submitting...' : 'Submit to CEO Adnuel'}
                   </button>
                 </div>
               </div>

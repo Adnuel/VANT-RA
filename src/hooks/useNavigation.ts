@@ -6,6 +6,7 @@ export interface RouteState {
   productSlug?: string;
   filter?: string;
   searchQuery?: string;
+  mode?: string;
 }
 
 export function parsePath(rawUrl: string): RouteState {
@@ -20,6 +21,7 @@ export function parsePath(rawUrl: string): RouteState {
   const searchParams = new URLSearchParams(search);
   const filter = searchParams.get('filter') || undefined;
   const searchQuery = searchParams.get('q') || undefined;
+  const mode = searchParams.get('mode') || undefined;
 
   if (clean === '/' || clean === '') {
     return { path: '/', filter, searchQuery };
@@ -39,7 +41,7 @@ export function parsePath(rawUrl: string): RouteState {
     return { path: clean, filter, searchQuery };
   }
   if (clean === '/account') {
-    return { path: '/account', filter, searchQuery };
+    return { path: '/account', filter, searchQuery, mode };
   }
   if (clean === '/track') {
     return { path: '/track', filter, searchQuery };

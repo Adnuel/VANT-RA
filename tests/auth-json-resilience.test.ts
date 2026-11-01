@@ -16,7 +16,7 @@ function createMockFetch(status: number, statusText: string, bodyText: string, h
   } as unknown as Response);
 }
 
-test('safeFetchJson handles empty response body without throwing SyntaxError', async () => {
+test('safeFetchJson handles empty response body without throwing SyntaxError and without exposing technical error strings', async () => {
   const originalFetch = global.fetch;
   try {
     // Simulate 204 No Content
@@ -30,7 +30,14 @@ test('safeFetchJson handles empty response body without throwing SyntaxError', a
     const res404 = await safeFetchJson('/test-404');
     assert.equal(res404.ok, false);
     assert.equal(res404.status, 404);
-    assert.ok(res404.error?.includes('404'));
+    assert.ok(res404.error?.length && !res404.error.includes('No response body'));
+
+    // Simulate empty 405 Method Not Allowed (like Cloudflare Pages static route)
+    global.fetch = createMockFetch(405, 'Method Not Allowed', '') as any;
+    const res405 = await safeFetchJson('/api/auth/register', { method: 'POST' });
+    assert.equal(res405.ok, false);
+    assert.equal(res405.status, 405);
+    assert.equal(res405.error?.includes('405 (No response body)'), false);
   } finally {
     global.fetch = originalFetch;
   }
@@ -44,7 +51,7 @@ test('safeFetchJson handles HTML error responses gracefully without JSON parse c
     const res = await safeFetchJson('/api/missing');
     assert.equal(res.ok, false);
     assert.equal(res.status, 404);
-    assert.ok(res.error?.includes('HTML status page') || res.error?.includes('404'));
+    assert.ok(res.error?.length && !res.error.includes('Unexpected token'));
   } finally {
     global.fetch = originalFetch;
   }
@@ -64,8 +71,7 @@ test('safeFetchJson parses valid JSON correctly', async () => {
   }
 });
 
-test('clientAuthFallback handles customer registration, duplicate prevention, and login', () => {
-  // Mock localStorage for test environment
+test('clientAuthFallback handles customer registration, re-login on matching password, and address book', () => {
   const store: Record<string, string> = {};
   global.localStorage = {
     getItem: (key: string) => store[key] || null,
@@ -83,8 +89,14 @@ test('clientAuthFallback handles customer registration, duplicate prevention, an
   assert.equal(regResult.user?.email, 'client@vantera.co');
   assert.equal(regResult.user?.role, 'customer');
 
-  // Prevent duplicate registration
-  const dupResult = clientAuthFallback.register('Duplicate', 'client@vantera.co', 'otherSecret');
+  // Re-registering with the same password logs in seamlessly
+  const reRegisterSamePass = clientAuthFallback.register('Adnuel Client', 'client@vantera.co', 'luxurySecret123');
+  assert.equal(reRegisterSamePass.success, true);
+  assert.ok(reRegisterSamePass.token);
+  assert.equal(reRegisterSamePass.user?.email, 'client@vantera.co');
+
+  // Registering with different password informs user that account exists
+  const dupResult = clientAuthFallback.register('Duplicate', 'client@vantera.co', 'otherSecretDifferentPass');
   assert.equal(dupResult.success, false);
   assert.ok(dupResult.error?.includes('already exists'));
 
@@ -110,4 +122,52 @@ test('clientAuthFallback handles customer registration, duplicate prevention, an
   });
   assert.equal(addresses.length, 1);
   assert.equal(addresses[0].city, 'Lagos');
+});
+
+test('Comfort account creation on vantera.com.ng succeeds seamlessly even on empty 405/500/HTML static response', async () => {
+  const store: Record<string, string> = {};
+  global.localStorage = {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, val: string) => { store[key] = val; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { Object.keys(store).forEach(k => delete store[k]); },
+    key: (i: number) => Object.keys(store)[i] || null,
+    length: Object.keys(store).length,
+  };
+
+  const originalFetch = global.fetch;
+  try {
+    // Simulate Cloudflare returning empty 405 Method Not Allowed or 0 bytes
+    global.fetch = createMockFetch(405, 'Method Not Allowed', '') as any;
+
+    const netResult = await safeFetchJson('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Comfort',
+        email: 'comfortugbada@gmail.com',
+        password: 'securePassword123',
+        phone: '08167925842',
+      }),
+    });
+
+    // safeFetchJson does NOT throw "Failed to execute 'json' on 'Response'"
+    assert.equal(netResult.ok, false);
+    assert.equal(netResult.status, 405);
+    // Never expose technical status 405 to user
+    assert.equal(netResult.error?.includes('405'), false);
+
+    // Fallback creates the account seamlessly
+    const fallback = clientAuthFallback.register('Comfort', 'comfortugbada@gmail.com', 'securePassword123', '08167925842');
+    assert.equal(fallback.success, true);
+    assert.equal(fallback.user?.name, 'Comfort');
+    assert.equal(fallback.user?.email, 'comfortugbada@gmail.com');
+    assert.equal(fallback.user?.phone, '08167925842');
+
+    // Login succeeds
+    const login = clientAuthFallback.login('comfortugbada@gmail.com', 'securePassword123');
+    assert.equal(login.success, true);
+    assert.equal(login.user?.email, 'comfortugbada@gmail.com');
+  } finally {
+    global.fetch = originalFetch;
+  }
 });

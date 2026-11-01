@@ -44,6 +44,14 @@
           event.stopImmediatePropagation();
         }
       });
+      // Ensure mobile browsers update service workers to eliminate stale cached bundles
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var i = 0; i < registrations.length; i++) {
+            registrations[i].update();
+          }
+        });
+      }
     </script>
   </head>
   <body class="bg-[#0B0B0B] text-[#EDEDED] antialiased selection:bg-[#D4AF37]/30 selection:text-[#FFFFFF]">

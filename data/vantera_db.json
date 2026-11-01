@@ -34,6 +34,42 @@
       "isPasswordSet": true,
       "createdAt": "2026-10-29T11:16:34.045Z",
       "updatedAt": "2026-10-29T11:16:34.045Z"
+    },
+    {
+      "id": "usr_b6466bf325997430",
+      "email": "comfortugbada@gmail.com",
+      "name": "Comfort",
+      "phone": "08167925842",
+      "role": "customer",
+      "passwordHash": "86b7e57b0aedd7167e2030387e4bc777f4d84bf7a9d564bb3bdcfbfa00443ad40599f915c4a15d685ff7ed7d1957240493630bbca5d62547d2819ba9b48132cf",
+      "salt": "622ef8d4e0ff225c6f49aced49edf9e7",
+      "isPasswordSet": true,
+      "createdAt": "2026-10-29T11:51:48.174Z",
+      "updatedAt": "2026-10-29T11:51:48.174Z"
+    },
+    {
+      "id": "usr_65a6ba207d7d860c",
+      "email": "newclient1793562668521@gmail.com",
+      "name": "New Client",
+      "phone": "08012345678",
+      "role": "customer",
+      "passwordHash": "e9ab4b2dcbb0c88bb3bfb2aaeef2c2b3b386a27069a31ab463f8ba65cbf6f681aad0df523b349c6a708fdbd6779eba6ac08bb16786ceb3319669ec6dd63217d4",
+      "salt": "7cbf2ddf3e300208c3a48e6b847e0cc4",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-01T19:51:08.622Z",
+      "updatedAt": "2026-11-01T19:51:08.622Z"
+    },
+    {
+      "id": "usr_a6802b9df352f827",
+      "email": "newclient@gmail.com",
+      "name": "New Client",
+      "phone": "08012345678",
+      "role": "customer",
+      "passwordHash": "ba16683106bb641193ad9dd63cf6867dd45c64099626b82618a0d61dabab0b34f1a713bbe12774a68b15548ab5d75d85d53617e7bde5fa229f741ab378c93b88",
+      "salt": "c118f0123625cc09d7c8bc6a1b3f9d71",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-01T19:51:13.760Z",
+      "updatedAt": "2026-11-01T19:51:13.760Z"
     }
   ],
   "deliveryAddresses": [],
@@ -1810,6 +1846,27 @@
   ],
   "auditLogs": [
     {
+      "id": "log_1793562673760_bdx2",
+      "timestamp": "2026-11-01T19:51:13.760Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: newclient@gmail.com"
+    },
+    {
+      "id": "log_1793562668623_v44f",
+      "timestamp": "2026-11-01T19:51:08.623Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: newclient1793562668521@gmail.com"
+    },
+    {
+      "id": "log_1793274708174_ujvf",
+      "timestamp": "2026-10-29T11:51:48.174Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: comfortugbada@gmail.com"
+    },
+    {
       "id": "log_1793272594045_96sn",
       "timestamp": "2026-10-29T11:16:34.045Z",
       "actor": "Customer",
@@ -1959,6 +2016,33 @@
   ],
   "notifications": [
     {
+      "recipient": "newclient@gmail.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, New Client! Your customer account has been created.",
+      "id": "notif_1793562673760_sz3t",
+      "status": "dispatched",
+      "timestamp": "2026-11-01T19:51:13.760Z"
+    },
+    {
+      "recipient": "newclient1793562668521@gmail.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, New Client! Your customer account has been created.",
+      "id": "notif_1793562668623_bx9m",
+      "status": "dispatched",
+      "timestamp": "2026-11-01T19:51:08.623Z"
+    },
+    {
+      "recipient": "comfortugbada@gmail.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, Comfort! Your customer account has been created.",
+      "id": "notif_1793274708174_ilvo",
+      "status": "dispatched",
+      "timestamp": "2026-10-29T11:51:48.174Z"
+    },
+    {
       "recipient": "chinedu@example.com",
       "channel": "email",
       "event": "account_registered",
@@ -2058,6 +2142,58 @@
     }
   ],
   "events": [
+    {
+      "id": "evt_1793562673760_ee3e2c84",
+      "type": "customer_registered",
+      "timestamp": "2026-11-01T19:51:13.760Z",
+      "customerId": "usr_a6802b9df352f827",
+      "customerEmail": "newclient@gmail.com",
+      "customerName": "New Client",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793562668623_799db16d",
+      "type": "customer_registered",
+      "timestamp": "2026-11-01T19:51:08.623Z",
+      "customerId": "usr_65a6ba207d7d860c",
+      "customerEmail": "newclient1793562668521@gmail.com",
+      "customerName": "New Client",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793274750753_1f9cce07",
+      "type": "customer_login",
+      "timestamp": "2026-10-29T11:52:30.753Z",
+      "customerId": "usr_b6466bf325997430",
+      "customerEmail": "comfortugbada@gmail.com",
+      "customerName": "Comfort",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793274708175_bf9434a4",
+      "type": "customer_registered",
+      "timestamp": "2026-10-29T11:51:48.175Z",
+      "customerId": "usr_b6466bf325997430",
+      "customerEmail": "comfortugbada@gmail.com",
+      "customerName": "Comfort",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
     {
       "id": "evt_1793272622132_4d7990a9",
       "type": "customer_login",
@@ -2366,6 +2502,28 @@
   ],
   "carts": [
     {
+      "id": "ses_1793389444228_jvtz4eih",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1793389444228_jvtz4eih",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-30T19:44:04.660Z",
+      "updatedAt": "2026-10-30T19:44:04.660Z"
+    },
+    {
+      "id": "ses_1793274683591_lomv3tru",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1793274683591_lomv3tru",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-29T11:51:23.887Z",
+      "updatedAt": "2026-10-29T11:51:23.887Z"
+    },
+    {
       "id": "ses_1793272561851_0odbt3wp",
       "customerId": null,
       "customerEmail": null,
@@ -2506,10 +2664,24 @@
       "itemCount": 0,
       "subtotalCents": 0,
       "createdAt": "2026-10-19T14:13:16.456Z",
-      "updatedAt": "2026-10-24T14:46:42.592Z"
+      "updatedAt": "2026-11-01T19:46:03.606Z"
     }
   ],
   "visitorSessions": [
+    {
+      "sessionId": "ses_1793389444228_jvtz4eih",
+      "firstSeen": "2026-10-30T19:44:04.658Z",
+      "lastActive": "2026-10-30T19:44:04.658Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1793274683591_lomv3tru",
+      "firstSeen": "2026-10-29T11:51:23.885Z",
+      "lastActive": "2026-10-29T11:51:23.885Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
     {
       "sessionId": "ses_1793272561851_0odbt3wp",
       "firstSeen": "2026-10-29T11:16:02.276Z",
@@ -2814,9 +2986,9 @@
     {
       "sessionId": "ses_1792061095986_oeq1ne6d",
       "firstSeen": "2026-10-16T10:47:53.257Z",
-      "lastActive": "2026-10-24T14:46:42.591Z",
+      "lastActive": "2026-11-01T19:46:03.605Z",
       "authenticatedUserId": null,
-      "pageViews": 21
+      "pageViews": 22
     }
   ],
   "currencySettings": {

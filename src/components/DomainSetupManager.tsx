@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { safeFetchJson } from '../lib/safeFetch';
 
 interface DomainSettings {
   domain: string;
@@ -43,12 +44,11 @@ export function DomainSetupManager() {
 
   const loadSettings = async () => {
     try {
-      const res = await fetch('/api/admin/domain-settings', { headers });
-      if (res.ok) {
-        const data = await res.json();
-        setSettings(data.domainSettings);
-        if (data.domainSettings?.domain) {
-          setInputDomain(data.domainSettings.domain);
+      const res = await safeFetchJson<{ domainSettings?: DomainSettings }>('/api/admin/domain-settings', { headers });
+      if (res.ok && res.data?.domainSettings) {
+        setSettings(res.data.domainSettings);
+        if (res.data.domainSettings.domain) {
+          setInputDomain(res.data.domainSettings.domain);
         }
       }
     } catch (e) {
@@ -78,29 +78,31 @@ export function DomainSetupManager() {
     setNotification(null);
 
     try {
-      const res = await fetch('/api/dev/check-domain', {
+      const res = await safeFetchJson<DnsCheckResult>('/api/dev/check-domain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain }),
       });
-      const data: DnsCheckResult = await res.json();
-      setCheckResult(data);
-
-      if (data.status === 'active') {
-        setNotification({
-          type: 'success',
-          message: `Success! ${data.domain} is properly pointing to VANTÉRA Cloud Run!`,
-        });
-      } else if (data.status === 'propagating') {
-        setNotification({
-          type: 'success',
-          message: `DNS records detected for ${data.domain}. DNS propagation in progress across global root servers.`,
-        });
+      if (res.ok && res.data) {
+        setCheckResult(res.data);
+        if (res.data.status === 'active') {
+          setNotification({
+            type: 'success',
+            message: `Success! ${res.data.domain} is properly pointing to VANTÉRA Cloud Run!`,
+          });
+        } else if (res.data.status === 'propagating') {
+          setNotification({
+            type: 'success',
+            message: `DNS records detected for ${res.data.domain}. DNS propagation in progress across global root servers.`,
+          });
+        } else {
+          setNotification({
+            type: 'error',
+            message: `No active DNS records pointing to VANTÉRA found for ${res.data.domain}. Follow the DNS records guide below.`,
+          });
+        }
       } else {
-        setNotification({
-          type: 'error',
-          message: `No active DNS records pointing to VANTÉRA found for ${data.domain}. Follow the DNS records guide below.`,
-        });
+        setNotification({ type: 'error', message: res.error || 'Unable to check domain DNS right now.' });
       }
     } catch {
       setNotification({ type: 'error', message: 'Failed to execute DNS check. Verify network connectivity.' });
@@ -118,7 +120,7 @@ export function DomainSetupManager() {
 
     setIsSaving(true);
     try {
-      const res = await fetch('/api/admin/domain-settings', {
+      const res = await safeFetchJson<{ domainSettings?: DomainSettings; error?: string }>('/api/admin/domain-settings', {
         method: 'PUT',
         headers,
         body: JSON.stringify({
@@ -130,16 +132,14 @@ export function DomainSetupManager() {
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setSettings(data.domainSettings);
+      if (res.ok && res.data?.domainSettings) {
+        setSettings(res.data.domainSettings);
         setNotification({
           type: 'success',
           message: `Canonical domain "${domain}" saved successfully in VANTÉRA configuration!`,
         });
       } else {
-        const err = await res.json();
-        setNotification({ type: 'error', message: err.error || 'Failed to update domain settings.' });
+        setNotification({ type: 'error', message: res.data?.error || res.error || 'Failed to update domain settings.' });
       }
     } catch {
       setNotification({ type: 'error', message: 'Network error saving domain settings.' });

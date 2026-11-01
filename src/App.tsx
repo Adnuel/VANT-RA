@@ -5,6 +5,7 @@ import { CurrencyProvider } from './contexts/CurrencyContext.tsx';
 import { CartProvider } from './contexts/CartContext.tsx';
 import { useNavigation } from './hooks/useNavigation.ts';
 import { INITIAL_PRODUCTS, Product } from './data/catalog.ts';
+import { safeFetchJson } from './lib/safeFetch.ts';
 
 import { StoreLayout } from './components/StoreLayout.tsx';
 import { Home } from './pages/Home.tsx';
@@ -23,16 +24,11 @@ function MainRouter() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
 
   useEffect(() => {
-    fetch('/api/products')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.products && Array.isArray(data.products) && data.products.length > 0) {
-          setProducts(data.products);
-        }
-      })
-      .catch(() => {
-        // Default to INITIAL_PRODUCTS
-      });
+    safeFetchJson<{ products: Product[] }>('/api/products').then((res) => {
+      if (res.ok && res.data?.products && Array.isArray(res.data.products) && res.data.products.length > 0) {
+        setProducts(res.data.products);
+      }
+    });
   }, []);
 
   // Separate interface: CEO Admin Login
@@ -82,7 +78,7 @@ function MainRouter() {
   } else if (['/about', '/contact', '/faq', '/shipping', '/returns', '/privacy', '/terms'].includes(route.path)) {
     pageContent = <InfoPage pageKey={route.path} onNavigate={navigate} />;
   } else if (route.path === '/account') {
-    pageContent = <AccountPage onNavigate={navigate} />;
+    pageContent = <AccountPage initialMode={route.mode as any} onNavigate={navigate} />;
   } else if (route.path === '/track') {
     pageContent = <TrackOrderPage onNavigate={navigate} />;
   } else {

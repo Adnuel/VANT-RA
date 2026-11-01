@@ -223,17 +223,28 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({ children, activePath, 
                     <span>→</span>
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onNavigate('/account');
-                    }}
-                    className="w-full text-left py-1 text-xs text-[#A9A69F] hover:text-[#D4AF37] font-meta uppercase tracking-wider flex items-center justify-between"
-                  >
-                    <span>VIP Client Sign In</span>
-                    <span>→</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onNavigate('/account?mode=login');
+                      }}
+                      className="text-center py-2 px-3 text-[11px] border border-white/10 text-[#EDEDED] hover:border-[#D4AF37] hover:text-[#D4AF37] font-meta uppercase tracking-wider rounded-xs cursor-pointer"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onNavigate('/account?mode=register');
+                      }}
+                      className="text-center py-2 px-3 text-[11px] gold-gradient-bg text-[#0B0B0B] font-meta uppercase tracking-wider font-bold rounded-xs hover:opacity-90 cursor-pointer"
+                    >
+                      Open Account
+                    </button>
+                  </div>
                 )}
                 <a
                   href="https://wa.me/2349132793670"

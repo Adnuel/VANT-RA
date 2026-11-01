@@ -110,3 +110,8 @@ export async function onRequestPost(context) {
     );
   }
 }
+
+export async function onRequest(context) {
+  if (context.request.method === 'OPTIONS') return onRequestOptions();
+  return onRequestPost(context);
+}

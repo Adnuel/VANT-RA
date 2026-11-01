@@ -145,7 +145,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
       const safeJson = async (res: Response | null, fallback: any) => {
         if (!res || !res.ok) return fallback;
         try {
-          return await res.json();
+          const text = await res.text();
+          return text && text.trim() ? JSON.parse(text) : fallback;
         } catch {
           return fallback;
         }
@@ -389,8 +390,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         }, 800);
         await loadDashboardData();
       } else {
-        const data = await res.json();
-        showToast(data.error || 'Failed to update order', 'error');
+        let errMessage = 'Failed to update order';
+        try {
+          const text = await res.text();
+          if (text) {
+            const data = JSON.parse(text);
+            errMessage = data.error || errMessage;
+          }
+        } catch {}
+        showToast(errMessage, 'error');
       }
     } catch {
       showToast('Network error while saving order edits', 'error');

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { DomainSetupManager } from '../components/DomainSetupManager';
+import { safeFetchJson } from '../lib/safeFetch';
 
 interface DeveloperPortalPageProps {
   onNavigate: (path: string) => void;
@@ -55,12 +56,11 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
     setIsLoading(true);
     const start = performance.now();
     try {
-      const res = await fetch('/api/dev/health', { headers });
+      const res = await safeFetchJson<{ health?: SystemHealth }>('/api/dev/health', { headers });
       const elapsed = Math.round(performance.now() - start);
       setApiLatencyMs(elapsed);
-      if (res.ok) {
-        const data = await res.json();
-        setHealth(data.health);
+      if (res.ok && res.data?.health) {
+        setHealth(res.data.health);
       } else if (res.status === 401 || res.status === 403) {
         setStatusMessage('Authentication required: Sign in via CEO / Admin credentials to access Technical Operations.');
       }
@@ -74,10 +74,9 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
   const loadBackups = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/dev/backups', { headers });
-      if (res.ok) {
-        const data = await res.json();
-        setBackups(data.backups || []);
+      const res = await safeFetchJson<{ backups?: any[] }>('/api/dev/backups', { headers });
+      if (res.ok && res.data?.backups) {
+        setBackups(res.data.backups);
       }
     } catch {
       setStatusMessage('Error loading database backups');
@@ -89,10 +88,9 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
   const loadIntegrity = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/dev/integrity', { headers });
-      if (res.ok) {
-        const data = await res.json();
-        setIntegrity(data);
+      const res = await safeFetchJson<DatabaseIntegrity>('/api/dev/integrity', { headers });
+      if (res.ok && res.data) {
+        setIntegrity(res.data);
       }
     } catch {
       setStatusMessage('Error verifying database integrity');
@@ -104,13 +102,15 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
   const createBackup = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/dev/backups', { method: 'POST', headers });
-      const data = await res.json();
-      if (res.ok) {
-        setStatusMessage(`Backup created: ${data.backup?.filename || 'Success'}`);
+      const res = await safeFetchJson<{ backup?: { filename?: string }; error?: string }>('/api/dev/backups', {
+        method: 'POST',
+        headers,
+      });
+      if (res.ok && res.data) {
+        setStatusMessage(`Backup created: ${res.data.backup?.filename || 'Success'}`);
         loadBackups();
       } else {
-        setStatusMessage(data.error || 'Failed to create backup');
+        setStatusMessage(res.data?.error || res.error || 'Failed to create backup');
       }
     } catch {
       setStatusMessage('Server error during backup creation');
@@ -125,16 +125,18 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
     }
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/dev/backups/${encodeURIComponent(filename)}/restore`, {
-        method: 'POST',
-        headers,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setStatusMessage(data.message || 'Database restored successfully');
+      const res = await safeFetchJson<{ message?: string; error?: string }>(
+        `/api/dev/backups/${encodeURIComponent(filename)}/restore`,
+        {
+          method: 'POST',
+          headers,
+        }
+      );
+      if (res.ok && res.data) {
+        setStatusMessage(res.data.message || 'Database restored successfully');
         loadHealth();
       } else {
-        setStatusMessage(data.error || 'Restore failed');
+        setStatusMessage(res.data?.error || res.error || 'Restore failed');
       }
     } catch {
       setStatusMessage('Error executing database restore');
