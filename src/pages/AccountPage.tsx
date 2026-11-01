@@ -486,167 +486,176 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           )}
 
           {authMode === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-3.5">
-              <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="client@example.com"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-                />
+            <form onSubmit={handleLogin} className="flex flex-col justify-between min-h-[320px] w-full">
+              <div className="flex-1 space-y-3.5 pb-4">
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[10px] font-meta uppercase tracking-wider text-[#A9A69F]">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('forgot');
+                        setErrorMessage('');
+                      }}
+                      className="text-[10px] text-[#8E8B82] hover:text-[#D4AF37] hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
               </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-[10px] font-meta uppercase tracking-wider text-[#A9A69F]">
-                    Password
-                  </label>
+              <div className="mt-auto pt-4 border-t border-white/10 space-y-3 w-full">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-[#D4AF37] hover:bg-[#E5C158] active:bg-[#B89326] text-[#0B0B0B] py-3.5 px-4 text-xs uppercase tracking-widest font-meta font-black rounded-xs shadow-[0_4px_25px_rgba(212,175,55,0.45)] hover:shadow-[0_6px_30px_rgba(212,175,55,0.6)] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>{isSubmitting ? 'SIGNING IN...' : 'SIGN IN'}</span>
+                  <span className="text-sm font-bold">→</span>
+                </button>
+
+                <div className="text-center text-[11px] text-[#8E8B82]">
+                  New client?{' '}
                   <button
                     type="button"
                     onClick={() => {
-                      setAuthMode('forgot');
+                      setAuthMode('register');
                       setErrorMessage('');
+                      setSuccessMessage('');
                     }}
-                    className="text-[10px] text-[#8E8B82] hover:text-[#D4AF37] hover:underline"
+                    className="font-medium text-[#D4AF37] underline hover:text-[#E5C158] cursor-pointer"
                   >
-                    Forgot password?
+                    Open an account now
                   </button>
                 </div>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full gold-gradient-bg text-[#0B0B0B] py-2.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
-              >
-                {isSubmitting ? 'Signing in...' : 'Sign In'}
-              </button>
-
-              <div className="text-center pt-3 border-t border-white/5 text-[11px] text-[#8E8B82]">
-                New client?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('register');
-                    setErrorMessage('');
-                    setSuccessMessage('');
-                  }}
-                  className="font-medium text-[#D4AF37] underline cursor-pointer"
-                >
-                  Open an account now
-                </button>
               </div>
             </form>
           )}
 
           {authMode === 'register' && (
-            <form onSubmit={handleRegister} className="space-y-3.5">
-              <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your Full Name"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-                />
+            <form onSubmit={handleRegister} className="flex flex-col justify-between min-h-[480px] w-full">
+              {/* Top Form Fields Container (flex-1) */}
+              <div className="flex-1 space-y-3.5 pb-4">
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your Full Name"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Phone / WhatsApp (Optional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. 08123456789"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Password (min. 6 characters)
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create password"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter your password"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="client@example.com"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
-                  Phone / WhatsApp (Optional)
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. 08123456789"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
-                  Password (min. 6 characters)
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create password"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter your password"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-                />
-              </div>
-
-              <div className="pt-3 sticky sm:static bottom-2 z-10 bg-[#121212]/95 backdrop-blur-xs pb-1">
+              {/* Dedicated Bottom Container Anchoring the Action Button via Flexbox */}
+              <div className="mt-auto pt-4 border-t border-white/10 space-y-3 w-full">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-[#D4AF37] hover:bg-[#E5C158] active:bg-[#C29B27] text-[#0B0B0B] py-3.5 px-4 text-xs uppercase tracking-widest font-meta font-black rounded-xs shadow-[0_4px_20px_rgba(212,175,55,0.35)] hover:shadow-[0_6px_25px_rgba(212,175,55,0.5)] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-[#D4AF37] hover:bg-[#E5C158] active:bg-[#B89326] text-[#0B0B0B] py-3.5 px-4 text-xs uppercase tracking-widest font-meta font-black rounded-xs shadow-[0_4px_25px_rgba(212,175,55,0.45)] hover:shadow-[0_6px_30px_rgba(212,175,55,0.6)] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span>{isSubmitting ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}</span>
                   <span className="text-sm font-bold">→</span>
                 </button>
-              </div>
 
-              <div className="text-center pt-3 border-t border-white/5 text-[11px] text-[#8E8B82]">
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('login');
-                    setErrorMessage('');
-                    setSuccessMessage('');
-                  }}
-                  className="font-medium text-[#D4AF37] underline cursor-pointer"
-                >
-                  Sign in here
-                </button>
+                <div className="text-center text-[11px] text-[#8E8B82]">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('login');
+                      setErrorMessage('');
+                      setSuccessMessage('');
+                    }}
+                    className="font-medium text-[#D4AF37] underline hover:text-[#E5C158] cursor-pointer"
+                  >
+                    Sign in here
+                  </button>
+                </div>
               </div>
             </form>
           )}
