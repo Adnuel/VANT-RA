@@ -70,6 +70,18 @@
       "isPasswordSet": true,
       "createdAt": "2026-11-01T19:51:13.760Z",
       "updatedAt": "2026-11-01T19:51:13.760Z"
+    },
+    {
+      "id": "usr_bfdece7aaacb88b9",
+      "email": "comfort_test_1793710364@gmail.com",
+      "name": "Comfort Test",
+      "phone": "08167925842",
+      "role": "customer",
+      "passwordHash": "3223338bdca75c4a1854abd04cadc67276f4e37b49b54edbf78de6f57374315710b7d952fe8ae7e83d9afc8ceaf3ed8e95d7e6323917770f0cafd4f01d11019a",
+      "salt": "59bd1f6716a4a51b21a11031af9c179b",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-03T12:52:44.619Z",
+      "updatedAt": "2026-11-03T12:52:44.620Z"
     }
   ],
   "deliveryAddresses": [],
@@ -1846,6 +1858,13 @@
   ],
   "auditLogs": [
     {
+      "id": "log_1793710364620_n9oi",
+      "timestamp": "2026-11-03T12:52:44.620Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: comfort_test_1793710364@gmail.com"
+    },
+    {
       "id": "log_1793562673760_bdx2",
       "timestamp": "2026-11-01T19:51:13.760Z",
       "actor": "Customer",
@@ -2016,6 +2035,15 @@
   ],
   "notifications": [
     {
+      "recipient": "comfort_test_1793710364@gmail.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, Comfort Test! Your customer account has been created.",
+      "id": "notif_1793710364620_l2eh",
+      "status": "dispatched",
+      "timestamp": "2026-11-03T12:52:44.620Z"
+    },
+    {
       "recipient": "newclient@gmail.com",
       "channel": "email",
       "event": "account_registered",
@@ -2142,6 +2170,19 @@
     }
   ],
   "events": [
+    {
+      "id": "evt_1793710364620_a55558a1",
+      "type": "customer_registered",
+      "timestamp": "2026-11-03T12:52:44.620Z",
+      "customerId": "usr_bfdece7aaacb88b9",
+      "customerEmail": "comfort_test_1793710364@gmail.com",
+      "customerName": "Comfort Test",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
     {
       "id": "evt_1793562673760_ee3e2c84",
       "type": "customer_registered",
