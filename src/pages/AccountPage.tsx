@@ -119,7 +119,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
     try {
       // 1. Try server endpoint first
-      const result = await safeFetchJson<{ token: string; user: any }>('/api/auth/login', {
+      const result = await safeFetchJson<{ token?: string; user?: any; error?: string }>('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: cleanEmail, password }),
@@ -197,7 +197,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
     try {
       // 1. Send registration to server API
-      const result = await safeFetchJson<{ token: string; user: any }>('/api/auth/register', {
+      const result = await safeFetchJson<{ token?: string; user?: any; error?: string }>('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -88,7 +88,7 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
   const loadIntegrity = async () => {
     setIsLoading(true);
     try {
-      const res = await safeFetchJson<DatabaseIntegrity>('/api/dev/integrity', { headers });
+      const res = await safeFetchJson<IntegrityReport>('/api/dev/integrity', { headers });
       if (res.ok && res.data) {
         setIntegrity(res.data);
       }
