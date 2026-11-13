@@ -127,6 +127,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
   const [manualRateReason, setManualRateReason] = useState('');
   const [isUpdatingFx, setIsUpdatingFx] = useState(false);
 
+  // CJ Dropshipping API 2.0 Authentication Status State
+  const [cjStatus, setCjStatus] = useState<{
+    status: 'Connected' | 'Authentication failed' | 'Connection unavailable';
+    message: string;
+    configured: boolean;
+    hasAccessToken: boolean;
+    hasRefreshToken: boolean;
+    accessTokenExpiresAt: string | null;
+    refreshTokenExpiresAt: string | null;
+    lastTestedAt: string | null;
+    lastRefreshedAt: string | null;
+    accountInfo?: {
+      openId?: string | number | null;
+      isSandbox?: boolean;
+      qpsLimit?: number;
+    } | null;
+  } | null>(null);
+  const [isLoadingCjStatus, setIsLoadingCjStatus] = useState(false);
+  const [isTestingCj, setIsTestingCj] = useState(false);
+
   // Load all admin data including real analytics & real customer events
   const loadDashboardData = async () => {
     if (!adminToken) return;
@@ -210,6 +230,85 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
     }
   };
 
+  const fetchCjStatus = async () => {
+    if (!adminToken) return;
+    setIsLoadingCjStatus(true);
+    try {
+      const res = await fetch('/api/admin/suppliers/cj/status', {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (data?.cj) {
+        setCjStatus(data.cj);
+      } else {
+        setCjStatus({
+          status: 'Connection unavailable',
+          message: 'Unable to retrieve CJ Dropshipping status from backend.',
+          configured: false,
+          hasAccessToken: false,
+          hasRefreshToken: false,
+          accessTokenExpiresAt: null,
+          refreshTokenExpiresAt: null,
+          lastTestedAt: new Date().toISOString(),
+          lastRefreshedAt: null,
+          accountInfo: null,
+        });
+      }
+    } catch {
+      setCjStatus({
+        status: 'Connection unavailable',
+        message: 'Network error communicating with backend status endpoint.',
+        configured: false,
+        hasAccessToken: false,
+        hasRefreshToken: false,
+        accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
+        lastTestedAt: new Date().toISOString(),
+        lastRefreshedAt: null,
+        accountInfo: null,
+      });
+    } finally {
+      setIsLoadingCjStatus(false);
+    }
+  };
+
+  const handleTestCjConnection = async () => {
+    if (!adminToken) return;
+    setIsTestingCj(true);
+    try {
+      const res = await fetch('/api/admin/suppliers/cj/test', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (data?.cj) {
+        setCjStatus(data.cj);
+        showToast(
+          `CJ Dropshipping: ${data.cj.status} — ${data.cj.message}`,
+          data.cj.status === 'Connected' ? 'success' : 'error'
+        );
+      } else {
+        showToast('CJ connection test returned an unexpected response.', 'error');
+      }
+    } catch {
+      setCjStatus((prev) => ({
+        status: 'Connection unavailable',
+        message: 'Unable to reach backend connection test endpoint.',
+        configured: prev?.configured ?? false,
+        hasAccessToken: prev?.hasAccessToken ?? false,
+        hasRefreshToken: prev?.hasRefreshToken ?? false,
+        accessTokenExpiresAt: prev?.accessTokenExpiresAt ?? null,
+        refreshTokenExpiresAt: prev?.refreshTokenExpiresAt ?? null,
+        lastTestedAt: new Date().toISOString(),
+        lastRefreshedAt: prev?.lastRefreshedAt ?? null,
+        accountInfo: null,
+      }));
+      showToast('CJ connection test failed: Connection unavailable.', 'error');
+    } finally {
+      setIsTestingCj(false);
+    }
+  };
+
   useEffect(() => {
     if (!adminToken) {
       onNavigate('/admin/login');
@@ -217,6 +316,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
     }
     loadDashboardData();
   }, [adminToken, analyticsRange]);
+
+  useEffect(() => {
+    if (adminToken && activeTab === 'suppliers' && !cjStatus && !isLoadingCjStatus) {
+      fetchCjStatus();
+    }
+  }, [adminToken, activeTab]);
 
   // Real-Time Server-Sent Events (SSE) Stream
   useEffect(() => {
@@ -1895,42 +2000,178 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         {/* 5. SUPPLIER MANAGEMENT */}
         {activeTab === 'suppliers' && (
           <div className="space-y-6">
-            <h2 className="font-serif text-2xl text-[#121210]">Supplier & Dropshipping Integrations</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {suppliers.map((sup) => (
-                <div key={sup.id} className="bg-white border border-[#e7e4de] p-6 space-y-4 shadow-xs">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-serif text-base font-bold text-[#121210]">{sup.name}</h3>
-                      <span className="text-[10px] text-[#77746d] font-mono block uppercase">{sup.integrationType}</span>
-                    </div>
-                    <span
-                      className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-xs ${
-                        sup.status === 'operational'
-                          ? 'bg-[#eef8ee] text-[#1e7e34]'
-                          : 'bg-[#fff8e6] text-[#856404]'
-                      }`}
-                    >
-                      {sup.status.replace('_', ' ')}
-                    </span>
-                  </div>
+            <div>
+              <h2 className="font-serif text-2xl text-[#121210]">Supplier & Dropshipping Integrations</h2>
+              <p className="text-xs text-[#77746d] mt-1">
+                Verify supplier API authentication securely on the server before enabling catalog sync.
+              </p>
+            </div>
 
-                  <p className="text-xs text-[#77746d] leading-relaxed">{sup.notes}</p>
-
-                  <div className="pt-2 border-t border-[#e7e4de] text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-[#a9a69f]">Website:</span>
-                      <a href={sup.website} target="_blank" rel="noopener noreferrer" className="text-[#121210] hover:underline">
-                        {sup.website}
-                      </a>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#a9a69f]">Contact:</span>
-                      <span className="text-[#121210]">{sup.contact}</span>
-                    </div>
+            {/* CJ Dropshipping API 2.0 Authentication & Connection Panel */}
+            <div className="bg-white border border-[#e7e4de] p-6 space-y-5 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e7e4de] pb-4">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h3 className="font-serif text-lg font-bold text-[#121210]">
+                      CJ Dropshipping API 2.0 Authentication
+                    </h3>
+                    {isLoadingCjStatus && !cjStatus ? (
+                      <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase rounded-xs bg-[#f4f2ee] text-[#77746d]">
+                        Checking...
+                      </span>
+                    ) : cjStatus ? (
+                      <span
+                        data-testid="cj-connection-status"
+                        className={`px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase rounded-xs ${
+                          cjStatus.status === 'Connected'
+                            ? 'bg-[#eef8ee] text-[#1e7e34] border border-[#1e7e34]/20'
+                            : cjStatus.status === 'Authentication failed'
+                            ? 'bg-[#fdf2f2] text-[#9b1c1c] border border-[#9b1c1c]/20'
+                            : 'bg-[#fff8e6] text-[#856404] border border-[#856404]/20'
+                        }`}
+                      >
+                        {cjStatus.status}
+                      </span>
+                    ) : null}
                   </div>
+                  <p className="text-xs text-[#77746d]">
+                    Server-side OAuth token exchange via <span className="font-mono">CJ_API_KEY</span> with automatic pre-expiry refresh. Credentials are never exposed to the browser.
+                  </p>
                 </div>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={handleTestCjConnection}
+                  disabled={isTestingCj || isLoadingCjStatus}
+                  className="bg-[#121210] text-[#f8f7f4] px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50 cursor-pointer shrink-0"
+                >
+                  {isTestingCj ? 'Testing Connection...' : 'Test CJ Connection'}
+                </button>
+              </div>
+
+              {cjStatus && (
+                <div className="space-y-4">
+                  <div
+                    className={`p-3.5 text-xs border ${
+                      cjStatus.status === 'Connected'
+                        ? 'bg-[#eef8ee]/60 border-[#1e7e34]/25 text-[#1e7e34]'
+                        : cjStatus.status === 'Authentication failed'
+                        ? 'bg-[#fdf2f2] border-[#9b1c1c]/25 text-[#9b1c1c]'
+                        : 'bg-[#fff8e6] border-[#856404]/25 text-[#856404]'
+                    }`}
+                  >
+                    <strong className="font-mono uppercase text-[10px] block mb-0.5">
+                      Connection Diagnostic
+                    </strong>
+                    <span>{cjStatus.message}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    <div className="bg-[#f8f7f4] border border-[#e7e4de] p-3">
+                      <span className="text-[10px] font-mono uppercase text-[#77746d] block">
+                        Backend Secret (CJ_API_KEY)
+                      </span>
+                      <span className="font-mono font-bold text-[#121210] mt-1 block">
+                        {cjStatus.configured ? 'Configured on Server' : 'Not Configured'}
+                      </span>
+                    </div>
+
+                    <div className="bg-[#f8f7f4] border border-[#e7e4de] p-3">
+                      <span className="text-[10px] font-mono uppercase text-[#77746d] block">
+                        Server Token Vault
+                      </span>
+                      <span className="font-mono font-bold text-[#121210] mt-1 block">
+                        {cjStatus.hasAccessToken && cjStatus.hasRefreshToken
+                          ? 'Access & Refresh Active'
+                          : 'No Active Session'}
+                      </span>
+                    </div>
+
+                    <div className="bg-[#f8f7f4] border border-[#e7e4de] p-3">
+                      <span className="text-[10px] font-mono uppercase text-[#77746d] block">
+                        Access Token Expiry
+                      </span>
+                      <span className="font-mono font-bold text-[#121210] mt-1 block">
+                        {cjStatus.accessTokenExpiresAt
+                          ? new Date(cjStatus.accessTokenExpiresAt).toLocaleDateString()
+                          : '—'}
+                      </span>
+                    </div>
+
+                    <div className="bg-[#f8f7f4] border border-[#e7e4de] p-3">
+                      <span className="text-[10px] font-mono uppercase text-[#77746d] block">
+                        Last Verified
+                      </span>
+                      <span className="font-mono font-bold text-[#121210] mt-1 block">
+                        {cjStatus.lastTestedAt
+                          ? new Date(cjStatus.lastTestedAt).toLocaleTimeString()
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {cjStatus.accountInfo && (cjStatus.accountInfo.openId || cjStatus.accountInfo.qpsLimit) && (
+                    <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-[#77746d] pt-1">
+                      {cjStatus.accountInfo.openId && (
+                        <span>CJ OpenID: <strong className="text-[#121210]">{cjStatus.accountInfo.openId}</strong></span>
+                      )}
+                      {typeof cjStatus.accountInfo.qpsLimit === 'number' && (
+                        <span>QPS Quota: <strong className="text-[#121210]">{cjStatus.accountInfo.qpsLimit}/s</strong></span>
+                      )}
+                      {typeof cjStatus.accountInfo.isSandbox === 'boolean' && (
+                        <span>Environment: <strong className="text-[#121210]">{cjStatus.accountInfo.isSandbox ? 'Sandbox' : 'Production'}</strong></span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {suppliers.map((sup) => {
+                const isCj = sup.integrationType === 'cjdropshipping_api';
+                const effectiveStatusLabel = isCj && cjStatus ? cjStatus.status : sup.status.replace('_', ' ');
+                const badgeClass = isCj && cjStatus
+                  ? cjStatus.status === 'Connected'
+                    ? 'bg-[#eef8ee] text-[#1e7e34]'
+                    : cjStatus.status === 'Authentication failed'
+                    ? 'bg-[#fdf2f2] text-[#9b1c1c]'
+                    : 'bg-[#fff8e6] text-[#856404]'
+                  : sup.status === 'operational'
+                  ? 'bg-[#eef8ee] text-[#1e7e34]'
+                  : 'bg-[#fff8e6] text-[#856404]';
+
+                return (
+                  <div key={sup.id} className="bg-white border border-[#e7e4de] p-6 space-y-4 shadow-xs">
+                    <div className="flex justify-between items-start gap-2">
+                      <div>
+                        <h3 className="font-serif text-base font-bold text-[#121210]">{sup.name}</h3>
+                        <span className="text-[10px] text-[#77746d] font-mono block uppercase">{sup.integrationType}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-xs whitespace-nowrap ${badgeClass}`}>
+                        {effectiveStatusLabel}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-[#77746d] leading-relaxed">
+                      {isCj && cjStatus ? cjStatus.message : sup.notes}
+                    </p>
+
+                    <div className="pt-2 border-t border-[#e7e4de] text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-[#a9a69f]">Website:</span>
+                        <a href={sup.website} target="_blank" rel="noopener noreferrer" className="text-[#121210] hover:underline">
+                          {sup.website}
+                        </a>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#a9a69f]">Contact:</span>
+                        <span className="text-[#121210]">{sup.contact}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

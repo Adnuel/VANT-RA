@@ -34,3 +34,6 @@ android/app/src/main/assets/public/
 android/.gradle/
 android/capacitor-cordova-android-plugins/build/
 android/capacitor-cordova-android-plugins/.gradle/
+
+# Server-side encrypted supplier tokens
+data/cj_tokens.json

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
@@ -22,6 +23,7 @@ import { wavy } from './server/wavy.ts';
 import { fetchLiveExchangeRate, setManualRateOverride, clearManualRateOverride } from './server/currency.ts';
 import { sendTransactionalEmail, emailTemplates, getDomainDnsRecords } from './server/mailer.ts';
 import { calculateDeliveryFee, validateNigerianPhone, NIGERIAN_STATES } from './src/data/nigerianStates.ts';
+import { cjService } from './server/cj.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1677,6 +1679,51 @@ app.put('/api/admin/suppliers/:id', requireAdmin, (req: AuthenticatedRequest, re
   }
 });
 
+// CJ Dropshipping API 2.0 Authentication Status & Connection Test (CEO Only — never exposes keys or tokens)
+app.get('/api/admin/suppliers/cj/status', requireAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const cjStatus = await cjService.getStatus();
+    res.json({ cj: cjStatus });
+  } catch {
+    res.status(500).json({
+      cj: {
+        status: 'Connection unavailable',
+        message: 'Unable to check CJ Dropshipping connection status.',
+        configured: cjService.isConfigured(),
+        hasAccessToken: false,
+        hasRefreshToken: false,
+        accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
+        lastTestedAt: new Date().toISOString(),
+        lastRefreshedAt: null,
+        accountInfo: null,
+      },
+    });
+  }
+});
+
+app.post('/api/admin/suppliers/cj/test', requireAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const cjStatus = await cjService.testConnection();
+    res.json({ cj: cjStatus });
+  } catch {
+    res.status(500).json({
+      cj: {
+        status: 'Connection unavailable',
+        message: 'Unable to complete CJ Dropshipping connection test.',
+        configured: cjService.isConfigured(),
+        hasAccessToken: false,
+        hasRefreshToken: false,
+        accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
+        lastTestedAt: new Date().toISOString(),
+        lastRefreshedAt: null,
+        accountInfo: null,
+      },
+    });
+  }
+});
+
 // CEO Bank Settings
 app.get('/api/admin/bank-settings', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
   res.json({ bankSettings: db.getBankSettings() });
@@ -2156,6 +2203,8 @@ async function startServer() {
       res.sendFile(path.resolve(ROOT_DIR, 'dist/index.html'));
     });
   }
+
+  cjService.startAutoRefreshScheduler();
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[VANTÉRA Engine] Server running on http://0.0.0.0:${PORT}`);
