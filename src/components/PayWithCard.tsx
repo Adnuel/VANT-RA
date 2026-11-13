@@ -2,32 +2,31 @@
  * VANTÉRA PayWithCard Component
  * Slogan: Technology, Elevated.
  *
- * Provides a luxury card and instant bank transfer checkout integration
- * utilizing Paystack Inline for Debit/Credit Cards (Mastercard, Visa, Verve),
- * USSD, and Apple Pay.
+ * Implements luxury card and instant bank transfer checkout integration
+ * utilizing Wavy (wavy.ng) for Debit/Credit Cards (Mastercard, Visa, Verve),
+ * Bank Transfers, and Apple Pay with strict server-side verification.
  */
 
 import React, { useState, useEffect } from 'react';
 import { formatPrice } from '../lib/commerceLogic.ts';
 import { safeFetchJson } from '../lib/safeFetch.ts';
 
-declare global {
-  interface Window {
-    PaystackPop?: any;
-  }
-}
-
 interface PayWithCardProps {
   email: string;
   customerName: string;
   customerPhone?: string;
-  amountKobo: number; // in Kobo for NGN or Cents for USD
+  amountKobo: number;
   centsUSD: number;
   currency: 'NGN' | 'USD';
   exchangeRate: number;
   orderReference: string;
+  onInitiateOrderCheckout?: () => Promise<{
+    order: any;
+    paymentReference: string;
+  } | null>;
+  onGatewaySessionReady?: (order: any, paymentReference: string, checkoutUrl?: string) => void;
   onPaymentSuccess: (reference: string, channel?: string) => void;
-  onPaymentCancel?: () => void;
+  onPaymentFailed?: (reason: string) => void;
   disabled?: boolean;
 }
 
@@ -40,32 +39,22 @@ export const PayWithCard: React.FC<PayWithCardProps> = ({
   currency,
   exchangeRate,
   orderReference,
+  onInitiateOrderCheckout,
+  onGatewaySessionReady,
   onPaymentSuccess,
-  onPaymentCancel,
+  onPaymentFailed,
   disabled = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [publicKey, setPublicKey] = useState('');
-  const [isTestMode, setIsTestMode] = useState(true);
+  const [isTestMode, setIsTestMode] = useState(false);
 
   useEffect(() => {
     safeFetchJson<any>('/api/payment-settings').then((res) => {
       if (res.ok && res.data) {
-        setPublicKey(res.data.paystackPublicKey || 'pk_test_sample_vantera_key');
-        setIsTestMode(res.data.isTestMode ?? true);
+        setIsTestMode(res.data.isTestMode ?? false);
       }
     });
-  }, []);
-
-  // Dynamically load Paystack script
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !window.PaystackPop) {
-      const script = document.createElement('script');
-      script.src = 'https://js.paystack.co/v1/inline.js';
-      script.async = true;
-      document.body.appendChild(script);
-    }
   }, []);
 
   const handlePay = async (e: React.MouseEvent) => {
@@ -79,109 +68,99 @@ export const PayWithCard: React.FC<PayWithCardProps> = ({
 
     setIsLoading(true);
 
-    // If live Paystack script is loaded, launch popup
-    if (window.PaystackPop && publicKey && !publicKey.includes('sample')) {
-      try {
-        const handler = window.PaystackPop.setup({
-          key: publicKey,
-          email: email.trim(),
-          amount: amountKobo,
-          currency: currency,
-          ref: `${orderReference}_${Date.now()}`,
-          metadata: {
-            custom_fields: [
-              {
-                display_name: 'Customer Name',
-                variable_name: 'customer_name',
-                value: customerName,
-              },
-              {
-                display_name: 'Order Reference',
-                variable_name: 'order_reference',
-                value: orderReference,
-              },
-            ],
-          },
-          callback: async (response: { reference: string }) => {
-            setIsLoading(false);
-            // Verify on server
-            try {
-              const verifyRes = await safeFetchJson<{ success?: boolean; verifyData?: any; error?: string }>(
-                '/api/payments/paystack/verify',
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    reference: response.reference,
-                    orderReference,
-                  }),
-                }
-              );
-              if (verifyRes.ok && verifyRes.data?.success) {
-                onPaymentSuccess(response.reference, verifyRes.data.verifyData?.channel || 'card');
-              } else {
-                // If payment verification endpoint was unreachable or static, still record success since Paystack popup approved
-                onPaymentSuccess(response.reference, 'card');
-              }
-            } catch {
-              onPaymentSuccess(response.reference, 'card');
-            }
-          },
-          onClose: () => {
-            setIsLoading(false);
-            if (onPaymentCancel) onPaymentCancel();
-          },
-        });
-
-        handler.openIframe();
-        return;
-      } catch (err: any) {
-        console.error('Paystack popup error:', err);
-      }
-    }
-
-    // Direct server-side initialization or development mode fallback
     try {
-      const initRes = await safeFetchJson<{ status?: boolean; data?: { reference?: string }; message?: string }>(
-        '/api/payments/paystack/initialize',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim(),
-            amountKobo,
-            reference: `${orderReference}_${Date.now()}`,
-            currency,
-          }),
-        }
-      );
+      let targetOrder: any = null;
+      let ref = `${orderReference}_${Date.now()}`;
+      let targetOrderRef = orderReference;
+      let targetAmountUnits = currency === 'NGN' ? amountKobo / 100 : centsUSD / 100;
+      let targetAmountKobo = amountKobo;
 
-      if (initRes.ok && initRes.data?.data?.reference) {
-        const verifyRes = await safeFetchJson<{ success?: boolean }>(
-          '/api/payments/paystack/verify',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              reference: initRes.data.data.reference,
-              orderReference,
-            }),
-          }
-        );
-
-        if (verifyRes.ok && verifyRes.data?.success) {
-          onPaymentSuccess(initRes.data.data.reference, 'paystack_card');
-        } else {
-          onPaymentSuccess(initRes.data.data.reference, 'paystack_card');
+      if (onInitiateOrderCheckout) {
+        const initiated = await onInitiateOrderCheckout();
+        if (!initiated) {
+          setIsLoading(false);
+          return;
         }
+        targetOrder = initiated.order;
+        ref = initiated.paymentReference;
+        targetOrderRef = targetOrder.orderReference;
+        const rate = targetOrder.exchangeRateUsed || exchangeRate;
+        const authoritativeCents = targetOrder.totalCents || centsUSD;
+        targetAmountUnits =
+          currency === 'NGN'
+            ? Math.round((authoritativeCents / 100) * rate)
+            : authoritativeCents / 100;
+        targetAmountKobo = Math.round(targetAmountUnits * 100);
+      }
+
+      // 1. Initialize checkout session with Wavy API
+      const initRes = await safeFetchJson<{
+        status?: boolean;
+        authorization_url?: string;
+        data?: { authorization_url?: string; reference?: string };
+        message?: string;
+        error?: string;
+      }>('/api/payments/wavy/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          amount: targetAmountUnits,
+          amountKobo: targetAmountKobo,
+          reference: ref,
+          orderReference: targetOrderRef,
+          currency,
+          customerName,
+          customerPhone,
+        }),
+      });
+
+      if (!initRes.ok) {
+        const msg = initRes.data?.error || initRes.error || 'Could not initialize payment gateway session.';
+        setErrorMessage(msg);
+        onPaymentFailed?.(msg);
+        return;
+      }
+
+      const authUrl = initRes.data?.authorization_url || initRes.data?.data?.authorization_url;
+
+      if (authUrl && authUrl.startsWith('http')) {
+        window.open(authUrl, '_blank', 'noopener,noreferrer');
+      }
+
+      if (targetOrder && onGatewaySessionReady) {
+        onGatewaySessionReady(targetOrder, ref, authUrl);
+        return;
+      }
+
+      // Fallback standalone verification check (strictly requires server confirmation)
+      const verifyRes = await safeFetchJson<{
+        success?: boolean;
+        failed?: boolean;
+        pending?: boolean;
+        verifyData?: any;
+        error?: string;
+      }>('/api/payments/wavy/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: ref,
+          orderReference: targetOrderRef,
+        }),
+      });
+
+      if (verifyRes.ok && verifyRes.data?.success) {
+        onPaymentSuccess(ref, verifyRes.data.verifyData?.channel || 'wavy_card');
       } else {
-        // Fallback test transaction authorization
-        const demoRef = `pay_${Date.now().toString(36)}`;
-        onPaymentSuccess(demoRef, 'card');
+        const reason =
+          verifyRes.data?.error || 'Payment not confirmed yet. Complete payment in the Wavy window to confirm your order.';
+        setErrorMessage(reason);
+        onPaymentFailed?.(reason);
       }
     } catch {
-      const demoRef = `pay_${Date.now().toString(36)}`;
-      onPaymentSuccess(demoRef, 'card');
+      const msg = 'Unable to connect to the payment gateway. Please try again.';
+      setErrorMessage(msg);
+      onPaymentFailed?.(msg);
     } finally {
       setIsLoading(false);
     }
@@ -192,51 +171,55 @@ export const PayWithCard: React.FC<PayWithCardProps> = ({
   return (
     <div className="space-y-3">
       {errorMessage && (
-        <div className="border border-[#f8b4b4] bg-[#fdf2f2] p-2.5 text-xs text-[#9b1c1c]">
+        <div className="border border-red-500/30 bg-red-950/40 p-2.5 text-xs text-red-300 rounded-xs">
           {errorMessage}
         </div>
       )}
 
-      <div className="border border-[#e7e4de] bg-[#fdfdfc] p-3.5 space-y-2.5">
+      <div className="border border-white/10 bg-[#0E0E0E] p-3.5 space-y-2.5 rounded-xs">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-serif text-sm font-semibold text-[#121210]">Pay with Card / Paystack</span>
-            {isTestMode && (
-              <span className="bg-[#eae7e0] text-[#77746d] text-[9px] px-1.5 py-0.5 font-mono uppercase">
+            <span className="font-editorial text-sm font-semibold text-[#F5F5F0]">Pay with Card / Wavy</span>
+            {isTestMode ? (
+              <span className="bg-[#181818] text-[#A0A09A] text-[9px] px-1.5 py-0.5 font-mono uppercase rounded-xs border border-white/10">
                 Test Mode
+              </span>
+            ) : (
+              <span className="bg-[#0F2E22] text-[#48BB78] text-[9px] px-1.5 py-0.5 font-mono uppercase font-bold rounded-xs border border-[#34A853]/30">
+                WAVY LIVE
               </span>
             )}
           </div>
           <div className="flex items-center gap-1.5 text-xs">
-            <span title="Visa" className="px-1.5 py-0.5 bg-white border border-[#e7e4de] font-mono text-[9px] font-bold text-[#1a1f71]">
+            <span title="Visa" className="px-1.5 py-0.5 bg-[#181818] border border-white/10 font-mono text-[9px] font-bold text-[#EDEDED]">
               VISA
             </span>
-            <span title="Mastercard" className="px-1.5 py-0.5 bg-white border border-[#e7e4de] font-mono text-[9px] font-bold text-[#eb001b]">
+            <span title="Mastercard" className="px-1.5 py-0.5 bg-[#181818] border border-white/10 font-mono text-[9px] font-bold text-[#D4AF37]">
               MC
             </span>
-            <span title="Verve" className="px-1.5 py-0.5 bg-white border border-[#e7e4de] font-mono text-[9px] font-bold text-[#00425f]">
+            <span title="Verve" className="px-1.5 py-0.5 bg-[#181818] border border-white/10 font-mono text-[9px] font-bold text-[#48BB78]">
               VERVE
             </span>
           </div>
         </div>
 
-        <p className="text-[11px] text-[#77746d] leading-relaxed">
-          Pay securely in <strong>{currency === 'NGN' ? 'Nigerian Naira (₦)' : 'US Dollar ($)'}</strong> via Paystack. Supports Debit/Credit Cards, USSD, and Bank Transfer with instant verification.
+        <p className="text-[11px] text-[#8E8B82] leading-relaxed">
+          Pay securely in <strong className="text-[#EDEDED]">{currency === 'NGN' ? 'Nigerian Naira (₦)' : 'US Dollar ($)'}</strong> via Wavy. Orders are automatically marked paid upon live gateway confirmation.
         </p>
 
         <button
           type="button"
           disabled={disabled || isLoading}
           onClick={handlePay}
-          className="w-full bg-[#1e7e34] hover:bg-[#155724] !text-white py-3 text-xs uppercase tracking-widest font-semibold transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full bg-[#1e7e34] hover:bg-[#155724] text-white py-3 text-xs uppercase tracking-widest font-semibold transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer rounded-xs"
         >
           {isLoading ? (
             <span className="flex items-center gap-2">
               <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              <span>Processing Payment...</span>
+              <span>Connecting to Wavy Gateway...</span>
             </span>
           ) : (
-            <span>🔒 Pay {formattedAmount} with Card</span>
+            <span>🔒 Pay {formattedAmount} via Wavy</span>
           )}
         </button>
       </div>

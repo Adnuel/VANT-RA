@@ -4,6 +4,7 @@ export interface RouteState {
   path: string;
   category?: string;
   productSlug?: string;
+  trackReference?: string;
   filter?: string;
   searchQuery?: string;
   mode?: string;
@@ -37,14 +38,22 @@ export function parsePath(rawUrl: string): RouteState {
     const productSlug = clean.replace('/product/', '');
     return { path: '/product', productSlug, filter, searchQuery };
   }
-  if (['/about', '/contact', '/faq', '/shipping', '/returns', '/privacy', '/terms'].includes(clean)) {
+  if (['/about', '/contact', '/faq', '/shipping', '/shipping-policy', '/returns', '/refund-policy', '/privacy', '/privacy-policy', '/terms'].includes(clean)) {
     return { path: clean, filter, searchQuery };
+  }
+  if (['/order-confirmed', '/payment-success', '/order-success'].includes(clean)) {
+    return { path: '/order-confirmed', filter, searchQuery };
   }
   if (clean === '/account') {
     return { path: '/account', filter, searchQuery, mode };
   }
   if (clean === '/track') {
-    return { path: '/track', filter, searchQuery };
+    const trackReference = searchParams.get('ref') || searchParams.get('reference') || searchParams.get('orderReference') || undefined;
+    return { path: '/track', trackReference, filter, searchQuery };
+  }
+  if (clean.startsWith('/track/')) {
+    const trackReference = decodeURIComponent(clean.replace('/track/', ''));
+    return { path: '/track', trackReference, filter, searchQuery };
   }
   if (clean === '/admin/login' || clean === '/ceo/login') {
     return { path: '/admin/login' };

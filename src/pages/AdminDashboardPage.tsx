@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext.tsx';
-import { formatUSD } from '../lib/commerceLogic.ts';
+import { formatUSD, formatNGN, convertUsdCentsToNgn } from '../lib/commerceLogic.ts';
 import { CATEGORIES } from '../data/catalog.ts';
 import { downloadProjectZip } from '../lib/downloadZip.ts';
 import type { RealAnalyticsSummary, AnalyticsTimeRange } from '../lib/analyticsLogic.ts';
@@ -18,7 +18,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
   const { adminUser, adminToken, logoutAdmin } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'activity' | 'overview' | 'orders' | 'products' | 'inventory' | 'shipping' | 'suppliers' | 'customers' | 'bank' | 'audit' | 'domain'
+    'activity' | 'overview' | 'orders' | 'products' | 'inventory' | 'shipping' | 'coupons' | 'suppliers' | 'customers' | 'bank' | 'audit' | 'domain'
   >('activity');
 
   const [statusToast, setStatusToast] = useState<{ message: string; type?: 'info' | 'success' | 'error' } | null>(null);
@@ -47,6 +47,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
   const [bankSettings, setBankSettings] = useState<any>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponForm, setCouponForm] = useState({
+    code: '',
+    type: 'percent' as 'percent' | 'fixed_cents',
+    value: '10',
+    minSubtotalUsd: '0',
+    description: '',
+  });
+  const [isSavingCoupon, setIsSavingCoupon] = useState(false);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -112,6 +121,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
     email: '',
   });
 
+  // CEO Live Foreign Exchange & Currency Management State
+  const [fxStatus, setFxStatus] = useState<any | null>(null);
+  const [manualRateInput, setManualRateInput] = useState('');
+  const [manualRateReason, setManualRateReason] = useState('');
+  const [isUpdatingFx, setIsUpdatingFx] = useState(false);
+
   // Load all admin data including real analytics & real customer events
   const loadDashboardData = async () => {
     if (!adminToken) return;
@@ -122,7 +137,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         customStart ? `&start=${encodeURIComponent(customStart)}` : ''
       }${customEnd ? `&end=${encodeURIComponent(customEnd)}` : ''}`;
 
-      const [statsRes, analyticsRes, eventsRes, ordersRes, productsRes, customersRes, suppliersRes, bankRes, auditRes, notifRes] =
+      const [statsRes, analyticsRes, eventsRes, ordersRes, productsRes, customersRes, suppliersRes, bankRes, auditRes, notifRes, fxRes, couponsRes] =
         await Promise.all([
           fetch('/api/admin/dashboard-stats', { headers }),
           fetch(analyticsUrl, { headers }),
@@ -134,6 +149,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
           fetch('/api/admin/bank-settings', { headers }),
           fetch('/api/admin/audit-logs', { headers }),
           fetch('/api/admin/notifications', { headers }),
+          fetch('/api/admin/currency/status', { headers }),
+          fetch('/api/admin/coupons', { headers }),
         ]);
 
       if (statsRes && (statsRes.status === 401 || statsRes.status === 403)) {
@@ -152,7 +169,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         }
       };
 
-      const [statsData, analyticsData, eventsData, ordersData, productsData, customersData, suppliersData, bankData, auditData, notifData] =
+      const [statsData, analyticsData, eventsData, ordersData, productsData, customersData, suppliersData, bankData, auditData, notifData, fxDataRes, couponsData] =
         await Promise.all([
           safeJson(statsRes, null),
           safeJson(analyticsRes, {}),
@@ -164,6 +181,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
           safeJson(bankRes, {}),
           safeJson(auditRes, { auditLogs: [] }),
           safeJson(notifRes, { notifications: [] }),
+          safeJson(fxRes, null),
+          safeJson(couponsRes, { coupons: [] }),
         ]);
 
       setStats(statsData);
@@ -178,7 +197,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         setBankForm(bankData.bankSettings);
       }
       setAuditLogs(auditData.auditLogs || []);
+      if (fxDataRes?.fxData) {
+        setFxStatus(fxDataRes.fxData);
+        setManualRateInput(fxDataRes.fxData.rate?.toString() || '');
+      }
       setNotifications(notifData.notifications || []);
+      setCoupons(couponsData.coupons || []);
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
@@ -319,6 +343,94 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         body: JSON.stringify({ status }),
       });
       if (res.ok) {
+        loadDashboardData();
+      }
+    } catch {}
+  };
+
+  const handleReturnDecision = async (orderId: string, decision: 'approved' | 'rejected' | 'completed') => {
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/return-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ returnStatus: decision }),
+      });
+      if (res.ok) {
+        showToast(`Return request marked ${decision}.`, 'success');
+        loadDashboardData();
+      } else {
+        showToast('Failed to update return status.', 'error');
+      }
+    } catch {
+      showToast('Error updating return status.', 'error');
+    }
+  };
+
+  const handleCreateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponForm.code.trim()) return;
+    setIsSavingCoupon(true);
+    try {
+      const numericValue =
+        couponForm.type === 'percent'
+          ? Math.round(Number(couponForm.value))
+          : Math.round(Number(couponForm.value) * 100);
+      const minSubtotalCents = Math.round((Number(couponForm.minSubtotalUsd) || 0) * 100);
+      const res = await fetch('/api/admin/coupons', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          code: couponForm.code.trim().toUpperCase(),
+          type: couponForm.type,
+          value: numericValue,
+          minSubtotalCents,
+          description: couponForm.description.trim() || 'Store Promotion',
+          isActive: true,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.coupon) {
+        showToast(`Coupon ${data.coupon.code} created.`, 'success');
+        setCouponForm({ code: '', type: 'percent', value: '10', minSubtotalUsd: '0', description: '' });
+        loadDashboardData();
+      } else {
+        showToast(data.error || 'Could not create coupon', 'error');
+      }
+    } catch {
+      showToast('Network error creating coupon', 'error');
+    } finally {
+      setIsSavingCoupon(false);
+    }
+  };
+
+  const handleToggleCoupon = async (coupon: any) => {
+    try {
+      const res = await fetch(`/api/admin/coupons/${coupon.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ isActive: !coupon.isActive }),
+      });
+      if (res.ok) loadDashboardData();
+    } catch {}
+  };
+
+  const handleDeleteCoupon = async (couponId: string) => {
+    try {
+      const res = await fetch(`/api/admin/coupons/${couponId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      if (res.ok) {
+        showToast('Coupon removed.', 'info');
         loadDashboardData();
       }
     } catch {}
@@ -485,6 +597,83 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
       }
     } catch {
       showToast('Error saving bank transfer details', 'error');
+    }
+  };
+
+  // CEO FX Management Actions
+  const handleRefreshFx = async () => {
+    setIsUpdatingFx(true);
+    try {
+      const res = await fetch('/api/admin/currency/refresh', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.fxData) {
+        setFxStatus(data.fxData);
+        setManualRateInput(data.fxData.rate?.toString() || '');
+        showToast(`Live exchange rate refreshed: 1 USD = ₦${data.fxData.rate.toLocaleString()} (${data.fxData.provider})`, 'success');
+      } else {
+        showToast(data.error || 'Failed to refresh FX rate', 'error');
+      }
+    } catch {
+      showToast('Error connecting to currency API', 'error');
+    } finally {
+      setIsUpdatingFx(false);
+    }
+  };
+
+  const handleManualOverrideFx = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const rateNum = Number(manualRateInput);
+    if (!rateNum || rateNum <= 0) {
+      showToast('Please enter a valid positive exchange rate', 'error');
+      return;
+    }
+    setIsUpdatingFx(true);
+    try {
+      const res = await fetch('/api/admin/currency/manual-override', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ rate: rateNum, reason: manualRateReason.trim() || 'CEO Manual Override' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.fxData) {
+        setFxStatus(data.fxData);
+        showToast(`Manual rate override active: 1 USD = ₦${data.fxData.rate.toLocaleString()}`, 'success');
+      } else {
+        showToast(data.error || 'Failed to set rate override', 'error');
+      }
+    } catch {
+      showToast('Error setting rate override', 'error');
+    } finally {
+      setIsUpdatingFx(false);
+    }
+  };
+
+  const handleClearOverrideFx = async () => {
+    setIsUpdatingFx(true);
+    try {
+      const res = await fetch('/api/admin/currency/clear-override', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.fxData) {
+        setFxStatus(data.fxData);
+        setManualRateInput(data.fxData.rate?.toString() || '');
+        setManualRateReason('');
+        showToast('Manual override cleared. Reverted to live ExchangeRate-API rate.', 'success');
+      } else {
+        showToast(data.error || 'Failed to clear override', 'error');
+      }
+    } catch {
+      showToast('Error clearing override', 'error');
+    } finally {
+      setIsUpdatingFx(false);
     }
   };
 
@@ -710,6 +899,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
             }`}
           >
             Shipping Zones
+          </button>
+          <button
+            onClick={() => setActiveTab('coupons')}
+            className={`py-3.5 transition-colors border-b-2 ${
+              activeTab === 'coupons' ? 'border-[#121210] text-[#121210] font-bold' : 'border-transparent text-[#77746d] hover:text-[#121210]'
+            }`}
+          >
+            Coupons ({coupons.length})
           </button>
           <button
             onClick={() => setActiveTab('suppliers')}
@@ -1351,6 +1548,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                       </div>
                     )}
 
+                    {/* Customer Return / Cancellation Request Banner */}
+                    {order.returnRequested && (
+                      <div className="bg-[#fdf2f2] border border-[#f8b4b4] p-3.5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-[#9b1c1c] uppercase text-[10px] font-mono block">
+                            Customer Return Request · Status: {order.returnStatus || 'pending'}
+                          </span>
+                          <p className="text-[#121210]">Reason: {order.returnReason || 'Not specified'}</p>
+                        </div>
+                        {(!order.returnStatus || order.returnStatus === 'pending') && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleReturnDecision(order.id, 'approved')}
+                              className="bg-[#1e7e34] text-white px-3 py-1.5 text-[11px] font-semibold uppercase hover:bg-[#186429] cursor-pointer"
+                            >
+                              ✓ Approve Return
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReturnDecision(order.id, 'rejected')}
+                              className="border border-[#9b1c1c] text-[#9b1c1c] px-3 py-1.5 text-[11px] font-semibold uppercase hover:bg-[#9b1c1c] hover:text-white cursor-pointer"
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Items List */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       <div>
@@ -1359,7 +1586,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                           {order.items.map((it: any, idx: number) => (
                             <li key={idx} className="flex justify-between border-b border-[#e7e4de]/40 pb-1">
                               <span>{it.quantity}x {it.title}</span>
-                              <span className="font-mono">{formatUSD(it.totalCents)}</span>
+                              <span className="font-mono">
+                                {order.currency === 'NGN'
+                                  ? formatNGN(convertUsdCentsToNgn(it.totalCents, order.exchangeRateUsed || 1500))
+                                  : formatUSD(it.totalCents)}
+                              </span>
                             </li>
                           ))}
                         </ul>
@@ -1376,8 +1607,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                           {order.shippingAddress.country}
                         </p>
                         <div className="pt-2 flex justify-between font-bold border-t border-[#e7e4de]">
-                          <span>Order Total:</span>
-                          <span className="font-mono text-sm text-[#1e7e34]">{formatUSD(order.totalCents)}</span>
+                          <span>Order Total ({order.currency || 'USD'}):</span>
+                          <span className="font-mono text-sm text-[#1e7e34]">
+                            {order.currency === 'NGN'
+                              ? `${formatNGN(convertUsdCentsToNgn(order.totalCents, order.exchangeRateUsed || 1500))} (${formatUSD(order.totalCents)})`
+                              : formatUSD(order.totalCents)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1536,6 +1771,127 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
           <ShippingZonesPanel />
         )}
 
+        {/* DISCOUNT & PROMO COUPONS */}
+        {activeTab === 'coupons' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-serif text-2xl text-[#121210]">Discount & Promo Codes</h2>
+              <p className="text-xs text-[#77746d]">
+                Create percentage or fixed-amount promo codes automatically validated during checkout.
+              </p>
+            </div>
+
+            <form onSubmit={handleCreateCoupon} className="bg-white border border-[#e7e4de] p-5 grid grid-cols-1 md:grid-cols-5 gap-3 items-end text-xs shadow-xs">
+              <div>
+                <label className="block text-[#77746d] mb-1 font-medium">Promo Code *</label>
+                <input
+                  type="text"
+                  required
+                  value={couponForm.code}
+                  onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. LAGOSVIP10"
+                  className="w-full border border-[#e7e4de] p-2 font-mono uppercase"
+                />
+              </div>
+              <div>
+                <label className="block text-[#77746d] mb-1 font-medium">Discount Type</label>
+                <select
+                  value={couponForm.type}
+                  onChange={(e) => setCouponForm({ ...couponForm, type: e.target.value as 'percent' | 'fixed_cents' })}
+                  className="w-full border border-[#e7e4de] p-2 bg-white"
+                >
+                  <option value="percent">Percentage (%)</option>
+                  <option value="fixed_cents">Fixed USD ($)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[#77746d] mb-1 font-medium">
+                  {couponForm.type === 'percent' ? 'Percent Off (%)' : 'Discount ($ USD)'}
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={couponForm.value}
+                  onChange={(e) => setCouponForm({ ...couponForm, value: e.target.value })}
+                  className="w-full border border-[#e7e4de] p-2 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[#77746d] mb-1 font-medium">Min Spend ($ USD)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={couponForm.minSubtotalUsd}
+                  onChange={(e) => setCouponForm({ ...couponForm, minSubtotalUsd: e.target.value })}
+                  className="w-full border border-[#e7e4de] p-2 font-mono"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSavingCoupon}
+                className="bg-[#121210] text-[#f8f7f4] py-2.5 px-4 uppercase tracking-wider font-semibold hover:bg-[#c4a66b] hover:text-[#121210] cursor-pointer"
+              >
+                {isSavingCoupon ? 'Saving...' : '+ Add Coupon'}
+              </button>
+            </form>
+
+            <div className="bg-white border border-[#e7e4de] shadow-xs overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#f8f7f4] border-b border-[#e7e4de] uppercase text-[10px] text-[#77746d] font-mono">
+                  <tr>
+                    <th className="p-3">Code</th>
+                    <th className="p-3">Value</th>
+                    <th className="p-3">Min Spend</th>
+                    <th className="p-3">Uses</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e7e4de]">
+                  {coupons.map((cp) => (
+                    <tr key={cp.id}>
+                      <td className="p-3 font-mono font-bold text-[#121210]">{cp.code}</td>
+                      <td className="p-3 font-mono">
+                        {cp.type === 'percent' ? `${cp.value}% Off` : formatUSD(cp.value)}
+                      </td>
+                      <td className="p-3 font-mono">{cp.minSubtotalCents ? formatUSD(cp.minSubtotalCents) : 'None'}</td>
+                      <td className="p-3 font-mono">{cp.usageCount || 0}</td>
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleCoupon(cp)}
+                          className={`px-2 py-0.5 text-[10px] font-mono uppercase font-bold cursor-pointer ${
+                            cp.isActive ? 'bg-[#eef8ee] text-[#1e7e34]' : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {cp.isActive ? 'Active' : 'Paused'}
+                        </button>
+                      </td>
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCoupon(cp.id)}
+                          className="text-red-700 hover:underline font-mono text-[11px] cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {coupons.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-[#77746d]">
+                        No discount coupons configured yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* 5. SUPPLIER MANAGEMENT */}
         {activeTab === 'suppliers' && (
           <div className="space-y-6">
@@ -1616,7 +1972,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
 
         {/* 7. BANK TRANSFER CONFIGURATION */}
         {activeTab === 'bank' && (
-          <div className="max-w-2xl bg-white border border-[#e7e4de] p-8 shadow-xs space-y-6">
+          <div className="space-y-6">
+            <div className="max-w-2xl bg-white border border-[#e7e4de] p-8 shadow-xs space-y-6">
             <div>
               <h2 className="font-serif text-2xl text-[#121210]">Business Bank Transfer Details</h2>
               <p className="text-xs text-[#77746d]">
@@ -1708,7 +2065,134 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
               </button>
             </form>
           </div>
-        )}
+
+          {/* Real-World Live Foreign Exchange (FX) Engine Panel */}
+          <div className="max-w-2xl bg-white border border-[#e7e4de] p-8 shadow-xs space-y-6 mt-6">
+            <div className="flex items-center justify-between border-b border-[#e7e4de] pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-serif text-2xl text-[#121210]">Live Currency Engine (USD / NGN)</h2>
+                  <span
+                    className={`px-2 py-0.5 text-[9px] font-mono font-bold uppercase rounded-xs ${
+                      fxStatus?.isManualOverride
+                        ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                        : fxStatus?.isLive
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {fxStatus?.isManualOverride
+                      ? 'MANUAL OVERRIDE'
+                      : fxStatus?.isLive
+                      ? 'LIVE API CONNECTED'
+                      : 'CACHED (FRESH)'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#77746d] mt-1">
+                  Automatic live rates from ExchangeRate-API for accurate storefront conversion and order recording.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={isUpdatingFx}
+                onClick={handleRefreshFx}
+                className="bg-[#121210] text-[#f8f7f4] px-4 py-2 text-xs font-mono font-semibold uppercase hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                <span>{isUpdatingFx ? 'Querying...' : '↻ Refresh from API'}</span>
+              </button>
+            </div>
+
+            {/* Current Rates Display Card */}
+            <div className="grid grid-cols-2 gap-4 bg-[#f8f7f4] p-4 border border-[#e7e4de]">
+              <div>
+                <span className="text-[10px] uppercase font-mono text-[#77746d] block">
+                  Authoritative Conversion Rate
+                </span>
+                <span className="text-2xl font-serif font-bold text-[#121210]">
+                  1 USD = ₦{fxStatus?.rate ? Number(fxStatus.rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '1,346.47'}
+                </span>
+                <span className="text-[10px] text-[#77746d] block mt-0.5">
+                  Reverse: 1 NGN ≈ ${(1 / (fxStatus?.rate || 1346.47)).toFixed(6)} USD
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase font-mono text-[#77746d] block">
+                  Data Provider & Freshness
+                </span>
+                <span className="text-xs font-mono font-bold text-[#121210] block">
+                  {fxStatus?.provider || 'ExchangeRate-API (live)'}
+                </span>
+                <span className="text-[10px] text-[#77746d] block mt-0.5">
+                  Last Updated: {fxStatus?.lastUpdated ? new Date(fxStatus.lastUpdated).toLocaleTimeString() : 'Just now'}
+                </span>
+                {fxStatus?.isManualOverride && fxStatus.overrideReason && (
+                  <span className="text-[10px] text-amber-700 font-mono block mt-1">
+                    Note: {fxStatus.overrideReason}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* CEO Manual Override Form */}
+            <form onSubmit={handleManualOverrideFx} className="space-y-4 pt-4 border-t border-[#e7e4de] text-xs">
+              <h3 className="font-serif text-base text-[#121210]">
+                CEO Manual Exchange Rate Override
+              </h3>
+              <p className="text-[11px] text-[#77746d]">
+                Set a verified custom rate during foreign exchange volatility. All orders will record this rate with your audit signature.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#77746d] mb-1 font-medium">Custom USD to NGN Rate</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={manualRateInput}
+                    onChange={(e) => setManualRateInput(e.target.value)}
+                    placeholder="e.g. 1350.00"
+                    className="w-full border border-[#e7e4de] p-2.5 font-mono focus:border-[#121210] focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#77746d] mb-1 font-medium">Business Rationale / Note</label>
+                  <input
+                    type="text"
+                    value={manualRateReason}
+                    onChange={(e) => setManualRateReason(e.target.value)}
+                    placeholder="e.g. Central Bank rate stabilization"
+                    className="w-full border border-[#e7e4de] p-2.5 focus:border-[#121210] focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={isUpdatingFx}
+                  className="bg-[#121210] text-[#f8f7f4] px-5 py-2 text-xs uppercase font-mono font-semibold hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50"
+                >
+                  {isUpdatingFx ? 'Applying...' : 'Apply Manual Override'}
+                </button>
+
+                {fxStatus?.isManualOverride && (
+                  <button
+                    type="button"
+                    disabled={isUpdatingFx}
+                    onClick={handleClearOverrideFx}
+                    className="border border-red-300 text-red-700 bg-red-50 px-4 py-2 text-xs uppercase font-mono font-semibold hover:bg-red-100 transition-colors"
+                  >
+                    Revert to Live API Rate
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
         {/* 8. AUDIT LOGS */}
         {activeTab === 'audit' && (

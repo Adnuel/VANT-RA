@@ -42,6 +42,7 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [backups, setBackups] = useState<BackupItem[]>([]);
   const [integrity, setIntegrity] = useState<IntegrityReport | null>(null);
+  const [confirmingRestoreFile, setConfirmingRestoreFile] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [apiLatencyMs, setApiLatencyMs] = useState<number | null>(null);
@@ -120,9 +121,7 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
   };
 
   const restoreBackup = async (filename: string) => {
-    if (!confirm(`Are you certain you want to roll back the database to ${filename}? Current state will be replaced.`)) {
-      return;
-    }
+    setConfirmingRestoreFile(null);
     setIsLoading(true);
     try {
       const res = await safeFetchJson<{ message?: string; error?: string }>(
@@ -395,12 +394,29 @@ export function DeveloperPortalPage({ onNavigate }: DeveloperPortalPageProps) {
                         <td className="p-3 text-[#a1a1aa]">{Math.round(b.sizeBytes / 1024)} KB</td>
                         <td className="p-3 text-[#71717a]">{new Date(b.createdAt).toLocaleString()}</td>
                         <td className="p-3 text-right">
-                          <button
-                            onClick={() => restoreBackup(b.filename)}
-                            className="px-2.5 py-1 rounded text-[11px] bg-red-950/40 text-red-400 border border-red-800/40 hover:bg-red-900/50"
-                          >
-                            Restore Database
-                          </button>
+                          {confirmingRestoreFile === b.filename ? (
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                onClick={() => restoreBackup(b.filename)}
+                                className="px-2.5 py-1 rounded text-[11px] bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                              >
+                                Confirm Restore
+                              </button>
+                              <button
+                                onClick={() => setConfirmingRestoreFile(null)}
+                                className="px-2.5 py-1 rounded text-[11px] bg-[#27272a] text-[#fafafa] hover:bg-[#3f3f46] cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmingRestoreFile(b.filename)}
+                              className="px-2.5 py-1 rounded text-[11px] bg-red-950/40 text-red-400 border border-red-800/40 hover:bg-red-900/50 cursor-pointer"
+                            >
+                              Restore Database
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))

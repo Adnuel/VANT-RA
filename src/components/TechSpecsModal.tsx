@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product } from '../data/catalog.ts';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
@@ -18,27 +18,37 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
 }) => {
   const { addToCart, setIsCartOpen } = useCart();
   const { currency, formatAmount } = useCurrency();
-  const [selectedFinish, setSelectedFinish] = useState<string>('Titanium Noir');
+  const [selectedFinish, setSelectedFinish] = useState<string>('Obsidian Noir');
   const [quantity, setQuantity] = useState<number>(1);
   const [addedNotice, setAddedNotice] = useState<boolean>(false);
 
+  useEffect(() => {
+    setQuantity(1);
+    setAddedNotice(false);
+  }, [product?.id]);
+
   if (!isOpen || !product) return null;
 
+  const isOutOfStock =
+    !product.isAvailable || product.stockQuantity === 0 || product.availability === 'out_of_stock';
+  const isReservedPhone = product.category === 'phones';
+
   const finishes = [
-    { name: 'Titanium Noir', hex: '#141412', bgClass: 'bg-[#141412]' },
-    { name: 'Natural Titanium', hex: '#8a8d8f', bgClass: 'bg-[#8a8d8f]' },
-    { name: 'Desert Gold', hex: '#c4a66b', bgClass: 'bg-[#c4a66b]' },
-    { name: 'Silver Frost', hex: '#e2e8f0', bgClass: 'bg-[#e2e8f0]' },
+    { name: 'Obsidian Noir', hex: '#141416' },
+    { name: 'Champagne Gold', hex: '#C8A96A' },
+    { name: 'Slate Gray', hex: '#4B5563' },
+    { name: 'Brushed Silver', hex: '#E5E7EB' },
   ];
 
   const handleAddToCart = () => {
+    if (isOutOfStock || isReservedPhone) return;
     addToCart(product, quantity);
     setAddedNotice(true);
     setTimeout(() => {
       setAddedNotice(false);
       onClose();
       setIsCartOpen(true);
-    }, 700);
+    }, 550);
   };
 
   return (
@@ -46,144 +56,139 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="tech-specs-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
     >
-      <div className="bg-[#fbfaf7] text-[#121210] w-full max-w-3xl border border-[#252521] shadow-2xl rounded-xs overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
-        {/* Left Visual Stage */}
-        <div className="md:w-1/2 bg-[#121210] p-8 flex flex-col items-center justify-between text-[#f8f7f4] relative overflow-hidden">
-          {/* Subtle glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#c4a66b]/15 blur-3xl rounded-full pointer-events-none"></div>
-
-          <div className="w-full flex items-center justify-between text-[11px] font-mono tracking-widest text-[#a9a69f] uppercase z-10">
-            <span>VANTÉRA STUDIO</span>
-            <span className="text-[#c4a66b] font-bold">{selectedFinish}</span>
+      <div className="bg-[#141416] text-[#F5F1E8] w-full max-w-3xl border border-white/10 rounded-xs overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
+        {/* Left Studio Image Stage */}
+        <div className="md:w-1/2 bg-[#0B0B0C] p-8 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-white/8">
+          <div className="w-full flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[#A8A297]">
+            <span>VANTÉRA</span>
+            <span className="text-[#C8A96A] font-medium">{selectedFinish}</span>
           </div>
 
-          <div className="relative my-6 aspect-square w-full max-w-[260px] flex items-center justify-center z-10">
+          <div className="relative my-6 aspect-square w-full max-w-[260px] flex items-center justify-center">
             <img
-              src={product.image || ''}
-              alt={product.title}
-              className="max-h-full max-w-full object-contain filter drop-shadow-2xl transition-all duration-300"
+              src={product.image || '/products/charging-phone-stand.jpg'}
+              alt={product.imageAlt || product.title}
+              className="max-h-full max-w-full object-contain"
+              referrerPolicy="no-referrer"
             />
           </div>
 
-          {/* Finish selector */}
-          <div className="w-full z-10 pt-4 border-t border-[#252521] space-y-2">
-            <span className="text-[10px] uppercase font-mono tracking-widest text-[#77746d] block text-center">
-              Select Finish
-            </span>
-            <div className="flex items-center justify-center gap-3">
-              {finishes.map((f) => (
-                <button
-                  key={f.name}
-                  type="button"
-                  onClick={() => setSelectedFinish(f.name)}
-                  className={`w-6 h-6 rounded-full border border-white/20 transition-all cursor-pointer ${
-                    selectedFinish === f.name
-                      ? 'scale-125 ring-2 ring-[#c4a66b] ring-offset-2 ring-offset-[#121210]'
-                      : 'hover:scale-110 opacity-70 hover:opacity-100'
-                  } ${f.bgClass}`}
-                  title={f.name}
-                />
-              ))}
-            </div>
+          <div className="w-full pt-4 border-t border-white/8 flex items-center justify-center gap-3">
+            {finishes.map((f) => (
+              <button
+                key={f.name}
+                type="button"
+                onClick={() => setSelectedFinish(f.name)}
+                aria-label={`Select ${f.name}`}
+                title={f.name}
+                className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${
+                  selectedFinish === f.name
+                    ? 'border-[#C8A96A] scale-115 ring-2 ring-[#C8A96A]/40 ring-offset-2 ring-offset-[#0B0B0C]'
+                    : 'border-white/20 opacity-70 hover:opacity-100'
+                }`}
+                style={{ backgroundColor: f.hex }}
+              />
+            ))}
           </div>
         </div>
 
-        {/* Right Hardware Specs & Purchase Sheet */}
-        <div className="md:w-1/2 p-6 md:p-8 overflow-y-auto space-y-6 flex flex-col justify-between">
+        {/* Right Specs & Purchase Module */}
+        <div className="md:w-1/2 p-6 sm:p-8 overflow-y-auto flex flex-col justify-between space-y-6">
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <span className="text-[10px] uppercase font-mono tracking-widest text-[#9d8048] font-bold block">
-                  {product.category.replace('-', ' ')} · Official Hardware
-                </span>
-                <h2 id="tech-specs-title" className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-[#121210]">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#C8A96A]">
+                  {product.category.replace('-', ' ')}
+                </p>
+                <h2 id="tech-specs-title" className="font-editorial text-2xl font-medium text-[#F5F1E8] mt-1">
                   {product.title}
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="text-[#77746d] hover:text-[#121210] p-1.5 transition-colors cursor-pointer rounded-xs"
+                className="text-[#A8A297] hover:text-[#F5F1E8] p-1.5 cursor-pointer"
                 aria-label="Close dialog"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ✕
               </button>
             </div>
 
-            <p className="text-xs text-[#77746d] leading-relaxed">
-              {product.description}
-            </p>
+            <p className="text-sm text-[#A8A297] leading-relaxed">{product.description}</p>
 
-            {/* Spec Table */}
-            <div className="space-y-2 border-t border-b border-[#e7e4de] py-3 text-xs">
-              <div className="flex justify-between py-1">
-                <span className="text-[#77746d] font-mono text-[11px]">Chassis Material:</span>
-                <span className="font-semibold text-[#121210]">Aerospace Grade Alloy / Grade 5 Titanium</span>
+            <div className="border-y border-white/8 py-3.5 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#A8A297] uppercase tracking-[0.12em] text-[10px]">Availability</span>
+                <span className={isOutOfStock ? 'text-[#E57373]' : 'text-[#F5F1E8]'}>
+                  {isOutOfStock ? 'Out of stock' : `${product.stockQuantity} units ready`}
+                </span>
               </div>
-              <div className="flex justify-between py-1">
-                <span className="text-[#77746d] font-mono text-[11px]">Thermal Architecture:</span>
-                <span className="font-semibold text-[#121210]">Multi-Stage Passive Heat Dissipation</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-[#77746d] font-mono text-[11px]">Certification:</span>
-                <span className="font-semibold text-[#121210]">Qi2 / CE / FCC / RoHS Verified</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-[#77746d] font-mono text-[11px]">Warranty:</span>
-                <span className="font-semibold text-[#121210]">1-Year VANTÉRA Replacement Care</span>
+              <div className="flex justify-between">
+                <span className="text-[#A8A297] uppercase tracking-[0.12em] text-[10px]">Warranty</span>
+                <span className="text-[#F5F1E8]">12-Month Hardware Assurance</span>
               </div>
             </div>
 
-            {/* Price Row */}
-            <div className="flex items-baseline justify-between">
+            <div className="flex items-center justify-between pt-1">
               <div>
-                <span className="text-[10px] uppercase font-mono tracking-widest text-[#77746d] block">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-[#A8A297] block">
                   Price ({currency})
                 </span>
-                <div className="text-2xl font-extrabold text-[#121210] font-sans">
+                <div className="text-2xl font-medium text-[#C8A96A] tabular-nums mt-0.5">
                   {formatAmount(product.retailPriceCents * quantity)}
                 </div>
               </div>
 
-              {/* Quantity selector */}
-              <div className="flex items-center border border-[#e7e4de] bg-white rounded-xs">
-                <button
-                  type="button"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-2.5 py-1 text-xs hover:bg-[#eae7e0] cursor-pointer"
-                >
-                  -
-                </button>
-                <span className="px-3 py-1 font-mono text-xs font-bold">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="px-2.5 py-1 text-xs hover:bg-[#eae7e0] cursor-pointer"
-                >
-                  +
-                </button>
-              </div>
+              {!isOutOfStock && !isReservedPhone && (
+                <div className="flex items-center border border-white/12 bg-[#0B0B0C] rounded-xs">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    aria-label="Decrease quantity"
+                    className="px-3 py-1.5 text-sm text-[#A8A297] hover:text-[#F5F1E8] cursor-pointer"
+                  >
+                    −
+                  </button>
+                  <span className="px-3 py-1.5 text-sm font-medium tabular-nums">{quantity}</span>
+                  <button
+                    type="button"
+                    disabled={quantity >= product.stockQuantity}
+                    onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))}
+                    aria-label="Increase quantity"
+                    className="px-3 py-1.5 text-sm text-[#A8A297] hover:text-[#F5F1E8] disabled:opacity-40 cursor-pointer"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Action Row */}
-          <div className="pt-4 space-y-2">
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              className="w-full bg-[#121210] text-[#f8f7f4] py-3.5 px-4 text-xs font-bold uppercase tracking-widest hover:bg-[#c4a66b] hover:text-[#121210] transition-colors rounded-xs flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-98"
-            >
-              <span>{addedNotice ? '✓ Added to Cart!' : 'Add to Bag'}</span>
-              <span>·</span>
-              <span>{formatAmount(product.retailPriceCents * quantity)}</span>
-            </button>
-            <p className="text-[10px] text-center text-[#77746d]">
-              Direct GTBank wire settlement & card checkout supported · 100% CEO inspected
-            </p>
+          <div className="space-y-2.5 pt-2">
+            {!isOutOfStock && !isReservedPhone ? (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer"
+              >
+                {addedNotice
+                  ? 'Added to Bag'
+                  : `Add to Cart · ${formatAmount(product.retailPriceCents * quantity)}`}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onNavigate(`/product/${product.slug}`);
+                }}
+                className="w-full border border-white/15 text-[#F5F1E8] py-3 px-4 text-[11px] uppercase tracking-[0.2em] rounded-xs cursor-pointer hover:border-[#C8A96A]"
+              >
+                View Product Details
+              </button>
+            )}
           </div>
         </div>
       </div>

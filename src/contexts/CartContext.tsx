@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext.tsx';
 import { trackEvent, syncCartWithServer, getOrCreateSessionId } from '../lib/tracker.ts';
 import { appNavigate } from '../hooks/useNavigation.ts';
 import { formatUSD } from '../lib/commerceLogic.ts';
+import { safeFetchJson } from '../lib/safeFetch.ts';
 
 export interface CartItem {
   product: Product;
@@ -27,20 +28,15 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'vantera_cart_v1';
 const PENDING_CART_ITEM_KEY = 'vantera_pending_cart_item';
 
-export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const [items, setItems] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+function getCartStorageKey(userId?: string | null): string {
+  return userId ? `vantera_cart_user_${userId}` : 'vantera_cart_guest';
+}
 
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, token } = useAuth();
+  const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<{ product: Product; quantity: number } | null>(() => {
@@ -54,19 +50,86 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Track cart session ID
   const cartSessionId = useRef<string>(getOrCreateSessionId());
+  const isInitialSyncDone = useRef<boolean>(false);
 
-  // Save items and sync with server
+  // Synchronize cart with backend on login / user change
   useEffect(() => {
-    try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // storage quota or private browsing
+    if (!user) {
+      // Guest or logged out: reset memory items so no cross-customer leakage occurs
+      setItems([]);
+      isInitialSyncDone.current = false;
+      return;
     }
+
+    const storageKey = getCartStorageKey(user.id);
+    let localItems: CartItem[] = [];
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) localItems = JSON.parse(saved);
+    } catch {}
+
+    // Fetch authoritative persistent cart from backend database
+    if (token) {
+      safeFetchJson<{ cart?: { items?: any[] } }>('/api/customer/cart', {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((res) => {
+        if (res.ok && res.data?.cart?.items && Array.isArray(res.data.cart.items) && res.data.cart.items.length > 0) {
+          setItems(res.data.cart.items);
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(res.data.cart.items));
+          } catch {}
+        } else if (localItems.length > 0) {
+          // If server had no cart but user had local items, sync local to server
+          setItems(localItems);
+          safeFetchJson('/api/customer/cart', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              items: localItems,
+              subtotalCents: localItems.reduce((s, i) => s + (i.product?.retailPriceCents || 0) * i.quantity, 0),
+            }),
+          });
+        } else {
+          setItems([]);
+        }
+        isInitialSyncDone.current = true;
+      });
+    } else {
+      setItems(localItems);
+      isInitialSyncDone.current = true;
+    }
+  }, [user?.id, token]);
+
+  // Save items and sync with server whenever items change
+  useEffect(() => {
+    if (!user) return;
+
+    const storageKey = getCartStorageKey(user.id);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(items));
+    } catch {}
 
     const count = items.reduce((sum, item) => sum + item.quantity, 0);
     const subtotal = items.reduce((sum, item) => sum + item.product.retailPriceCents * item.quantity, 0);
+
+    // Sync to abandonment tracker
     syncCartWithServer(cartSessionId.current, items, count, subtotal);
-  }, [items]);
+
+    // Sync to persistent customer cart in database
+    if (token && isInitialSyncDone.current) {
+      safeFetchJson('/api/customer/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items, subtotalCents: subtotal }),
+      });
+    }
+  }, [items, user?.id, token]);
 
   // When user signs in, if they had a pending product waiting, add it now!
   useEffect(() => {
@@ -99,14 +162,35 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('openCart') === '1' || params.get('checkout') === '1') {
+        setIsCartOpen(true);
+        params.delete('openCart');
+        params.delete('checkout');
+        const nextQuery = params.toString();
+        window.history.replaceState(null, '', window.location.pathname + (nextQuery ? `?${nextQuery}` : ''));
+      }
+    } catch {}
+  }, [user]);
+
   /**
    * STRICT REQUIREMENT:
    * Require every customer to register or log in before they can add products to their shopping cart.
    */
   const addToCart = (product: Product, quantity = 1) => {
+    const stockLimit = typeof product.stockQuantity === 'number' ? product.stockQuantity : 99;
+    if (!product.isAvailable || stockLimit <= 0) {
+      return;
+    }
+
+    const safeQty = Math.max(1, Math.min(quantity, stockLimit));
+
     if (!user) {
-      // Customer is NOT logged in: block addition and prompt for registration/login
-      const pending = { product, quantity };
+      // Customer is NOT logged in: save pending selection and prompt for registration/login
+      const pending = { product, quantity: safeQty };
       setPendingProduct(pending);
       try {
         localStorage.setItem(PENDING_CART_ITEM_KEY, JSON.stringify(pending));
@@ -115,22 +199,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Customer is authenticated: proceed with adding
+    // Customer is authenticated: proceed with adding while respecting stock cap
     setItems((prev) => {
       const existingIdx = prev.findIndex((i) => i.product.id === product.id);
       if (existingIdx > -1) {
         const copy = [...prev];
-        copy[existingIdx].quantity += quantity;
+        copy[existingIdx].quantity = Math.min(stockLimit, copy[existingIdx].quantity + safeQty);
         return copy;
       } else {
-        return [...prev, { product, quantity }];
+        return [...prev, { product, quantity: safeQty }];
       }
     });
 
     trackEvent('cart_item_added', {
       productId: product.id,
       productTitle: product.title,
-      quantity,
+      quantity: safeQty,
       retailPriceCents: product.retailPriceCents,
     });
 
@@ -143,7 +227,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     setItems((prev) =>
-      prev.map((item) => (item.product.id === productId ? { ...item, quantity: Math.min(quantity, 99) } : item))
+      prev.map((item) => {
+        if (item.product.id !== productId) return item;
+        const maxStock = typeof item.product.stockQuantity === 'number' ? Math.max(1, item.product.stockQuantity) : 99;
+        return { ...item, quantity: Math.min(quantity, maxStock, 99) };
+      })
     );
     trackEvent('cart_quantity_changed', {
       productId,
@@ -164,6 +252,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setItems([]);
+    if (user) {
+      try {
+        localStorage.removeItem(getCartStorageKey(user.id));
+      } catch {}
+      if (token) {
+        safeFetchJson('/api/customer/cart', {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    }
   };
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -219,56 +318,54 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 Account Required to Add Products
               </h2>
 
-              <p className="text-xs sm:text-sm text-[#77746d] leading-relaxed">
-                To guarantee authenticated order tracking and personal bank transfer verification by CEO Adnuel, VANTÉRA requires all clients to be registered and signed in before reserving items in the review cart.
+              <p className="text-xs text-[#77746d] leading-relaxed">
+                VANTÉRA curates high-end tech objects with limited reservation allocations. Please create an account or sign in to reserve items in your shopping bag.
               </p>
 
               {pendingProduct && (
-                <div className="bg-[#fbfaf7] border border-[#e7e4de] p-3 flex items-center gap-3">
-                  {pendingProduct.product.image ? (
+                <div className="flex items-center gap-3 p-3 bg-[#fdfdfc] border border-[#e7e4de] text-xs">
+                  {pendingProduct.product.image && (
                     <img
                       src={pendingProduct.product.image}
                       alt={pendingProduct.product.title}
-                      className="w-12 h-12 object-contain bg-white border border-[#e7e4de] p-1"
+                      className="w-10 h-10 object-cover border border-[#e7e4de]"
                     />
-                  ) : (
-                    <div className="w-12 h-12 bg-[#eae7e0] flex items-center justify-center font-serif text-xs text-[#77746d]">
-                      V
-                    </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-[#121210] truncate">
-                      {pendingProduct.product.title}
-                    </p>
-                    <p className="text-[11px] text-[#c4a66b] font-mono">
-                      {formatUSD(pendingProduct.product.retailPriceCents)}
+                    <p className="font-medium text-[#121210] truncate">{pendingProduct.product.title}</p>
+                    <p className="text-[11px] text-[#77746d]">
+                      Qty: {pendingProduct.quantity} • {formatUSD(pendingProduct.product.retailPriceCents * pendingProduct.quantity)}
                     </p>
                   </div>
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col sm:flex-row gap-3">
+              <div className="pt-2 flex flex-col gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
                     setIsAuthModalOpen(false);
-                    appNavigate('/account');
+                    appNavigate('/account?mode=register&returnTo=cart');
                   }}
-                  className="flex-1 bg-[#121210] text-[#f8f7f4] py-3 px-4 text-xs font-semibold uppercase tracking-widest hover:bg-[#c4a66b] hover:text-[#121210] transition-colors text-center"
+                  className="w-full bg-[#121210] hover:bg-[#252521] text-white py-3 text-xs uppercase font-mono tracking-wider transition-colors cursor-pointer text-center"
                 >
-                  Sign In / Register Account
+                  Create Client Account →
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setIsAuthModalOpen(false)}
-                  className="border border-[#e7e4de] text-[#77746d] py-3 px-4 text-xs font-semibold uppercase tracking-wider hover:text-[#121210] hover:border-[#121210] transition-colors"
+                  onClick={() => {
+                    setIsAuthModalOpen(false);
+                    appNavigate('/account?mode=login&returnTo=cart');
+                  }}
+                  className="w-full border border-[#121210] text-[#121210] hover:bg-[#f5f5f4] py-2.5 text-xs uppercase font-mono tracking-wider transition-colors cursor-pointer text-center"
                 >
-                  Continue Browsing
+                  Sign In to Existing Account
                 </button>
               </div>
 
-              <p className="text-[10px] text-[#a9a69f] text-center pt-2 border-t border-[#e7e4de]">
-                Registration takes under 30 seconds · No credit card required
+              <p className="text-[10px] text-center text-[#a9a69f]">
+                Your selection will be held while you sign in.
               </p>
             </div>
           </div>
@@ -278,7 +375,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export function useCart() {
+export function useCart(): CartContextType {
   const context = useContext(CartContext);
   if (!context) {
     throw new Error('useCart must be used within a CartProvider');

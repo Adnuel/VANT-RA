@@ -3,6 +3,7 @@ import { DeviceProvider } from './contexts/DeviceContext.tsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
 import { CurrencyProvider } from './contexts/CurrencyContext.tsx';
 import { CartProvider } from './contexts/CartContext.tsx';
+import { WishlistProvider } from './contexts/WishlistContext.tsx';
 import { useNavigation } from './hooks/useNavigation.ts';
 import { INITIAL_PRODUCTS, Product } from './data/catalog.ts';
 import { safeFetchJson } from './lib/safeFetch.ts';
@@ -17,6 +18,7 @@ import { TrackOrderPage } from './pages/TrackOrderPage.tsx';
 import { AdminLoginPage } from './pages/AdminLoginPage.tsx';
 import { AdminDashboardPage } from './pages/AdminDashboardPage.tsx';
 import { DeveloperPortalPage } from './pages/DeveloperPortalPage.tsx';
+import { OrderConfirmationPage } from './pages/OrderConfirmationPage.tsx';
 
 function MainRouter() {
   const { route, navigate } = useNavigation();
@@ -75,29 +77,48 @@ function MainRouter() {
     );
   } else if (route.path === '/product') {
     pageContent = <ProductPage productSlug={route.productSlug || ''} products={products} onNavigate={navigate} />;
-  } else if (['/about', '/contact', '/faq', '/shipping', '/returns', '/privacy', '/terms'].includes(route.path)) {
+  } else if (['/about', '/contact', '/faq', '/shipping', '/shipping-policy', '/returns', '/refund-policy', '/privacy', '/privacy-policy', '/terms'].includes(route.path)) {
     pageContent = <InfoPage pageKey={route.path} onNavigate={navigate} />;
+  } else if (route.path === '/order-confirmed') {
+    pageContent = <OrderConfirmationPage onNavigate={navigate} />;
   } else if (route.path === '/account') {
     pageContent = <AccountPage initialMode={route.mode as any} onNavigate={navigate} />;
   } else if (route.path === '/track') {
-    pageContent = <TrackOrderPage onNavigate={navigate} />;
+    pageContent = <TrackOrderPage initialReference={route.trackReference} onNavigate={navigate} />;
   } else {
     pageContent = (
-      <div className="max-w-4xl mx-auto px-4 py-24 text-center space-y-4">
-        <h1 className="font-serif text-3xl text-[#121210]">Page Not Found</h1>
-        <p className="text-xs text-[#77746d]">The page you are looking for does not exist on VANTÉRA.</p>
-        <button
-          onClick={() => navigate('/')}
-          className="bg-[#121210] text-[#f8f7f4] px-6 py-2.5 text-xs uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210]"
-        >
-          Return to Storefront
-        </button>
+      <div className="max-w-3xl mx-auto px-6 py-28 text-center space-y-6">
+        <p className="text-[11px] uppercase tracking-[0.28em] text-[#C8A96A] font-medium">
+          Error 404
+        </p>
+        <h1 className="font-editorial text-4xl sm:text-5xl font-medium text-[#F5F1E8]">
+          This Page Could Not Be Found
+        </h1>
+        <p className="text-sm sm:text-base text-[#A8A297] max-w-md mx-auto leading-relaxed">
+          The link may be outdated or the item has moved. Return to our collection or view your client account below.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="gold-gradient-bg px-7 py-3.5 text-xs uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer"
+          >
+            Return Home
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/shop')}
+            className="border border-white/15 hover:border-[#C8A96A] text-[#F5F1E8] hover:text-[#C8A96A] px-7 py-3.5 text-xs uppercase tracking-[0.2em] font-medium rounded-xs transition-colors cursor-pointer"
+          >
+            Browse Collection
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <StoreLayout activePath={route.path} onNavigate={navigate}>
+    <StoreLayout activePath={route.path} products={products} onNavigate={navigate}>
       {pageContent}
     </StoreLayout>
   );
@@ -109,7 +130,9 @@ export default function App() {
       <AuthProvider>
         <CurrencyProvider>
           <CartProvider>
-            <MainRouter />
+            <WishlistProvider>
+              <MainRouter />
+            </WishlistProvider>
           </CartProvider>
         </CurrencyProvider>
       </AuthProvider>

@@ -16,6 +16,9 @@ export interface User {
   salt?: string;
   phone?: string;
   isPasswordSet: boolean;
+  isEmailVerified?: boolean;
+  emailVerificationCode?: string;
+  emailVerificationExpiry?: number;
   createdAt: string;
   updatedAt: string;
   resetToken?: string;
@@ -73,6 +76,12 @@ export interface Order {
   totalCents: number;
   currency: 'USD' | 'NGN';
   exchangeRateUsed?: number;
+  exchangeRateProvider?: string | null;
+  exchangeRateTimestamp?: string | null;
+  originalPriceCents?: number;
+  originalCurrency?: 'USD' | 'NGN';
+  paymentReference?: string | null;
+  paymentGateway?: string | null;
   paymentMethod: 'bank_transfer' | 'card_online';
   paymentStatus: 'pending' | 'awaiting_verification' | 'paid' | 'failed' | 'refunded';
   paymentProofNotes: string | null;
@@ -84,8 +93,15 @@ export interface Order {
   trackingUrl: string | null;
   supplierOrderId: string | null;
   supplierName: string | null;
-  supplierCostTotalCents: number | null;
-  notes: string | null;
+  deliveryState?: string;
+  deliveryLga?: string;
+  estimatedTransitTime?: string;
+  notes?: string | null;
+  returnRequested?: boolean;
+  returnReason?: string;
+  returnNotes?: string;
+  returnRequestedAt?: string;
+  returnStatus?: 'pending' | 'approved' | 'declined' | 'rejected' | 'completed';
   adminNotes?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -126,7 +142,7 @@ export interface NotificationRecord {
   orderId?: string;
   recipient: string;
   channel: 'email' | 'whatsapp';
-  event: 'order_created' | 'payment_verified' | 'order_shipped' | 'order_delivered' | 'account_registered';
+  event: 'order_created' | 'payment_verified' | 'order_shipped' | 'order_delivered' | 'order_status_updated' | 'account_registered';
   status: 'dispatched' | 'simulated';
   message: string;
   timestamp: string;
@@ -264,6 +280,10 @@ export interface ImageAuditSummary {
 }
 
 export interface PaymentGatewaySettings {
+  wavyEnabled: boolean;
+  wavyPublicKey: string;
+  wavySecretKey: string;
+  wavyTestMode: boolean;
   paystackEnabled: boolean;
   paystackPublicKey: string;
   paystackSecretKey: string;
@@ -303,6 +323,7 @@ export interface DatabaseSchema {
   events: CustomerEvent[];
   carts: ActiveCartRecord[];
   visitorSessions: VisitorSessionRecord[];
+  processedWebhooks?: Record<string, { timestamp: string; payload: any }>;
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -343,10 +364,14 @@ function loadDatabase(): DatabaseSchema {
         }
         if (!dbCache.paymentSettings) {
           dbCache.paymentSettings = {
+            wavyEnabled: true,
+            wavyPublicKey: process.env.WAVY_PUBLIC_KEY || 'wavy_pk_live_64e762e61f597be9bfcc4228f2751672',
+            wavySecretKey: process.env.WAVY_SECRET_KEY || 'wavy_sk_live_cc203228f83a6039c1001b9b24a8ff513346bc49a37db3cb',
+            wavyTestMode: false,
             paystackEnabled: true,
-            paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_sample_vantera_key',
-            paystackSecretKey: process.env.PAYSTACK_SECRET_KEY || 'sk_test_sample_vantera_key',
-            paystackTestMode: true,
+            paystackPublicKey: 'wavy_pk_live_64e762e61f597be9bfcc4228f2751672',
+            paystackSecretKey: 'wavy_sk_live_cc203228f83a6039c1001b9b24a8ff513346bc49a37db3cb',
+            paystackTestMode: false,
             bankTransferEnabled: true,
             activeCurrencies: ['NGN', 'USD'],
             updatedAt: new Date().toISOString(),
@@ -403,6 +428,7 @@ function loadDatabase(): DatabaseSchema {
         }
         if (!Array.isArray(dbCache.supportTickets)) dbCache.supportTickets = [];
         if (!Array.isArray(dbCache.verificationCodes)) dbCache.verificationCodes = [];
+        if (!dbCache.processedWebhooks || typeof dbCache.processedWebhooks !== 'object') dbCache.processedWebhooks = {};
         if (!dbCache.imageAudit) {
           dbCache.imageAudit = {
             lastScannedAt: new Date().toISOString(),
@@ -462,10 +488,14 @@ function loadDatabase(): DatabaseSchema {
       email: AUTHORIZED_CEO_EMAIL,
     },
     paymentSettings: {
+      wavyEnabled: true,
+      wavyPublicKey: process.env.WAVY_PUBLIC_KEY || 'wavy_pk_live_64e762e61f597be9bfcc4228f2751672',
+      wavySecretKey: process.env.WAVY_SECRET_KEY || 'wavy_sk_live_cc203228f83a6039c1001b9b24a8ff513346bc49a37db3cb',
+      wavyTestMode: false,
       paystackEnabled: true,
-      paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_sample_vantera_key',
-      paystackSecretKey: process.env.PAYSTACK_SECRET_KEY || 'sk_test_sample_vantera_key',
-      paystackTestMode: true,
+      paystackPublicKey: 'wavy_pk_live_64e762e61f597be9bfcc4228f2751672',
+      paystackSecretKey: 'wavy_sk_live_cc203228f83a6039c1001b9b24a8ff513346bc49a37db3cb',
+      paystackTestMode: false,
       bankTransferEnabled: true,
       activeCurrencies: ['NGN', 'USD'],
       updatedAt: new Date().toISOString(),
@@ -671,13 +701,18 @@ export const db = {
       updatedAt: new Date().toISOString(),
     };
 
+    const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    newUser.emailVerificationCode = verificationOtp;
+    newUser.emailVerificationExpiry = Date.now() + 15 * 60 * 1000;
+    newUser.isEmailVerified = false;
+
     d.users.push(newUser);
     this.addAuditLog('Customer', 'REGISTER_ACCOUNT', `New customer registered: ${cleanEmail}`);
     this.addNotification({
       recipient: cleanEmail,
       channel: 'email',
       event: 'account_registered',
-      message: `Welcome to VANTÉRA, ${name}! Your customer account has been created.`,
+      message: `Welcome to VANTÉRA, ${name}! Your customer account has been created. Your verification code is ${verificationOtp}.`,
     });
     this.addCustomerEvent({
       type: 'customer_registered',
@@ -689,6 +724,69 @@ export const db = {
     });
     saveDatabase(d);
     return newUser;
+  },
+
+  createUser(name: string, email: string, password: string, phone?: string): User {
+    return this.createCustomer(name, email, password, phone);
+  },
+
+  verifyEmail(email: string, code: string): { success: boolean; error?: string } {
+    const d = loadDatabase();
+    const user = d.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+    if (!user) return { success: false, error: 'User account not found' };
+    if (user.isEmailVerified) return { success: true };
+    if (!user.emailVerificationCode || user.emailVerificationCode !== code.trim()) {
+      return { success: false, error: 'Invalid verification code' };
+    }
+    if (user.emailVerificationExpiry && Date.now() > user.emailVerificationExpiry) {
+      return { success: false, error: 'Verification code has expired. Please request a new one.' };
+    }
+    user.isEmailVerified = true;
+    user.emailVerificationCode = undefined;
+    user.emailVerificationExpiry = undefined;
+    user.updatedAt = new Date().toISOString();
+    this.addAuditLog('Customer', 'EMAIL_VERIFIED', `Customer verified email: ${user.email}`);
+    saveDatabase(d);
+    return { success: true };
+  },
+
+  resendVerificationCode(email: string): { success: boolean; code?: string; error?: string } {
+    const d = loadDatabase();
+    const user = d.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+    if (!user) return { success: false, error: 'User account not found' };
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.emailVerificationCode = code;
+    user.emailVerificationExpiry = Date.now() + 15 * 60 * 1000;
+    user.updatedAt = new Date().toISOString();
+    this.addNotification({
+      recipient: user.email,
+      channel: 'email',
+      event: 'account_registered',
+      message: `Your new VANTÉRA email verification code is: ${code}`,
+    });
+    saveDatabase(d);
+    return { success: true, code };
+  },
+
+  changePassword(userId: string, currentPass: string, newPass: string): { success: boolean; error?: string } {
+    const d = loadDatabase();
+    const user = d.users.find((u) => u.id === userId);
+    if (!user || !user.passwordHash || !user.salt) {
+      return { success: false, error: 'User not found' };
+    }
+    if (!verifyPassword(currentPass, user.passwordHash, user.salt)) {
+      return { success: false, error: 'Current password is incorrect' };
+    }
+    if (!newPass || newPass.length < 8) {
+      return { success: false, error: 'New password must be at least 8 characters long' };
+    }
+    const { hash, salt } = hashPassword(newPass);
+    user.passwordHash = hash;
+    user.salt = salt;
+    user.updatedAt = new Date().toISOString();
+    this.addAuditLog('Customer', 'CHANGE_PASSWORD', `Customer updated password for ${user.email}`);
+    saveDatabase(d);
+    return { success: true };
   },
 
   setAdminPassword(password: string): User {
@@ -766,14 +864,24 @@ export const db = {
 
   getCustomerOrders(userId: string, email: string): Order[] {
     const d = loadDatabase();
+    const cleanEmail = (email || '').trim().toLowerCase();
     return d.orders.filter(
-      (o) => (o.customerId && o.customerId === userId) || o.customerEmail.toLowerCase() === email.toLowerCase()
+      (o) => (userId && o.customerId && o.customerId === userId) || (cleanEmail && o.customerEmail && o.customerEmail.toLowerCase() === cleanEmail)
     );
+  },
+
+  getOrdersByCustomerId(customerId: string): Order[] {
+    return this.getCustomerOrders(customerId, '');
   },
 
   getOrderByReference(reference: string): Order | undefined {
     const d = loadDatabase();
-    return d.orders.find((o) => o.orderReference.toUpperCase() === reference.trim().toUpperCase());
+    const upper = reference.trim().toUpperCase();
+    return d.orders.find(
+      (o) =>
+        o.orderReference.toUpperCase() === upper ||
+        (o.paymentReference && o.paymentReference.toUpperCase() === upper)
+    );
   },
 
   getOrderById(id: string): Order | undefined {
@@ -787,9 +895,20 @@ export const db = {
     customerName: string;
     customerPhone: string;
     shippingAddress: Order['shippingAddress'];
-    cartItems: Array<{ productId: string; quantity: number }>;
+    cartItems?: Array<{ productId: string; quantity: number }>;
+    items?: Array<{ productId?: string; id?: string; title?: string; quantity: number; unitPriceCents?: number; totalCents?: number }>;
     currency?: 'USD' | 'NGN';
+    shippingFeeCents?: number;
+    estimatedTransitTime?: string;
+    subtotalCents?: number;
+    totalCents?: number;
     paymentMethod?: 'bank_transfer' | 'card_online';
+    paymentReference?: string | null;
+    paymentGateway?: string | null;
+    paymentStatus?: Order['paymentStatus'];
+    exchangeRateUsed?: number;
+    exchangeRateProvider?: string | null;
+    exchangeRateTimestamp?: string | null;
     couponCode?: string;
     notes?: string;
   }): Order {
@@ -799,19 +918,30 @@ export const db = {
     const computedItems: OrderItem[] = [];
     let subtotal = 0;
 
-    for (const item of orderData.cartItems) {
-      const product = productsMap.get(item.productId);
-      if (!product) throw new Error(`Product ${item.productId} not found`);
+    const rawItems = orderData.cartItems || (orderData as any).items || [];
+    if (!rawItems.length) {
+      throw new Error('Order items list cannot be empty');
+    }
+
+    // 1. Stock check & validation: Prevent overselling
+    for (const item of rawItems) {
+      const pid = item.productId || (item as any).id;
+      const product = productsMap.get(pid);
+      if (!product) throw new Error(`Product ${pid} not found`);
       if (!product.isAvailable) throw new Error(`Product ${product.title} is not available`);
+      if (typeof product.stockQuantity === 'number' && product.stockQuantity < item.quantity) {
+        throw new Error(`Insufficient stock for ${product.title}. Only ${product.stockQuantity} remaining.`);
+      }
 
       const qty = Math.max(1, Math.min(99, item.quantity));
-      const lineTotal = product.retailPriceCents * qty;
+      const unitPrice = typeof (item as any).unitPriceCents === 'number' ? (item as any).unitPriceCents : product.retailPriceCents;
+      const lineTotal = unitPrice * qty;
 
       computedItems.push({
         productId: product.id,
         slug: product.slug,
-        title: product.title,
-        unitPriceCents: product.retailPriceCents,
+        title: (item as any).title || product.title,
+        unitPriceCents: unitPrice,
         quantity: qty,
         totalCents: lineTotal,
         supplierCostCents: product.supplierCostCents,
@@ -819,6 +949,19 @@ export const db = {
       });
 
       subtotal += lineTotal;
+    }
+
+    // 2. Decrement stock atomically in catalog
+    for (const item of rawItems) {
+      const pid = item.productId || (item as any).id;
+      const product = productsMap.get(pid);
+      if (product && typeof product.stockQuantity === 'number') {
+        product.stockQuantity = Math.max(0, product.stockQuantity - item.quantity);
+        if (product.stockQuantity === 0) {
+          product.isAvailable = false;
+          product.availability = 'Out of Stock';
+        }
+      }
     }
 
     let discountCents = 0;
@@ -836,10 +979,13 @@ export const db = {
       }
     }
 
-    const shippingFee = subtotal >= 5000 ? 0 : 500; // Free shipping over $50
+    const shippingFee = typeof orderData.shippingFeeCents === 'number'
+      ? orderData.shippingFeeCents
+      : (subtotal >= 5000 ? 0 : 500);
+
     const total = Math.max(0, subtotal - discountCents + shippingFee);
     const currency = orderData.currency === 'NGN' ? 'NGN' : 'USD';
-    const rate = d.currencySettings?.ngnExchangeRate || 1500;
+    const rate = orderData.exchangeRateUsed || d.currencySettings?.ngnExchangeRate || 1350;
 
     // Generate unique order reference
     let reference = '';
@@ -855,6 +1001,9 @@ export const db = {
       customerName: orderData.customerName.trim(),
       customerPhone: orderData.customerPhone.trim(),
       shippingAddress: orderData.shippingAddress,
+      deliveryState: orderData.shippingAddress?.state,
+      deliveryLga: orderData.shippingAddress?.city,
+      estimatedTransitTime: orderData.estimatedTransitTime,
       items: computedItems,
       subtotalCents: subtotal,
       discountCents,
@@ -863,10 +1012,16 @@ export const db = {
       totalCents: total,
       currency,
       exchangeRateUsed: rate,
+      exchangeRateProvider: orderData.exchangeRateProvider || 'ExchangeRate-API Live',
+      exchangeRateTimestamp: orderData.exchangeRateTimestamp || new Date().toISOString(),
+      originalPriceCents: subtotal,
+      originalCurrency: 'USD',
+      paymentReference: orderData.paymentReference || null,
+      paymentGateway: orderData.paymentGateway || (orderData.paymentMethod === 'card_online' ? 'wavy' : null),
       paymentMethod: orderData.paymentMethod || 'bank_transfer',
-      paymentStatus: 'pending',
+      paymentStatus: orderData.paymentStatus || 'pending',
       paymentProofNotes: null,
-      paymentVerifiedAt: null,
+      paymentVerifiedAt: orderData.paymentStatus === 'paid' ? new Date().toISOString() : null,
       paymentVerifiedBy: null,
       fulfilmentStatus: 'unfulfilled',
       carrier: null,
@@ -874,13 +1029,35 @@ export const db = {
       trackingUrl: null,
       supplierOrderId: null,
       supplierName: null,
-      supplierCostTotalCents: null,
       notes: orderData.notes || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     d.orders.unshift(newOrder);
+
+    // Automatically empty customer active cart upon order
+    if (orderData.customerId) {
+      const cartIdx = (d.carts || []).findIndex((c) => c.customerId === orderData.customerId);
+      if (cartIdx > -1) {
+        d.carts[cartIdx].items = [];
+        d.carts[cartIdx].itemCount = 0;
+        d.carts[cartIdx].subtotalCents = 0;
+        d.carts[cartIdx].updatedAt = new Date().toISOString();
+      } else {
+        d.carts = d.carts || [];
+        d.carts.push({
+          id: `cart_${orderData.customerId}`,
+          customerId: orderData.customerId,
+          customerEmail: orderData.customerEmail,
+          items: [],
+          itemCount: 0,
+          subtotalCents: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
     this.addAuditLog('System', 'ORDER_CREATED', `Order ${reference} placed by ${newOrder.customerEmail} ($${(total / 100).toFixed(2)})`);
 
     // Notify customer
@@ -1142,10 +1319,14 @@ export const db = {
     const d = loadDatabase();
     if (!d.paymentSettings) {
       d.paymentSettings = {
+        wavyEnabled: true,
+        wavyPublicKey: process.env.WAVY_PUBLIC_KEY || 'wavy_pk_live_64e762e61f597be9bfcc4228f2751672',
+        wavySecretKey: process.env.WAVY_SECRET_KEY || 'wavy_sk_live_cc203228f83a6039c1001b9b24a8ff513346bc49a37db3cb',
+        wavyTestMode: false,
         paystackEnabled: true,
-        paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_sample_vantera_key',
-        paystackSecretKey: process.env.PAYSTACK_SECRET_KEY || 'sk_test_sample_vantera_key',
-        paystackTestMode: true,
+        paystackPublicKey: 'wavy_pk_live_64e762e61f597be9bfcc4228f2751672',
+        paystackSecretKey: 'wavy_sk_live_cc203228f83a6039c1001b9b24a8ff513346bc49a37db3cb',
+        paystackTestMode: false,
         bankTransferEnabled: true,
         activeCurrencies: ['NGN', 'USD'],
         updatedAt: new Date().toISOString(),
@@ -1159,10 +1340,14 @@ export const db = {
     const d = loadDatabase();
     d.paymentSettings = {
       ...(d.paymentSettings || {
+        wavyEnabled: true,
+        wavyPublicKey: 'wavy_pk_live_64e762e61f597be9bfcc4228f2751672',
+        wavySecretKey: 'wavy_sk_live_cc203228f83a6039c1001b9b24a8ff513346bc49a37db3cb',
+        wavyTestMode: false,
         paystackEnabled: true,
-        paystackPublicKey: 'pk_test_sample_vantera_key',
-        paystackSecretKey: 'sk_test_sample_vantera_key',
-        paystackTestMode: true,
+        paystackPublicKey: 'wavy_pk_live_64e762e61f597be9bfcc4228f2751672',
+        paystackSecretKey: 'wavy_sk_live_cc203228f83a6039c1001b9b24a8ff513346bc49a37db3cb',
+        paystackTestMode: false,
         bankTransferEnabled: true,
         activeCurrencies: ['NGN', 'USD'],
         updatedAt: new Date().toISOString(),
@@ -1170,23 +1355,41 @@ export const db = {
       ...settings,
       updatedAt: new Date().toISOString(),
     };
-    this.addAuditLog(actor, 'UPDATE_PAYMENT_GATEWAY_SETTINGS', 'Updated Paystack payment gateway configurations.');
+    this.addAuditLog(actor, 'UPDATE_PAYMENT_GATEWAY_SETTINGS', 'Updated Wavy payment gateway configurations.');
     saveDatabase(d);
     return d.paymentSettings;
   },
 
-  markOrderPaidOnline(orderReference: string, paystackReference: string, channel = 'paystack_card'): Order {
+  markOrderPaidOnline(orderReference: string, paystackReference: string, channel = 'wavy_card'): Order {
     const d = loadDatabase();
-    const order = d.orders.find((o) => o.orderReference.toUpperCase() === orderReference.toUpperCase());
+    const upper = orderReference.trim().toUpperCase();
+    const payUpper = paystackReference.trim().toUpperCase();
+    const order = d.orders.find(
+      (o) =>
+        o.orderReference.toUpperCase() === upper ||
+        (o.paymentReference && (o.paymentReference.toUpperCase() === upper || o.paymentReference.toUpperCase() === payUpper))
+    );
     if (!order) throw new Error('Order not found');
 
+    if (order.paymentStatus === 'paid') {
+      return order;
+    }
+
     order.paymentStatus = 'paid';
+    order.paymentReference = order.paymentReference || paystackReference;
     order.paymentVerifiedAt = new Date().toISOString();
-    order.paymentVerifiedBy = `Paystack Online (${channel})`;
-    order.paymentProofNotes = `Paystack Reference: ${paystackReference}`;
+    order.paymentVerifiedBy = `Wavy Gateway (${channel})`;
+    order.paymentProofNotes = `Gateway Reference: ${paystackReference}`;
+    if (order.fulfilmentStatus === 'unfulfilled') {
+      order.fulfilmentStatus = 'processing';
+    }
     order.updatedAt = new Date().toISOString();
 
-    this.addAuditLog('System:Paystack', 'PAYMENT_VERIFIED', `Order ${order.orderReference} paid via Paystack (${paystackReference})`);
+    if (order.customerId) {
+      d.carts = (d.carts || []).filter((c) => c.customerId !== order.customerId);
+    }
+
+    this.addAuditLog('System:Wavy', 'PAYMENT_VERIFIED', `Order ${order.orderReference} paid via gateway (${paystackReference})`);
 
     this.addCustomerEvent({
       type: 'payment_confirmed',
@@ -1197,8 +1400,9 @@ export const db = {
       metadata: {
         orderId: order.id,
         orderReference: order.orderReference,
-        paystackReference,
+        gatewayReference: paystackReference,
         totalCents: order.totalCents,
+        currency: order.currency,
         channel,
       },
     });
@@ -1371,6 +1575,168 @@ export const db = {
     saveDatabase(d);
   },
 
+  // Customer Persistent Cart Across Devices
+  getCustomerCart(customerId: string): ActiveCartRecord {
+    const d = loadDatabase();
+    const found = (d.carts || []).find((c) => c.customerId === customerId);
+    if (found) return found;
+    return {
+      id: `cart_${customerId}`,
+      customerId,
+      customerEmail: null,
+      items: [],
+      itemCount: 0,
+      subtotalCents: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  },
+
+  recordProcessedWebhook(reference: string, payload: any): boolean {
+    const d = loadDatabase();
+    d.processedWebhooks = d.processedWebhooks || {};
+    d.processedWebhooks[reference] = {
+      timestamp: new Date().toISOString(),
+      payload,
+    };
+    saveDatabase(d);
+    return true;
+  },
+
+  isWebhookProcessed(reference: string): boolean {
+    const d = loadDatabase();
+    return Boolean(d.processedWebhooks && d.processedWebhooks[reference]);
+  },
+
+  requestOrderReturn(orderId: string, customerId: string, reason: string, notes: string): Order {
+    const d = loadDatabase();
+    const order = d.orders.find((o) => o.id === orderId || o.orderReference === orderId);
+    if (!order) throw new Error('Order not found');
+    if (order.customerId && order.customerId !== customerId) {
+      throw new Error('Unauthorized to request return for this order');
+    }
+    order.returnRequested = true;
+    order.returnReason = reason;
+    order.returnNotes = notes;
+    order.returnRequestedAt = new Date().toISOString();
+    order.returnStatus = 'pending';
+    order.updatedAt = new Date().toISOString();
+    this.addAuditLog('Customer', 'RETURN_REQUESTED', `Return requested for order ${order.orderReference}: ${reason}`);
+    this.addNotification({
+      recipient: AUTHORIZED_CEO_EMAIL,
+      channel: 'email',
+      event: 'order_created',
+      message: `RETURN REQUEST: Order ${order.orderReference} - Reason: ${reason} - Notes: ${notes}`,
+    });
+    saveDatabase(d);
+    return order;
+  },
+
+  updateOrderReturnStatus(
+    orderId: string,
+    returnStatus: 'approved' | 'rejected' | 'completed',
+    actor: string,
+    adminNotes?: string
+  ): Order {
+    const d = loadDatabase();
+    const order = d.orders.find((o) => o.id === orderId || o.orderReference === orderId);
+    if (!order) throw new Error('Order not found');
+    order.returnStatus = returnStatus;
+    if (returnStatus === 'approved' && order.fulfilmentStatus !== 'shipped' && order.fulfilmentStatus !== 'delivered') {
+      order.fulfilmentStatus = 'cancelled';
+    }
+    if (adminNotes) {
+      order.adminNotes = adminNotes;
+    }
+    order.updatedAt = new Date().toISOString();
+    this.addAuditLog(actor, 'UPDATE_RETURN_STATUS', `Return request for ${order.orderReference} marked ${returnStatus}`);
+    this.addNotification({
+      orderId: order.id,
+      recipient: order.customerEmail,
+      channel: 'email',
+      event: 'order_status_updated',
+      message: `Your return/cancellation request for ${order.orderReference} has been ${returnStatus}.`,
+    });
+    saveDatabase(d);
+    return order;
+  },
+
+  failOrderPayment(orderReference: string, reason = 'Payment cancelled or declined'): Order | null {
+    const d = loadDatabase();
+    const order = d.orders.find(
+      (o) =>
+        o.orderReference.toUpperCase() === orderReference.toUpperCase() ||
+        (o.paymentReference && o.paymentReference.toUpperCase() === orderReference.toUpperCase())
+    );
+    if (!order) return null;
+    if (order.paymentStatus === 'paid') return order; // Already confirmed paid
+
+    // Restore stock for failed/cancelled checkout so inventory stays accurate
+    if (order.paymentStatus !== 'failed') {
+      const productsMap = new Map(d.products.map((p) => [p.id, p]));
+      for (const item of order.items) {
+        const product = productsMap.get(item.productId);
+        if (product && typeof product.stockQuantity === 'number') {
+          product.stockQuantity += item.quantity;
+          if (product.stockQuantity > 0) {
+            product.isAvailable = true;
+            product.availability = 'In Stock';
+          }
+        }
+      }
+    }
+
+    order.paymentStatus = 'failed';
+    order.fulfilmentStatus = 'cancelled';
+    order.paymentProofNotes = reason;
+    order.updatedAt = new Date().toISOString();
+    this.addAuditLog('System:Gateway', 'PAYMENT_FAILED', `Order ${order.orderReference}: ${reason}`);
+    saveDatabase(d);
+    return order;
+  },
+
+  saveCustomerCart(customerId: string, customerEmail: string | null, items: any[], subtotalCents: number): ActiveCartRecord {
+    const d = loadDatabase();
+    d.carts = d.carts || [];
+    const nowIso = new Date().toISOString();
+    const count = items.reduce((s, i) => s + (i.quantity || 1), 0);
+
+    const existingIdx = d.carts.findIndex((c) => c.customerId === customerId);
+    if (existingIdx > -1) {
+      d.carts[existingIdx] = {
+        ...d.carts[existingIdx],
+        items,
+        itemCount: count,
+        subtotalCents,
+        customerEmail: customerEmail || d.carts[existingIdx].customerEmail,
+        updatedAt: nowIso,
+      };
+      saveDatabase(d);
+      return d.carts[existingIdx];
+    } else {
+      const newCart: ActiveCartRecord = {
+        id: `cart_${customerId}_${Date.now()}`,
+        customerId,
+        customerEmail,
+        items,
+        itemCount: count,
+        subtotalCents,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      d.carts.unshift(newCart);
+      saveDatabase(d);
+      return newCart;
+    }
+  },
+
+  clearCustomerCart(customerId: string): void {
+    const d = loadDatabase();
+    d.carts = (d.carts || []).filter((c) => c.customerId !== customerId);
+    saveDatabase(d);
+  },
+
+
   // Refund Order (CEO Verified)
   refundOrder(orderId: string, actor: string, reason?: string): Order {
     const d = loadDatabase();
@@ -1535,7 +1901,7 @@ export const db = {
   },
 
   // Password Recovery & Cryptographic Verification Codes (5-min expiry)
-  requestPasswordReset(email: string): { success: boolean; message: string } {
+  requestPasswordReset(email: string): { success: boolean; message: string; dispatchedCode?: string; recipientEmail?: string } {
     const d = loadDatabase();
     const cleanEmail = email.trim().toLowerCase();
     const user = d.users.find((u) => u.email.toLowerCase() === cleanEmail);
@@ -1552,6 +1918,8 @@ export const db = {
       };
     }
 
+    let generatedCode: string | undefined;
+
     if (user) {
       // Invalidate any previous codes
       d.verificationCodes.forEach((c) => {
@@ -1560,6 +1928,7 @@ export const db = {
 
       // Generate cryptographically secure 6-digit one-time code
       const code = crypto.randomInt(100000, 999999).toString();
+      generatedCode = code;
       const salt = crypto.randomBytes(16).toString('hex');
       const codeHash = crypto.pbkdf2Sync(code, salt, 10000, 32, 'sha256').toString('hex');
 
@@ -1598,6 +1967,8 @@ export const db = {
     return {
       success: true,
       message: 'If an account exists with this email address, a secure 6-digit verification code has been dispatched. The code will expire in 5 minutes.',
+      dispatchedCode: generatedCode,
+      recipientEmail: user ? cleanEmail : undefined,
     };
   },
 
@@ -2072,6 +2443,50 @@ export const db = {
       },
       issues,
     };
+  },
+
+  getReviews(): Array<{
+    id: string;
+    customerName: string;
+    location: string;
+    rating: number;
+    comment: string;
+    productTitle?: string;
+    verifiedBuyer: boolean;
+    createdAt: string;
+  }> {
+    const d = loadDatabase() as any;
+    return Array.isArray(d.reviews) ? d.reviews : [];
+  },
+
+  addReview(input: {
+    customerId: string;
+    customerEmail: string;
+    customerName: string;
+    location?: string;
+    rating: number;
+    comment: string;
+    productTitle?: string;
+  }) {
+    const d = loadDatabase() as any;
+    const customerOrders = this.getCustomerOrders(input.customerId, input.customerEmail);
+    const hasPaidOrder = customerOrders.some((o) => o.paymentStatus === 'paid');
+    if (!Array.isArray(d.reviews)) {
+      d.reviews = [];
+    }
+    const review = {
+      id: `rev_${crypto.randomBytes(6).toString('hex')}`,
+      customerName: input.customerName.trim(),
+      location: (input.location || 'Nigeria').trim(),
+      rating: Math.max(1, Math.min(5, Math.round(input.rating))),
+      comment: input.comment.trim(),
+      productTitle: input.productTitle?.trim() || undefined,
+      verifiedBuyer: hasPaidOrder,
+      createdAt: new Date().toISOString(),
+    };
+    d.reviews.unshift(review);
+    saveDatabase(d);
+    return review;
   },
 };
 

@@ -12,11 +12,13 @@ export const InfoPage: React.FC<InfoPageProps> = ({ pageKey, onNavigate }) => {
 
   if (!data) {
     return (
-      <div className="w-full px-4 py-16 text-center space-y-4">
-        <h2 className="font-editorial text-2xl text-[#F8F7F4]">Page Not Found</h2>
+      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-28 text-center space-y-6">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-[#C8A96A]">Error 404</p>
+        <h1 className="font-editorial text-3xl text-[#F5F1E8]">Page Not Found</h1>
         <button
+          type="button"
           onClick={() => onNavigate('/')}
-          className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs uppercase font-meta font-bold rounded-xs cursor-pointer"
+          className="gold-gradient-bg px-7 py-3 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer"
         >
           Return Home
         </button>
@@ -25,34 +27,34 @@ export const InfoPage: React.FC<InfoPageProps> = ({ pageKey, onNavigate }) => {
   }
 
   return (
-    <div className="w-full px-3.5 py-6 space-y-6 font-sans">
+    <div className="max-w-4xl mx-auto px-4 sm:px-8 lg:px-12 py-14 lg:py-24 space-y-14">
       {/* Masthead */}
-      <div className="border-b border-white/5 pb-5 space-y-2">
-        <span className="text-[9px] uppercase tracking-[0.18em] font-meta text-[#D4AF37] block">
+      <div className="border-b border-white/8 pb-10 space-y-4">
+        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#C8A96A]">
           {data.eyebrow}
-        </span>
-        <h1 className="font-editorial text-2xl min-[360px]:text-3xl font-bold text-[#F8F7F4] leading-snug break-words">
+        </p>
+        <h1 className="font-editorial text-3xl sm:text-5xl font-medium text-[#F5F1E8] leading-tight text-balance">
           {data.title}
         </h1>
-        <p className="text-xs text-[#8E8B82] leading-relaxed break-words font-light">
+        <p className="text-base text-[#A8A297] leading-relaxed max-w-2xl">
           {data.intro}
         </p>
       </div>
 
-      {/* Sections */}
-      <div className="space-y-6 divide-y divide-white/5">
+      {/* Editorial Sections */}
+      <div className="divide-y divide-white/8">
         {data.sections.map((section, idx) => (
-          <div key={idx} className={`space-y-2 ${idx > 0 ? 'pt-6' : ''}`}>
-            <div>
-              <span className="text-[9px] font-mono text-[#D4AF37] block mb-0.5">
-                0{idx + 1} /
+          <div key={idx} className={`grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 ${idx > 0 ? 'py-9' : 'pb-9'}`}>
+            <div className="md:col-span-4 space-y-1.5">
+              <span className="text-[11px] uppercase tracking-[0.2em] text-[#C8A96A] block tabular-nums">
+                0{idx + 1}
               </span>
-              <h3 className="font-editorial text-base font-semibold text-[#F8F7F4] break-words">
+              <h2 className="font-editorial text-xl font-medium text-[#F5F1E8]">
                 {section.heading}
-              </h3>
+              </h2>
             </div>
-            <div>
-              <div className="text-xs text-[#A9A69F] leading-relaxed whitespace-pre-line font-light break-words">
+            <div className="md:col-span-8">
+              <div className="text-sm sm:text-base text-[#A8A297] leading-relaxed whitespace-pre-line">
                 {section.body}
               </div>
             </div>
@@ -60,34 +62,39 @@ export const InfoPage: React.FC<InfoPageProps> = ({ pageKey, onNavigate }) => {
         ))}
       </div>
 
-      {/* Contact highlight and message form if on contact page */}
+      {/* Direct Concierge & Contact Inquiry Form */}
       {cleanKey === 'contact' && (
-        <div className="space-y-5 pt-4 border-t border-white/5">
-          <div className="border border-[#D4AF37]/30 bg-[#121212] p-4 space-y-2.5 rounded-xs">
-            <h4 className="font-editorial font-bold text-sm text-[#F8F7F4]">
-              Direct WhatsApp Concierge
-            </h4>
-            <p className="text-[11px] text-[#8E8B82] leading-relaxed break-words">
-              Need immediate order assistance or custom concierge allocation? Reach CEO Adnuel directly on our official WhatsApp line:
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pt-10 border-t border-white/8">
+          <div className="md:col-span-5 bg-[#141416] border border-white/8 p-6 sm:p-8 rounded-xs space-y-4 self-start">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#C8A96A]">Concierge</p>
+            <h3 className="font-editorial text-2xl font-medium text-[#F5F1E8]">
+              Direct Support
+            </h3>
+            <p className="text-sm text-[#A8A297] leading-relaxed">
+              Reach CEO Adnuel directly for order inquiries, dispatch tracking, or bank transfer confirmation.
             </p>
             <a
               href="https://wa.me/2349132793670"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[#0F2E22] text-[#48BB78] border border-[#34A853]/30 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-xs hover:bg-[#153e2f] transition-colors"
+              className="inline-flex items-center justify-center w-full gold-gradient-bg px-5 py-3 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs"
             >
-              Open WhatsApp (+234 913 279 3670) ↗
+              WhatsApp (+234 913 279 3670) ↗
             </a>
+            <p className="text-xs text-[#A8A297] pt-1">
+              Email: emmanueladarikwu@gmail.com
+            </p>
           </div>
 
-          <div className="border border-white/5 bg-[#121212] p-4 space-y-3 rounded-xs">
-            <h4 className="font-editorial font-bold text-sm text-[#F8F7F4]">
-              Send Official Client Inquiry
-            </h4>
-            <p className="text-[11px] text-[#8E8B82] break-words">
-              Inquiries are logged in the CEO dashboard and personally reviewed by Adnuel.
-            </p>
-
+          <div className="md:col-span-7 bg-[#141416] border border-white/8 p-6 sm:p-8 rounded-xs space-y-5">
+            <div>
+              <h3 className="font-editorial text-2xl font-medium text-[#F5F1E8]">
+                Send an Inquiry
+              </h3>
+              <p className="text-sm text-[#A8A297] mt-1">
+                Messages are logged directly to our support desk.
+              </p>
+            </div>
             <ContactForm />
           </div>
         </div>
@@ -97,7 +104,13 @@ export const InfoPage: React.FC<InfoPageProps> = ({ pageKey, onNavigate }) => {
 };
 
 const ContactForm: React.FC = () => {
-  const [form, setForm] = React.useState({ name: '', email: '', subject: 'Product & Availability Inquiry', phone: '', message: '' });
+  const [form, setForm] = React.useState({
+    name: '',
+    email: '',
+    subject: 'Product & Availability Inquiry',
+    phone: '',
+    message: '',
+  });
   const [status, setStatus] = React.useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,7 +124,13 @@ const ContactForm: React.FC = () => {
       });
       if (res.ok) {
         setStatus('success');
-        setForm({ name: '', email: '', subject: 'Product & Availability Inquiry', phone: '', message: '' });
+        setForm({
+          name: '',
+          email: '',
+          subject: 'Product & Availability Inquiry',
+          phone: '',
+          message: '',
+        });
       } else {
         setStatus('error');
       }
@@ -121,77 +140,98 @@ const ContactForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+    <form onSubmit={handleSubmit} className="space-y-4 text-sm">
       {status === 'success' && (
-        <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-[11px] rounded-xs">
-          ✓ Your message has been transmitted directly to CEO Adnuel. We will reply promptly.
+        <div className="p-3.5 bg-[#0F2E22] border border-[#2E9B6B]/40 text-[#F5F1E8] text-xs rounded-xs">
+          Your message has been sent. We will reply shortly.
         </div>
       )}
       {status === 'error' && (
-        <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-[11px] rounded-xs">
+        <div className="p-3.5 bg-[#221212] border border-[#D9534F]/40 text-[#E57373] text-xs rounded-xs">
           Please check that your name, email, and message are filled out correctly.
         </div>
       )}
-      <div className="flex flex-col gap-2.5">
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-[#8E8B82] mb-1 uppercase text-[9px] tracking-wider">Full Name *</label>
+          <label htmlFor="contact-name" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+            Full Name *
+          </label>
           <input
+            id="contact-name"
             type="text"
             required
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full bg-[#181818] border border-white/10 p-2.5 text-xs text-[#EDEDED] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-            placeholder="e.g. John Doe"
+            className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+            placeholder="Adaora Okafor"
           />
         </div>
         <div>
-          <label className="block text-[#8E8B82] mb-1 uppercase text-[9px] tracking-wider">Email Address *</label>
+          <label htmlFor="contact-email" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+            Email Address *
+          </label>
           <input
+            id="contact-email"
             type="email"
             required
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="w-full bg-[#181818] border border-white/10 p-2.5 text-xs text-[#EDEDED] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-            placeholder="e.g. john@example.com"
-          />
-        </div>
-        <div>
-          <label className="block text-[#8E8B82] mb-1 uppercase text-[9px] tracking-wider">Subject</label>
-          <input
-            type="text"
-            value={form.subject}
-            onChange={(e) => setForm({ ...form, subject: e.target.value })}
-            className="w-full bg-[#181818] border border-white/10 p-2.5 text-xs text-[#EDEDED] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-          />
-        </div>
-        <div>
-          <label className="block text-[#8E8B82] mb-1 uppercase text-[9px] tracking-wider">Phone / WhatsApp (Optional)</label>
-          <input
-            type="tel"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full bg-[#181818] border border-white/10 p-2.5 text-xs text-[#EDEDED] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-            placeholder="+234..."
-          />
-        </div>
-        <div>
-          <label className="block text-[#8E8B82] mb-1 uppercase text-[9px] tracking-wider">Message *</label>
-          <textarea
-            required
-            rows={4}
-            value={form.message}
-            onChange={(e) => setForm({ ...form, message: e.target.value })}
-            className="w-full bg-[#181818] border border-white/10 p-2.5 text-xs text-[#EDEDED] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
-            placeholder="Write your inquiry or transaction questions here..."
+            className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+            placeholder="you@example.com"
           />
         </div>
       </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="contact-subject" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+            Subject
+          </label>
+          <input
+            id="contact-subject"
+            type="text"
+            value={form.subject}
+            onChange={(e) => setForm({ ...form, subject: e.target.value })}
+            className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+          />
+        </div>
+        <div>
+          <label htmlFor="contact-phone" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+            Phone / WhatsApp
+          </label>
+          <input
+            id="contact-phone"
+            type="tel"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+            placeholder="+234..."
+          />
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="contact-message" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+          Message *
+        </label>
+        <textarea
+          id="contact-message"
+          required
+          rows={4}
+          value={form.message}
+          onChange={(e) => setForm({ ...form, message: e.target.value })}
+          className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+          placeholder="How can we help?"
+        />
+      </div>
+
       <button
         type="submit"
         disabled={status === 'sending'}
-        className="w-full gold-gradient-bg text-[#0B0B0B] py-3 uppercase tracking-wider font-meta font-bold text-xs rounded-xs hover:opacity-90 transition-opacity cursor-pointer"
+        className="w-full gold-gradient-bg py-3.5 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer"
       >
-        {status === 'sending' ? 'Transmitting...' : 'Send Inquiry to CEO Adnuel'}
+        {status === 'sending' ? 'Sending...' : 'Send Message'}
       </button>
     </form>
   );

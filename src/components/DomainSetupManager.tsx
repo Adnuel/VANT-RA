@@ -36,6 +36,10 @@ export function DomainSetupManager() {
   const [checkResult, setCheckResult] = useState<DnsCheckResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [emailDnsRecords, setEmailDnsRecords] = useState<
+    { type: string; name: string; value: string; description: string; purpose: string }[]
+  >([]);
+  const [emailDnsDomain, setEmailDnsDomain] = useState('vantera.com.ng');
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -44,12 +48,19 @@ export function DomainSetupManager() {
 
   const loadSettings = async () => {
     try {
-      const res = await safeFetchJson<{ domainSettings?: DomainSettings }>('/api/admin/domain-settings', { headers });
-      if (res.ok && res.data?.domainSettings) {
-        setSettings(res.data.domainSettings);
-        if (res.data.domainSettings.domain) {
-          setInputDomain(res.data.domainSettings.domain);
+      const [domainRes, dnsRes] = await Promise.all([
+        safeFetchJson<{ domainSettings?: DomainSettings }>('/api/admin/domain-settings', { headers }),
+        safeFetchJson<{ domain?: string; records?: any[] }>('/api/admin/email-dns-records', { headers }),
+      ]);
+      if (domainRes.ok && domainRes.data?.domainSettings) {
+        setSettings(domainRes.data.domainSettings);
+        if (domainRes.data.domainSettings.domain) {
+          setInputDomain(domainRes.data.domainSettings.domain);
         }
+      }
+      if (dnsRes.ok && dnsRes.data?.records) {
+        setEmailDnsRecords(dnsRes.data.records);
+        if (dnsRes.data.domain) setEmailDnsDomain(dnsRes.data.domain);
       }
     } catch (e) {
       console.error('Failed to load domain settings:', e);
@@ -574,6 +585,54 @@ export function DomainSetupManager() {
           </div>
         )}
       </div>
+
+      {/* Transactional Email Deliverability (SPF, DKIM, DMARC, MX) */}
+      {emailDnsRecords.length > 0 && (
+        <div className="border border-[#27272a] bg-[#121215] p-6 lg:p-8 space-y-5">
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#c4a66b] block">
+              Inbox Deliverability & Spoof Protection
+            </span>
+            <h3 className="text-lg font-bold text-[#f4f4f5] mt-1">
+              Transactional Email DNS Records ({emailDnsDomain})
+            </h3>
+            <p className="text-xs text-[#a1a1aa] mt-1">
+              Add these SPF, DKIM, DMARC, and MX records in Cloudflare or your domain registrar so order receipts and verification codes land directly in customer inboxes.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {emailDnsRecords.map((rec, idx) => (
+              <div
+                key={idx}
+                className="border border-[#27272a] bg-[#09090b] p-4 space-y-2 text-xs font-mono"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-[#18181b] border border-[#c4a66b]/40 text-[#c4a66b] font-bold">
+                      {rec.type}
+                    </span>
+                    <span className="text-[#fafafa] font-semibold">Host: {rec.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(rec.value, `email-dns-${idx}`)}
+                    className="px-2.5 py-1 text-[10px] border border-[#3f3f46] hover:border-[#c4a66b] text-[#e4e4e7] cursor-pointer"
+                  >
+                    {copiedKey === `email-dns-${idx}` ? 'COPIED ✓' : 'COPY VALUE'}
+                  </button>
+                </div>
+                <div className="bg-[#18181b] p-2.5 border border-[#27272a] text-[#38bdf8] break-all">
+                  {rec.value}
+                </div>
+                <p className="font-sans text-[11px] text-[#a1a1aa] leading-relaxed">
+                  <strong className="text-[#e4e4e7]">{rec.description}</strong> — {rec.purpose}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Registrar Directory Cards */}
       <div className="space-y-4">

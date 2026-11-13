@@ -1858,6 +1858,41 @@
   ],
   "auditLogs": [
     {
+      "id": "log_1794568128098_t1gb",
+      "timestamp": "2026-11-13T11:08:48.098Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1794568088238_z7xj",
+      "timestamp": "2026-11-13T11:08:08.238Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1794568043257_z6eq",
+      "timestamp": "2026-11-13T11:07:23.257Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1794564282053_xnqv",
+      "timestamp": "2026-11-13T10:04:42.053Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1793883136367_00pi",
+      "timestamp": "2026-11-05T12:52:16.367Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1346.47 NGN/USD)"
+    },
+    {
       "id": "log_1793710364620_n9oi",
       "timestamp": "2026-11-03T12:52:44.620Z",
       "actor": "Customer",
@@ -2543,6 +2578,25 @@
   ],
   "carts": [
     {
+      "id": "cart__1793883136208",
+      "customerId": "",
+      "customerEmail": "customer_b_1793883136203@example.com",
+      "items": [
+        {
+          "product": {
+            "id": "clear-protective-phone-case",
+            "title": "Titanium Edge MagSafe Shield",
+            "retailPriceCents": 2400
+          },
+          "quantity": 1
+        }
+      ],
+      "itemCount": 1,
+      "subtotalCents": 2400,
+      "createdAt": "2026-11-05T12:52:16.208Z",
+      "updatedAt": "2026-11-05T12:52:16.210Z"
+    },
+    {
       "id": "ses_1793389444228_jvtz4eih",
       "customerId": null,
       "customerEmail": null,
@@ -2705,7 +2759,7 @@
       "itemCount": 0,
       "subtotalCents": 0,
       "createdAt": "2026-10-19T14:13:16.456Z",
-      "updatedAt": "2026-11-01T19:46:03.606Z"
+      "updatedAt": "2026-11-05T12:36:56.011Z"
     }
   ],
   "visitorSessions": [
@@ -3027,17 +3081,17 @@
     {
       "sessionId": "ses_1792061095986_oeq1ne6d",
       "firstSeen": "2026-10-16T10:47:53.257Z",
-      "lastActive": "2026-11-01T19:46:03.605Z",
+      "lastActive": "2026-11-05T12:36:56.009Z",
       "authenticatedUserId": null,
-      "pageViews": 22
+      "pageViews": 23
     }
   ],
   "currencySettings": {
     "defaultCurrency": "USD",
-    "ngnExchangeRate": 1500,
+    "ngnExchangeRate": 1350.46,
     "enableNgn": true,
     "enableUsd": true,
-    "lastUpdated": "2026-10-16T11:16:11.822Z"
+    "lastUpdated": "2026-11-13T11:08:48.098Z"
   },
   "bankDestinations": [
     {
@@ -3112,5 +3166,6 @@
     "sslStatus": "provisioning",
     "configuredAt": "2026-10-24T14:46:44.680Z",
     "lastChecked": "2026-10-24T14:46:44.680Z"
-  }
+  },
+  "processedWebhooks": {}
 }

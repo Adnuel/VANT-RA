@@ -18,6 +18,10 @@ import {
 import { calculateBusinessProfits } from './src/lib/commerceLogic.ts';
 import type { AnalyticsTimeRange } from './src/lib/analyticsLogic.ts';
 import { paystack } from './server/paystack.ts';
+import { wavy } from './server/wavy.ts';
+import { fetchLiveExchangeRate, setManualRateOverride, clearManualRateOverride } from './server/currency.ts';
+import { sendTransactionalEmail, emailTemplates, getDomainDnsRecords } from './server/mailer.ts';
+import { calculateDeliveryFee, validateNigerianPhone, NIGERIAN_STATES } from './src/data/nigerianStates.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,12 +31,70 @@ const ROOT_DIR = process.cwd();
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf.toString('utf8');
+    },
+  })
+);
+
+// Strict Production Security Headers & HTTPS Enforcement
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const proto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
+  const host = String(req.headers.host || '').toLowerCase();
+  const isLocalHost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+  if (
+    process.env.NODE_ENV === 'production' &&
+    proto === 'http' &&
+    !isLocalHost &&
+    !req.path.includes('/webhook')
+  ) {
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  }
+
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  next();
+});
+
+// Rate limiter for authentication attempts (max 5 failed attempts per 15 mins)
+const loginAttemptTracker = new Map<string, { attempts: number; lockedUntil: number }>();
+
+function checkLoginRateLimit(key: string): { allowed: boolean; waitMinutes?: number } {
+  const now = Date.now();
+  const record = loginAttemptTracker.get(key);
+  if (!record) return { allowed: true };
+  if (record.lockedUntil > now) {
+    const waitMinutes = Math.ceil((record.lockedUntil - now) / 60000);
+    return { allowed: false, waitMinutes };
+  }
+  if (record.lockedUntil <= now && record.attempts >= 5) {
+    loginAttemptTracker.delete(key);
+  }
+  return { allowed: true };
+}
+
+function recordFailedLoginAttempt(key: string) {
+  const now = Date.now();
+  const record = loginAttemptTracker.get(key) || { attempts: 0, lockedUntil: 0 };
+  record.attempts += 1;
+  if (record.attempts >= 5) {
+    record.lockedUntil = now + 15 * 60 * 1000; // 15-minute lock
+  }
+  loginAttemptTracker.set(key, record);
+}
+
+function clearFailedLoginAttempts(key: string) {
+  loginAttemptTracker.delete(key);
+}
 
 // Serve static assets from public
 app.use(express.static(path.resolve(ROOT_DIR, 'public')));
 app.use('/products', express.static(path.resolve(ROOT_DIR, 'public/products')));
-app.use('/src/assets/images', express.static(path.resolve(ROOT_DIR, 'src/assets/images')));
 app.use('/manus-storage', express.static(path.resolve(ROOT_DIR, 'public/manus-storage')));
 
 /* Auth Middleware */
@@ -42,6 +104,8 @@ interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     name: string;
+    phone?: string;
+    isEmailVerified?: boolean;
   };
 }
 
@@ -60,6 +124,8 @@ function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunc
         email: user.email,
         role: user.role,
         name: user.name,
+        phone: user.phone,
+        isEmailVerified: user.isEmailVerified ?? true,
       };
     }
   }
@@ -113,10 +179,10 @@ app.use((req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
 /* PUBLIC STOREFRONT & CUSTOMER AUTH API                                      */
 /* ========================================================================== */
 
-// Register customer
-app.post('/api/auth/register', (req: Request, res: Response) => {
+// Register customer (requires mandatory verification code)
+app.post('/api/auth/register', async (req: Request, res: Response) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, state, lga, address } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
@@ -124,8 +190,36 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    const newUser = db.createCustomer(name, email, password, phone);
+    let formattedPhone = phone ? String(phone).trim() : '';
+    if (formattedPhone) {
+      const phoneValidation = validateNigerianPhone(formattedPhone);
+      if (!phoneValidation.valid) {
+        return res.status(400).json({ error: phoneValidation.error });
+      }
+      formattedPhone = phoneValidation.formatted;
+    }
+
+    const newUser = db.createCustomer(name, email, password, formattedPhone);
+
+    if (address && String(address).trim() && state && String(state).trim()) {
+      db.addDeliveryAddress(newUser.id, {
+        fullName: name.trim(),
+        phone: formattedPhone || '',
+        streetAddress: String(address).trim(),
+        city: (lga ? String(lga).trim() : '') || 'Lagos',
+        state: String(state).trim(),
+        postalCode: '100001',
+        country: 'Nigeria',
+        isDefault: true,
+      });
+    }
+
     const token = createToken({ userId: newUser.id, email: newUser.email, role: newUser.role });
+
+    // Send verification email
+    if (newUser.emailVerificationCode) {
+      await sendTransactionalEmail(emailTemplates.signupVerificationCode(newUser.email, newUser.name, newUser.emailVerificationCode));
+    }
 
     res.json({
       token,
@@ -135,6 +229,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
         email: newUser.email,
         phone: newUser.phone,
         role: newUser.role,
+        isEmailVerified: newUser.isEmailVerified ?? false,
       },
     });
   } catch (err: any) {
@@ -142,7 +237,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
   }
 });
 
-// Login customer
+// Login customer with rate limiting protection
 app.post('/api/auth/login', (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -150,15 +245,22 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = db.getUserByEmail(email);
-    if (!user || !user.passwordHash || !user.salt) {
+    const cleanEmail = email.trim().toLowerCase();
+    const clientKey = `${req.ip}_${cleanEmail}`;
+    const rateLimit = checkLoginRateLimit(clientKey);
+    if (!rateLimit.allowed) {
+      return res.status(429).json({
+        error: `Account temporarily locked due to repeated failed login attempts. Please wait ${rateLimit.waitMinutes || 15} minutes before retrying.`,
+      });
+    }
+
+    const user = db.getUserByEmail(cleanEmail);
+    if (!user || !user.passwordHash || !user.salt || !verifyPassword(password, user.passwordHash, user.salt)) {
+      recordFailedLoginAttempt(clientKey);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    if (!verifyPassword(password, user.passwordHash, user.salt)) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
+    clearFailedLoginAttempts(clientKey);
     const token = createToken({ userId: user.id, email: user.email, role: user.role });
 
     db.addCustomerEvent({
@@ -178,10 +280,81 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        isEmailVerified: user.isEmailVerified ?? true,
       },
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Login failed' });
+  }
+});
+
+// Verify email address with 6-digit OTP code
+app.post('/api/auth/verify-email', (req: Request, res: Response) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Email and 6-digit code are required.' });
+  }
+  const result = db.verifyEmail(email, code);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  const verifiedUser = db.getUserByEmail(email);
+  res.json({
+    success: true,
+    message: 'Email verified successfully.',
+    user: verifiedUser
+      ? {
+          id: verifiedUser.id,
+          name: verifiedUser.name,
+          email: verifiedUser.email,
+          phone: verifiedUser.phone,
+          role: verifiedUser.role,
+          isEmailVerified: true,
+        }
+      : undefined,
+  });
+});
+
+// Resend email verification code
+app.post('/api/auth/resend-verification', async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required.' });
+  const result = db.resendVerificationCode(email);
+  if (result.code) {
+    const user = db.getUserByEmail(email);
+    await sendTransactionalEmail(emailTemplates.signupVerificationCode(email, user?.name || 'Client', result.code));
+  }
+  res.json({ success: true, message: 'Verification code sent.' });
+});
+
+// Change account password (authenticated)
+app.post('/api/auth/change-password', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current password and new password are required.' });
+  }
+  const result = db.changePassword(req.user!.id, currentPassword, newPassword);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  res.json({ success: true, message: 'Password updated successfully.' });
+});
+
+// Request return or cancellation (authenticated)
+app.post(['/api/customer/orders/:id/return', '/api/customer/orders/:id/return-request'], requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { reason, notes, type } = req.body;
+    if (!reason || !String(reason).trim()) {
+      return res.status(400).json({ error: 'Reason for return or cancellation is required.' });
+    }
+    const cleanReason = type
+      ? `[${String(type).toUpperCase()}] ${String(reason).trim()}`
+      : String(reason).trim();
+    const order = db.requestOrderReturn(req.params.id, req.user!.id, cleanReason, notes ? String(notes).trim() : '');
+    await sendTransactionalEmail(emailTemplates.returnRequestSubmitted(order, cleanReason));
+    res.json({ success: true, order, message: 'Return request submitted. Our concierge team will review promptly.' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to submit return request' });
   }
 });
 
@@ -213,7 +386,16 @@ app.get('/api/auth/me', requireAuth, (req: AuthenticatedRequest, res: Response) 
 app.put('/api/auth/profile', requireAuth, (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, phone } = req.body;
-    const updated = db.updateUserProfile(req.user!.id, { name, phone });
+    if (phone) {
+      const phoneCheck = validateNigerianPhone(String(phone));
+      if (!phoneCheck.valid) {
+        return res.status(400).json({ error: phoneCheck.error });
+      }
+    }
+    const updated = db.updateUserProfile(req.user!.id, {
+      name,
+      phone: phone ? validateNigerianPhone(String(phone)).formatted : phone,
+    });
     res.json({
       user: {
         id: updated.id,
@@ -221,6 +403,7 @@ app.put('/api/auth/profile', requireAuth, (req: AuthenticatedRequest, res: Respo
         email: updated.email,
         phone: updated.phone,
         role: updated.role,
+        isEmailVerified: updated.isEmailVerified ?? true,
       },
     });
   } catch (err: any) {
@@ -229,13 +412,19 @@ app.put('/api/auth/profile', requireAuth, (req: AuthenticatedRequest, res: Respo
 });
 
 // Cryptographically secure password reset request (5-min verification code)
-app.post('/api/auth/forgot-password', (req: Request, res: Response) => {
+app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
   const { email } = req.body;
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Valid email address required.' });
   }
   const result = db.requestPasswordReset(email);
-  res.json(result);
+  if (result.dispatchedCode && result.recipientEmail) {
+    await sendTransactionalEmail(emailTemplates.passwordResetOTP(result.recipientEmail, result.dispatchedCode));
+  }
+  res.json({
+    success: result.success,
+    message: result.message,
+  });
 });
 
 // Verify 6-digit one-time verification code
@@ -317,6 +506,28 @@ app.get('/api/customer/orders/:id', requireAuth, (req: AuthenticatedRequest, res
   res.json({ order });
 });
 
+// Customer-Isolated Persistent Cart
+app.get('/api/customer/cart', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const cart = db.getCustomerCart(req.user!.id);
+  res.json({ cart: cart || { items: [], itemCount: 0, subtotalCents: 0 } });
+});
+
+app.post('/api/customer/cart', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const { items, subtotalCents } = req.body;
+  const cart = db.saveCustomerCart(
+    req.user!.id,
+    req.user!.email,
+    Array.isArray(items) ? items : [],
+    typeof subtotalCents === 'number' ? subtotalCents : 0
+  );
+  res.json({ success: true, cart });
+});
+
+app.delete('/api/customer/cart', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  db.clearCustomerCart(req.user!.id);
+  res.json({ success: true });
+});
+
 /* ========================================================================== */
 /* STOREFRONT PRODUCTS & CHECKOUT API                                         */
 /* ========================================================================== */
@@ -334,26 +545,118 @@ app.get('/api/products/:slug', (req: Request, res: Response) => {
   res.json({ product });
 });
 
-// Create Order (Checkout)
-app.post('/api/orders', (req: AuthenticatedRequest, res: Response) => {
+// Visitor Geo-Location Currency Auto-Detection
+app.get('/api/geo', (req: Request, res: Response) => {
+  const countryHeader =
+    (req.headers['cf-ipcountry'] as string) ||
+    (req.headers['x-vercel-ip-country'] as string) ||
+    (req.headers['x-appengine-country'] as string) ||
+    '';
+  const normalized = countryHeader.trim().toUpperCase();
+  const isNigeria = normalized === 'NG';
+  res.json({
+    countryCode: normalized || null,
+    isNigeria,
+    currency: isNigeria ? 'NGN' : normalized ? 'USD' : null,
+  });
+});
+
+// Nigerian State Delivery Fee Calculator
+app.post('/api/shipping/calculate', async (req: Request, res: Response) => {
+  const { state, country, subtotalCents, subtotalNgn } = req.body;
+  const fx = await fetchLiveExchangeRate();
+  const safeSubtotalCents = typeof subtotalCents === 'number' ? subtotalCents : 0;
+  const safeSubtotalNgn =
+    typeof subtotalNgn === 'number' ? subtotalNgn : Math.round((safeSubtotalCents / 100) * fx.usdToNgnRate);
+  const calc = calculateDeliveryFee(state || 'Lagos', country || 'Nigeria', safeSubtotalCents, safeSubtotalNgn);
+  res.json({
+    ...calc,
+    statesCount: NIGERIAN_STATES.length,
+  });
+});
+
+// Create Order (Checkout — Strictly Authenticated Client Accounts Only)
+app.post('/api/orders', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { customerEmail, customerName, customerPhone, shippingAddress, cartItems, notes, currency, couponCode } = req.body;
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Client account required. Please sign in or create an account before placing an order.',
+        requiresAuth: true,
+      });
+    }
+
+    const {
+      customerEmail,
+      customerName,
+      customerPhone,
+      shippingAddress,
+      cartItems,
+      notes,
+      currency,
+      couponCode,
+      paymentMethod,
+      paymentReference,
+    } = req.body;
 
     if (!customerEmail || !customerName || !shippingAddress || !cartItems || !cartItems.length) {
       return res.status(400).json({ error: 'Incomplete order checkout details' });
     }
 
+    const rawPhone = String(customerPhone || shippingAddress.phone || '').trim();
+    const isNigeria = !shippingAddress.country || String(shippingAddress.country).trim().toLowerCase() === 'nigeria';
+    let normalizedPhone = rawPhone;
+    if (isNigeria) {
+      const phoneCheck = validateNigerianPhone(rawPhone);
+      if (!phoneCheck.valid) {
+        return res.status(400).json({ error: phoneCheck.error || 'Please provide a valid Nigerian +234 phone number.' });
+      }
+      normalizedPhone = phoneCheck.formatted;
+    }
+
+    const fx = await fetchLiveExchangeRate();
+
+    // Compute authoritative item subtotal to derive real state-based delivery fee
+    const catalog = new Map(db.getProducts().map((p) => [p.id, p]));
+    let subtotalCents = 0;
+    for (const item of cartItems) {
+      const prod = catalog.get(item.productId || item.id);
+      if (prod) {
+        subtotalCents += prod.retailPriceCents * Math.max(1, Math.min(99, item.quantity || 1));
+      }
+    }
+    const subtotalNgn = Math.round((subtotalCents / 100) * fx.usdToNgnRate);
+    const shippingCalc = calculateDeliveryFee(
+      shippingAddress.state || 'Lagos',
+      shippingAddress.country || 'Nigeria',
+      subtotalCents,
+      subtotalNgn
+    );
+
     const order = db.createOrder({
-      customerId: req.user?.id || null,
-      customerEmail,
-      customerName,
-      customerPhone: customerPhone || shippingAddress.phone || '',
-      shippingAddress,
+      customerId: req.user.id,
+      customerEmail: customerEmail || req.user.email,
+      customerName: customerName || req.user.name,
+      customerPhone: normalizedPhone,
+      shippingAddress: {
+        ...shippingAddress,
+        phone: normalizedPhone,
+      },
       cartItems,
       currency: currency === 'NGN' ? 'NGN' : 'USD',
+      shippingFeeCents: shippingCalc.feeCents,
+      estimatedTransitTime: shippingCalc.transitTime,
       couponCode,
       notes,
+      paymentMethod: paymentMethod === 'card_online' ? 'card_online' : 'bank_transfer',
+      paymentReference: paymentReference || null,
+      paymentGateway: paymentMethod === 'card_online' ? 'wavy' : null,
+      paymentStatus: 'pending',
+      exchangeRateUsed: fx.usdToNgnRate,
+      exchangeRateProvider: fx.provider,
+      exchangeRateTimestamp: fx.lastUpdated,
     });
+
+    await sendTransactionalEmail(emailTemplates.orderConfirmation(order));
 
     res.json({ order });
   } catch (err: any) {
@@ -361,27 +664,63 @@ app.post('/api/orders', (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// Public Order Tracking by Reference
-app.get('/api/orders/track/:reference', (req: Request, res: Response) => {
+// Public Order Tracking & Payment Status Confirmation by Reference
+app.get(['/api/orders/track/:reference', '/api/orders/status/:reference'], (req: AuthenticatedRequest, res: Response) => {
   const order = db.getOrderByReference(req.params.reference);
   if (!order) return res.status(404).json({ error: 'Order not found with that reference' });
 
-  // Redact customer address for public tracking, keep order milestones
-  res.json({
-    order: {
-      orderReference: order.orderReference,
-      createdAt: order.createdAt,
-      paymentStatus: order.paymentStatus,
-      paymentVerifiedAt: order.paymentVerifiedAt,
-      fulfilmentStatus: order.fulfilmentStatus,
-      carrier: order.carrier,
-      trackingNumber: order.trackingNumber,
-      trackingUrl: order.trackingUrl,
-      itemCount: order.items.reduce((acc, i) => acc + i.quantity, 0),
-      totalCents: order.totalCents,
-      currency: order.currency || 'USD',
-      exchangeRateUsed: order.exchangeRateUsed || 1500,
+  const isOwnerOrAdmin =
+    req.user &&
+    ((order.customerId && order.customerId === req.user.id) ||
+      order.customerEmail.toLowerCase() === req.user.email.toLowerCase() ||
+      (req.user.role === 'admin' && req.user.email.toLowerCase() === AUTHORIZED_CEO_EMAIL.toLowerCase()));
+
+  const safeOrder = {
+    orderReference: order.orderReference,
+    createdAt: order.createdAt,
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    paymentReference: order.paymentReference,
+    paymentVerifiedAt: order.paymentVerifiedAt,
+    fulfilmentStatus: order.fulfilmentStatus,
+    carrier: order.carrier,
+    trackingNumber: order.trackingNumber,
+    trackingUrl: order.trackingUrl,
+    items: order.items.map((item) => ({
+      title: item.title,
+      quantity: item.quantity,
+      unitPriceCents: item.unitPriceCents,
+      totalCents: item.totalCents,
+      image: item.image,
+    })),
+    itemCount: order.items.reduce((acc, i) => acc + i.quantity, 0),
+    subtotalCents: order.subtotalCents,
+    discountCents: order.discountCents || 0,
+    couponCode: order.couponCode || null,
+    shippingFeeCents: order.shippingFeeCents,
+    totalCents: order.totalCents,
+    currency: order.currency || 'USD',
+    exchangeRateUsed: order.exchangeRateUsed || 1500,
+    estimatedTransitTime: order.estimatedTransitTime || '1–4 business days',
+    returnRequested: order.returnRequested || false,
+    returnStatus: order.returnStatus,
+    shippingAddress: {
+      city: order.shippingAddress?.city,
+      state: order.shippingAddress?.state,
+      country: order.shippingAddress?.country,
+      ...(isOwnerOrAdmin
+        ? {
+            fullName: order.shippingAddress?.fullName,
+            streetAddress: order.shippingAddress?.streetAddress,
+            phone: order.shippingAddress?.phone,
+          }
+        : {}),
     },
+  };
+
+  res.json({
+    ...safeOrder,
+    order: safeOrder,
   });
 });
 
@@ -399,10 +738,27 @@ app.post('/api/orders/payment-proof', (req: Request, res: Response) => {
   }
 });
 
-// Dual Currency Settings (Public)
-app.get('/api/currency-settings', (_req: Request, res: Response) => {
-  const settings = db.getCurrencySettings();
-  res.json({ settings });
+// Dual Currency Settings (Public Live FX Rates)
+app.get('/api/currency-settings', async (_req: Request, res: Response) => {
+  const fxData = await fetchLiveExchangeRate();
+  const dbSettings = db.getCurrencySettings();
+  res.json({
+    settings: {
+      defaultCurrency: dbSettings.defaultCurrency || 'USD',
+      ngnExchangeRate: fxData.usdToNgnRate,
+      usdToNgnRate: fxData.usdToNgnRate,
+      ngnToUsdRate: fxData.ngnToUsdRate,
+      provider: fxData.provider,
+      lastUpdated: fxData.lastUpdated,
+      isLive: fxData.isLive,
+      isStale: fxData.isStale,
+      isManualOverride: fxData.isManualOverride,
+      manualOverrideBy: fxData.manualOverrideBy || null,
+      manualOverrideReason: fxData.manualOverrideReason || null,
+      enableNgn: true,
+      enableUsd: true,
+    },
+  });
 });
 
 // Bank settings & destinations for checkout instructions (Public)
@@ -421,92 +777,159 @@ app.get('/api/bank-destinations', (_req: Request, res: Response) => {
   res.json({ destinations, activeNgn, activeUsd });
 });
 
-// Public Payment Gateway Settings (Paystack & Bank Transfer)
+// Public Payment Gateway Settings (Wavy & Bank Transfer)
 app.get('/api/payment-settings', (_req: Request, res: Response) => {
   const settings = db.getPaymentSettings();
   res.json({
+    wavyEnabled: settings.wavyEnabled ?? true,
+    wavyPublicKey: wavy.getPublicKey(),
     paystackEnabled: settings.paystackEnabled,
-    paystackPublicKey: paystack.getPublicKey(),
+    paystackPublicKey: wavy.getPublicKey(),
     bankTransferEnabled: settings.bankTransferEnabled,
-    isTestMode: paystack.isTestMode(),
+    isTestMode: wavy.isTestMode(),
   });
 });
 
-// Paystack: Initialize Online Card Checkout
-app.post('/api/payments/paystack/initialize', async (req: Request, res: Response) => {
+// Wavy & Paystack: Initialize Online Card Checkout
+app.post(['/api/payments/wavy/initialize', '/api/payments/paystack/initialize'], async (req: Request, res: Response) => {
   try {
-    const { email, amountKobo, reference, currency, metadata } = req.body;
-    if (!email || !amountKobo || !reference) {
-      return res.status(400).json({ error: 'Email, amountKobo, and order reference are required' });
+    const { email, amount, amountKobo, reference, orderReference, currency } = req.body;
+    const finalAmount = amount || (amountKobo ? amountKobo / 100 : 100);
+    const trackingRef = orderReference || reference;
+
+    if (!email || !reference) {
+      return res.status(400).json({ error: 'Email and order reference are required' });
     }
 
-    const initResult = await paystack.initializeTransaction({
+    const baseAppUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const initResult = await wavy.initializeCheckout({
       email,
-      amountKobo,
+      amount: finalAmount,
       reference,
+      merchantReference: trackingRef,
       currency: currency || 'NGN',
-      callbackUrl: `${process.env.APP_URL || ''}/track/${encodeURIComponent(reference)}`,
-      metadata: {
-        orderReference: reference,
-        ...metadata,
-      },
+      callbackUrl: `${baseAppUrl}/order-confirmed?reference=${encodeURIComponent(reference)}&orderReference=${encodeURIComponent(trackingRef)}`,
+      description: `VANTÉRA Order #${trackingRef}`,
     });
 
     res.json(initResult);
   } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Paystack initialization error' });
+    res.status(500).json({ error: err.message || 'Wavy initialization error' });
   }
 });
 
-// Paystack: Verify Payment and Update Order
-app.post('/api/payments/paystack/verify', async (req: Request, res: Response) => {
+// Wavy & Paystack: Authoritative Server-Side Payment Verification
+app.post(['/api/payments/wavy/verify', '/api/payments/paystack/verify'], async (req: Request, res: Response) => {
   try {
     const { reference, orderReference } = req.body;
     const targetRef = orderReference || reference;
 
     if (!reference) {
-      return res.status(400).json({ error: 'Paystack reference is required' });
+      return res.status(400).json({ error: 'Payment reference is required' });
     }
 
-    const verifyResult = await paystack.verifyTransaction(reference);
-
-    if (verifyResult.status && verifyResult.data?.status === 'success') {
-      const order = db.markOrderPaidOnline(
-        targetRef,
-        reference,
-        verifyResult.data.channel || 'paystack_card'
-      );
-      return res.json({ success: true, order, verifyData: verifyResult.data });
-    } else {
-      return res.status(400).json({
-        success: false,
-        error: verifyResult.message || 'Payment verification was not successful',
+    // 1. Check if webhook has already verified & marked the order paid
+    const existingOrder = db.getOrderByReference(targetRef) || db.getOrderByReference(reference);
+    if (existingOrder && existingOrder.paymentStatus === 'paid') {
+      return res.json({
+        success: true,
+        order: existingOrder,
+        verifyData: { status: 'success', reference, channel: 'webhook_verified' },
       });
     }
+
+    if (existingOrder && existingOrder.paymentStatus === 'failed') {
+      return res.status(400).json({
+        success: false,
+        failed: true,
+        pending: false,
+        error: existingOrder.paymentProofNotes || 'Transaction was declined or cancelled.',
+      });
+    }
+
+    // 2. Query Wavy gateway server-side
+    const verifyResult = await wavy.verifyTransaction(reference);
+    const txStatus = String(verifyResult.data?.status || '').toLowerCase();
+
+    if (verifyResult.status && (txStatus === 'success' || txStatus === 'successful')) {
+      const order = db.markOrderPaidOnline(
+        existingOrder ? existingOrder.orderReference : targetRef,
+        reference,
+        verifyResult.data?.channel || 'wavy_card'
+      );
+      await sendTransactionalEmail(emailTemplates.paymentVerified(order));
+      return res.json({ success: true, order, verifyData: verifyResult.data });
+    }
+
+    if (['failed', 'cancelled', 'abandoned', 'declined'].includes(txStatus)) {
+      if (existingOrder) {
+        db.failOrderPayment(existingOrder.orderReference, verifyResult.message || `Gateway status: ${txStatus}`);
+      }
+      return res.status(400).json({
+        success: false,
+        failed: true,
+        pending: false,
+        error: verifyResult.message || 'Payment failed or was cancelled at the gateway.',
+      });
+    }
+
+    return res.status(202).json({
+      success: false,
+      failed: false,
+      pending: true,
+      error: verifyResult.message || 'Awaiting gateway confirmation.',
+    });
   } catch (err: any) {
-    res.status(400).json({ error: err.message || 'Paystack verification failed' });
+    res.status(400).json({ error: err.message || 'Payment verification failed' });
   }
 });
 
-// Paystack: Webhook Handler
-app.post('/api/payments/paystack/webhook', express.raw({ type: 'application/json' }), (req: Request, res: Response) => {
-  try {
-    const signature = req.headers['x-paystack-signature'] as string;
-    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+// Mark failed / cancelled online checkout & release reserved stock
+app.post('/api/payments/wavy/fail', (req: Request, res: Response) => {
+  const { orderReference, reference, reason } = req.body;
+  const target = orderReference || reference;
+  if (!target) {
+    return res.status(400).json({ error: 'Order reference required' });
+  }
+  const order = db.failOrderPayment(target, reason || 'Payment cancelled by customer or declined by bank.');
+  res.json({ success: true, order });
+});
 
-    if (signature && !paystack.validateWebhookSignature(rawBody, signature)) {
-      return res.status(400).send('Invalid signature');
+// Wavy & Paystack Verified Webhook Handler (Signature Verification + Idempotency)
+app.post(['/api/payments/wavy/webhook', '/api/payments/paystack/webhook'], async (req: Request, res: Response) => {
+  try {
+    const signature = (req.headers['x-wavy-signature'] || req.headers['x-paystack-signature'] || '') as string;
+    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+
+    if (!signature || !paystack.validateWebhookSignature(rawBody, signature)) {
+      return res.status(400).send('Invalid webhook signature');
     }
 
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const data = event?.data || event;
+    const txRef = String(data?.reference || data?.tx_ref || data?.id || '');
+    const orderRef = String(data?.metadata?.orderReference || data?.merchantReference || txRef);
+    const eventName = String(event?.event || '').toLowerCase();
+    const txStatus = String(data?.status || '').toLowerCase();
 
-    if (event.event === 'charge.success') {
-      const data = event.data;
-      const orderReference = data.metadata?.orderReference || data.reference;
+    if (txRef && db.isWebhookProcessed(txRef)) {
+      return res.sendStatus(200);
+    }
+
+    if (eventName === 'charge.success' || eventName === 'payment.success' || txStatus === 'success' || txStatus === 'successful') {
       try {
-        db.markOrderPaidOnline(orderReference, data.reference, data.channel || 'webhook');
+        const order = db.markOrderPaidOnline(orderRef, txRef || orderRef, data?.channel || 'wavy_webhook');
+        if (txRef) db.recordProcessedWebhook(txRef, event);
+        await sendTransactionalEmail(emailTemplates.paymentVerified(order));
       } catch (err) {
-        console.error('[PAYSTACK WEBHOOK ERROR]', err);
+        console.error('[PAYMENT WEBHOOK ERROR]', err);
+      }
+    } else if (eventName === 'charge.failed' || eventName === 'payment.failed' || txStatus === 'failed' || txStatus === 'cancelled') {
+      try {
+        db.failOrderPayment(orderRef, data?.gateway_response || 'Payment failed via gateway webhook');
+        if (txRef) db.recordProcessedWebhook(txRef, event);
+      } catch (err) {
+        console.error('[PAYMENT WEBHOOK FAIL ERROR]', err);
       }
     }
 
@@ -525,7 +948,7 @@ app.post('/api/coupons/apply', (req: Request, res: Response) => {
 });
 
 /* ========================================================================== */
-/* CLOUDFLARE PAGES EQUIVALENT CORE HANDLER: PAYSTACK & ZENDROP               */
+/* CLOUDFLARE PAGES EQUIVALENT CORE HANDLER: WAVY & ZENDROP                   */
 /* ========================================================================== */
 app.post('/api/vantera-core-handler', async (req: Request, res: Response) => {
   try {
@@ -541,44 +964,33 @@ app.post('/api/vantera-core-handler', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Order line items cannot be empty.' });
     }
 
-    // 1. Payment Verification exclusively via Paystack
+    // 1. Payment Verification exclusively via Wavy (wavy.ng)
     let verifiedPayment: any = null;
+    const lowerGateway = (gateway || 'wavy').toLowerCase();
 
-    if (!gateway || gateway.toLowerCase() === 'paystack') {
-      const paystackKey = process.env.PAYSTACK_SECRET_KEY;
-      if (paystackKey) {
-        try {
-          const pRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-            headers: { Authorization: `Bearer ${paystackKey}` },
-          });
-          const pData = await pRes.json();
-          if (pRes.ok && pData.data?.status === 'success') {
-            verifiedPayment = {
-              id: pData.data.reference,
-              amount: pData.data.amount / 100,
-              currency: pData.data.currency,
-              status: 'paid',
-              gateway: 'paystack',
-            };
-          }
-        } catch (e) {
-          console.warn('[Core Handler] Paystack verify exception:', e);
-        }
+    if (lowerGateway === 'wavy' || lowerGateway === 'paystack' || lowerGateway === 'card') {
+      const verifyResult = await wavy.verifyTransaction(reference);
+      const txStatus = String(verifyResult.data?.status || '').toLowerCase();
+      if (verifyResult.status && (txStatus === 'success' || txStatus === 'successful')) {
+        verifiedPayment = {
+          id: verifyResult.data?.reference || reference,
+          amount: verifyResult.data?.amount || totalAmount,
+          currency: verifyResult.data?.currency || currency,
+          status: 'paid',
+          gateway: 'wavy',
+        };
       }
 
       if (!verifiedPayment) {
-        verifiedPayment = {
-          id: reference,
-          amount: totalAmount,
-          currency,
-          status: 'verified_authorized',
-          gateway: 'paystack',
-        };
+        return res.status(402).json({
+          success: false,
+          error: verifyResult.message || 'Transaction could not be confirmed as paid by Wavy.',
+        });
       }
     } else {
       return res.status(400).json({
         success: false,
-        error: `Unsupported gateway: ${gateway}. VANTÉRA processes transactions exclusively through Paystack.`,
+        error: `Unsupported gateway: ${gateway}. VANTÉRA processes transactions exclusively through Wavy.`,
       });
     }
 
@@ -780,32 +1192,71 @@ app.post('/api/cart/sync', (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// Newsletter Subscription
+// Newsletter & Privé Registry Subscription
 app.post('/api/newsletter', (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { email, sessionId } = req.body;
+    const { email, name, category, sessionId } = req.body;
     if (!email || !email.includes('@')) {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
     const cleanEmail = email.trim().toLowerCase();
+    const enrollmentCode = `VP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     db.addCustomerEvent({
       type: 'newsletter_subscribed',
       customerId: req.user?.id || null,
       customerEmail: cleanEmail,
-      customerName: req.user?.name || null,
+      customerName: (name ? String(name).trim() : null) || req.user?.name || null,
       sessionId: sessionId || null,
       status: 'success',
-      metadata: { source: 'footer_signup' },
+      metadata: {
+        source: name || category ? 'vip_registry' : 'footer_signup',
+        category: category || null,
+        enrollmentCode,
+      },
     });
     db.addNotification({
       recipient: cleanEmail,
       channel: 'email',
       event: 'account_registered',
-      message: 'Thank you for subscribing to VANTÉRA. You will receive private announcements regarding our elevated collections.',
+      message: `Thank you for registering with VANTÉRA. Priority Reference: ${enrollmentCode}.`,
     });
-    res.json({ success: true, message: 'Thank you for subscribing to VANTÉRA.' });
+    res.json({
+      success: true,
+      enrollmentCode,
+      message: 'Thank you for subscribing to VANTÉRA.',
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Real Customer Reviews (Stored in DB — no fabricated quotes)
+app.get('/api/reviews', (_req: Request, res: Response) => {
+  res.json({ reviews: db.getReviews() });
+});
+
+app.post('/api/reviews', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { rating, comment, productTitle, location } = req.body;
+    if (!comment || typeof comment !== 'string' || comment.trim().length < 8) {
+      return res.status(400).json({ error: 'Please write a brief review (at least 8 characters).' });
+    }
+    const numRating = Number(rating);
+    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5.' });
+    }
+    const review = db.addReview({
+      customerId: req.user!.id,
+      customerEmail: req.user!.email,
+      customerName: req.user!.name,
+      location: location ? String(location) : 'Nigeria',
+      rating: numRating,
+      comment,
+      productTitle: productTitle ? String(productTitle) : undefined,
+    });
+    res.status(201).json({ review, success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Unable to save review' });
   }
 });
 
@@ -893,7 +1344,7 @@ app.post('/api/admin/setup-password', (req: Request, res: Response) => {
   }
 });
 
-// CEO Login
+// CEO Login (rate-limited)
 app.post('/api/admin/login', (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -902,7 +1353,16 @@ app.post('/api/admin/login', (req: Request, res: Response) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const clientKey = `admin_${req.ip}_${cleanEmail}`;
+    const rateLimit = checkLoginRateLimit(clientKey);
+    if (!rateLimit.allowed) {
+      return res.status(429).json({
+        error: `Admin login temporarily locked after repeated failures. Wait ${rateLimit.waitMinutes || 15} minutes.`,
+      });
+    }
+
     if (cleanEmail !== AUTHORIZED_CEO_EMAIL.toLowerCase()) {
+      recordFailedLoginAttempt(clientKey);
       return res.status(403).json({
         error: 'Access denied. Only the authorized CEO account can access this administrative portal.',
       });
@@ -917,9 +1377,11 @@ app.post('/api/admin/login', (req: Request, res: Response) => {
     }
 
     if (!verifyPassword(password, user.passwordHash, user.salt)) {
+      recordFailedLoginAttempt(clientKey);
       return res.status(401).json({ error: 'Invalid administrator password.' });
     }
 
+    clearFailedLoginAttempts(clientKey);
     const token = createToken({ userId: user.id, email: user.email, role: 'admin' });
     db.addAuditLog('CEO Adnuel', 'ADMIN_LOGIN', 'CEO signed into private dashboard.');
 
@@ -1129,6 +1591,32 @@ app.put('/api/admin/orders/:id', requireAdmin, (req: AuthenticatedRequest, res: 
   }
 });
 
+// CEO Approve / Decline Customer Return or Cancellation Request
+app.post('/api/admin/orders/:id/return-status', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { returnStatus, adminNotes } = req.body;
+    if (!['approved', 'rejected', 'completed'].includes(returnStatus)) {
+      return res.status(400).json({ error: 'Invalid return status.' });
+    }
+    const order = db.updateOrderReturnStatus(
+      req.params.id,
+      returnStatus,
+      req.user?.name || AUTHORIZED_CEO_NAME,
+      adminNotes
+    );
+    res.json({ order, success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to update return status' });
+  }
+});
+
+// CEO Email Deliverability DNS Records (SPF, DKIM, DMARC, MX)
+app.get('/api/admin/email-dns-records', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const domainSettings = db.getDomainSettings();
+  const domain = domainSettings.domain || 'vantera.com.ng';
+  res.json({ domain, records: getDomainDnsRecords(domain) });
+});
+
 // CEO Products Management
 app.get('/api/admin/products', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
   const products = db.getProducts();
@@ -1223,7 +1711,47 @@ app.put('/api/admin/payment-settings', requireAdmin, (req: AuthenticatedRequest,
   }
 });
 
-// CEO Currency Settings
+// CEO Currency Settings & Live FX Engine
+app.get('/api/admin/currency/status', requireAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  const fxData = await fetchLiveExchangeRate();
+  res.json({ fxData, dbSettings: db.getCurrencySettings() });
+});
+
+app.post('/api/admin/currency/refresh', requireAdmin, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const fxData = await fetchLiveExchangeRate();
+    res.json({ success: true, fxData });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/currency/manual-override', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { rate, reason } = req.body;
+    if (!rate || isNaN(Number(rate)) || Number(rate) <= 0) {
+      return res.status(400).json({ error: 'Valid positive exchange rate required' });
+    }
+    const fxData = setManualRateOverride(
+      Number(rate),
+      req.user!.name || AUTHORIZED_CEO_NAME,
+      reason || 'CEO Verified Rate Override'
+    );
+    res.json({ success: true, fxData });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/currency/clear-override', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const fxData = await clearManualRateOverride(req.user!.name || AUTHORIZED_CEO_NAME);
+    res.json({ success: true, fxData });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/admin/currency-settings', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
   try {
     const updated = db.updateCurrencySettings(req.body, AUTHORIZED_CEO_NAME);

@@ -8,79 +8,106 @@
   --breakpoint-2xl: 1536px;
 }
 
+:root {
+  --vantera-canvas: #0B0B0C;
+  --vantera-surface: #141416;
+  --vantera-ink: #F5F1E8;
+  --vantera-muted: #A8A297;
+  --vantera-accent: #C8A96A;
+}
+
 body {
-  font-family: 'Montserrat', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #EDEDED;
-  background-color: #0B0B0B;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #F5F1E8;
+  background-color: #0B0B0C;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  line-height: 1.6;
 }
 
-/* Luxury Editorial Typography */
+/* Strictly Two Typefaces: Playfair Display (Headings) + Montserrat (Body & Labels) */
 .font-editorial {
-  font-family: 'Cinzel', 'Playfair Display', Didot, Georgia, serif;
+  font-family: 'Playfair Display', Georgia, serif;
 }
 
 .font-meta {
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
-  letter-spacing: 0.08em;
   overflow-wrap: break-word;
 }
 
-/* Liquid Metal Champagne Gold Gradient */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Muted Champagne Gold Accent */
 .gold-gradient-text {
-  background: linear-gradient(135deg, #F3DE97 0%, #D4AF37 50%, #9B6E09 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #C8A96A;
 }
 
 .gold-gradient-bg {
-  background: linear-gradient(135deg, #E6C875 0%, #D4AF37 50%, #9E730D 100%);
+  background-color: #C8A96A;
+  color: #0B0B0C;
+  transition: background-color 200ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.gold-gradient-border {
-  border-image: linear-gradient(135deg, rgba(212,175,55,0.4) 0%, rgba(170,124,17,0.1) 100%) 1;
+.gold-gradient-bg:hover {
+  background-color: #D8BC82;
 }
 
-/* Velvet Emerald Glow Ambient Backgrounds */
-.velvet-emerald-glow {
-  background: radial-gradient(circle at center, rgba(15, 46, 34, 0.45) 0%, rgba(11, 11, 11, 0) 70%);
-}
-
-.velvet-emerald-glow-soft {
-  background: radial-gradient(ellipse at center, rgba(15, 46, 34, 0.28) 0%, rgba(11, 11, 11, 0) 75%);
-}
-
-/* Zero-Borders Diffuse Dropshadow Glows */
+/* Refined Quiet Border Cards */
 .zero-border-card {
-  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 0 30px rgba(212, 175, 55, 0.03);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(245, 241, 232, 0.08);
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), border-color 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .zero-border-card:hover {
-  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 0 45px rgba(15, 46, 34, 0.45), 0 0 15px rgba(212, 175, 55, 0.12);
+  border-color: rgba(200, 169, 106, 0.4);
 }
 
-@media (min-width: 640px) {
-  .sm\:grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+/* Subtle Loading Bar Animation (Minimal & Refined) */
+@keyframes vanteraProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }
 
-@media (min-width: 768px) {
-  .md\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+.vantera-loader-bar {
+  animation: vanteraProgress 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Scroll Fade-In */
+.fade-in-section {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-in-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zero-border-card,
+  .gold-gradient-bg,
+  .fade-in-section {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+  .vantera-loader-bar {
+    animation: none;
   }
 }
 
-@media (min-width: 1024px) {
-  .lg\:grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
-}
-
-/* Additional luxury styling for CEO dashboard & Customer Account modals */
+/* CEO Dashboard Utility Classes (Preserved) */
 .admin-card {
   background: #ffffff;
   border: 1px solid var(--line, #e7e4de);

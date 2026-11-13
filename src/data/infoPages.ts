@@ -11,145 +11,147 @@ export interface InfoPageData {
 }
 
 export const INFO_PAGES: Record<string, InfoPageData> = {
-  "about": {
-    "eyebrow": "ABOUT VANTÉRA",
-    "title": "A considered approach to everyday technology.",
-    "intro": "VANTÉRA is a premium technology storefront centred on phones, their everyday essentials, and a carefully selected set of high-performance accessories.",
-    "sections": [
+  about: {
+    eyebrow: 'ABOUT VANTÉRA',
+    title: 'A considered approach to everyday technology.',
+    intro:
+      'VANTÉRA is a luxury technology storefront focused on smartphones, essential protection, inductive power, and workspace hardware engineered to last.',
+    sections: [
       {
-        "heading": "Technology, Elevated.",
-        "body": "Our guiding philosophy is singular: modern devices should be paired with accessories designed with restraint, craftsmanship, and longevity. We curate rather than aggregate, selecting only items that meet rigorous standards for tactile quality and durability."
+        heading: 'Technology, Elevated.',
+        body: 'Modern devices deserve accessories designed with restraint, durability, and reliable performance. We curate items tested for build quality, thermal safety, and tactile precision rather than flooding our catalog with unvetted hardware.',
       },
       {
-        "heading": "Curated Catalog",
-        "body": "Every phone case, charging dock, audio accessory, and workspace essential in the VANTÉRA catalog is chosen to complement your daily digital routine with sophistication and utility."
+        heading: 'Authenticated Inventory & Pricing',
+        body: 'Every item lists live availability and verified pricing automatically displayed in Naira (₦) across Nigeria and US Dollars ($) internationally, with instant manual currency switching in the header.',
       },
       {
-        "heading": "Leadership & Integrity",
-        "body": "Under the direction of CEO Adnuel, VANTÉRA operates with direct personal oversight. Every direct bank transfer order is verified prior to dispatch to safeguard customer purchases."
-      }
-    ]
+        heading: 'Leadership & Accountability',
+        body: 'Founded and personally overseen by CEO Adnuel (emmanueladarikwu@gmail.com | +234 913 279 3670), VANTÉRA operates with direct executive oversight across online gateway settlements, bank transfers, and regional fulfillment.',
+      },
+    ],
   },
-  "contact": {
-    "eyebrow": "CONTACT & SUPPORT",
-    "title": "How can we assist you?",
-    "intro": "Our customer concierge and executive desk are available to assist with orders, corporate procurement, and product inquiries.",
-    "sections": [
+  contact: {
+    eyebrow: 'CONTACT & CONCIERGE',
+    title: 'How can we assist you?',
+    intro:
+      'Our concierge and executive support desk assist with orders, delivery updates, warranty claims, and corporate procurement.',
+    sections: [
       {
-        "heading": "Customer Concierge & Orders",
-        "body": "Email: emmanueladarikwu@gmail.com\nWhatsApp: +234 913 279 3670\nHours: Monday – Saturday, 8am – 8pm (WAT)"
+        heading: 'Customer Concierge & Orders',
+        body: 'Email: emmanueladarikwu@gmail.com\nWhatsApp: +234 913 279 3670\nHours: Monday – Saturday, 8:00 AM – 8:00 PM (WAT)',
       },
       {
-        "heading": "Headquarters & Leadership",
-        "body": "CEO: Adnuel\nVANTÉRA — Technology, Elevated.\nFor direct wholesale inquiries, bespoke corporate gifting, and strategic supplier partnerships, connect directly via our executive email or verified WhatsApp line."
+        heading: 'Headquarters & Leadership',
+        body: 'CEO: Adnuel\nVANTÉRA — https://vantera.com.ng\nFor wholesale orders, bespoke corporate gifting, or urgent order assistance, contact us directly via email or verified WhatsApp.',
       },
       {
-        "heading": "Order & Payment Verification",
-        "body": "Upon completing your checkout with Direct Bank Transfer, your unique order reference (e.g. VAN-2026-XXXX) is generated. For priority confirmation, forward your transfer receipt to WhatsApp (+234 913 279 3670) or track your order progress in your account portal."
-      }
-    ]
+        heading: 'Order & Payment Verification',
+        body: 'Card payments confirm automatically via server-verified payment gateway webhooks. Direct bank transfers (e.g., VAN-2026-XXXX) stay awaiting payment until reconciled by our team; you can also share your receipt on WhatsApp (+234 913 279 3670) for faster dispatch.',
+      },
+    ],
   },
-  "faq": {
-    "eyebrow": "FREQUENTLY ASKED QUESTIONS",
-    "title": "Essential information regarding orders and services.",
-    "intro": "Answers to common questions regarding purchasing, payments, and delivery with VANTÉRA.",
-    "sections": [
+  faq: {
+    eyebrow: 'FREQUENTLY ASKED QUESTIONS',
+    title: 'Essential answers on accounts, payments, and delivery.',
+    intro: 'Clear information on ordering, verification, currencies, and post-purchase care at VANTÉRA.',
+    sections: [
       {
-        "heading": "How do I place and confirm an order?",
-        "body": "Select your desired items and proceed through the checkout drawer. Select Direct Bank Transfer to receive your order reference and designated business bank account details. Transfers are verified by CEO Adnuel before order fulfillment."
+        heading: 'Do I need an account to check out?',
+        body: 'Yes. For buyer protection, verified order history, saved Nigerian addresses, and self-service tracking and returns, every checkout requires signing in or creating a VANTÉRA client account. Your cart is preserved automatically while you log in.',
       },
       {
-        "heading": "What payment methods are supported?",
-        "body": "We currently process direct bank transfers to our verified corporate account under CEO Adnuel. This ensures maximum security, transparent transaction auditing, and immediate order assignment."
+        heading: 'What payment methods are accepted?',
+        body: 'We accept instant Online Card / Gateway Payments (verified automatically server-side via webhook) and Direct Bank Transfer in NGN or USD. Card payments confirm immediately and move your order straight into processing; bank transfers remain awaiting verification until confirmed.',
       },
       {
-        "heading": "How can I track my package?",
-        "body": "Navigate to the 'Order Status' page in the top or footer navigation, or log in to your VANTÉRA customer account. Enter your Order Reference (e.g. VAN-2026-XXXX) to view real-time fulfillment status."
+        heading: 'How do USD ($) and Naira (₦) prices work?',
+        body: 'Visitors in Nigeria automatically see prices in Naira (₦), while international visitors see US Dollars ($). You can switch between NGN and USD anytime in the navigation bar, and totals remain consistent across product pages, your bag, checkout, and email receipts.',
       },
       {
-        "heading": "Are products genuine and guaranteed?",
-        "body": "All VANTÉRA products are authenticated and inspected prior to dispatch. Each item carries our standard VANTÉRA Purchase Assurance."
+        heading: 'How much is delivery across Nigerian states?',
+        body: 'Delivery fees are calculated dynamically by destination state before payment—starting from ₦2,500 within Lagos, ₦3,500–₦4,500 across Abuja (FCT) and neighbouring zones, and up to ₦6,500 for distant regions. Orders over ₦75,000 ($50) qualify for complimentary domestic delivery.',
       },
       {
-        "heading": "Will a case or charger fit my specific device?",
-        "body": "Device compatibility details are listed on each product page. If you are unsure about model dimensions or charging protocols (e.g., MagSafe, Qi2, USB-C PD), reach out to our WhatsApp concierge (+234 913 279 3670) for personalized guidance."
-      }
-    ]
+        heading: 'How do I track an order or request a return?',
+        body: 'Log in to your Account Vault or open the Order Tracking page using your reference (VAN-2026-XXXX). Eligible orders within 14 days can also submit a return or cancellation request directly from your order history.',
+      },
+    ],
   },
-  "shipping": {
-    "eyebrow": "SHIPPING & DELIVERY",
-    "title": "Careful packaging, prompt dispatch.",
-    "intro": "We treat every order with meticulous care from our fulfillment centers to your doorstep.",
-    "sections": [
+  shipping: {
+    eyebrow: 'SHIPPING & DELIVERY POLICY',
+    title: 'Transparent state-based fees and reliable transit.',
+    intro: 'Every order is inspected, sealed in protective packaging, and routed through vetted logistics partners.',
+    sections: [
       {
-        "heading": "Order Dispatch Timeline",
-        "body": "Once your direct bank transfer is verified, your order is prepared, packed in custom protective packaging, and dispatched within 24 to 48 business hours."
+        heading: 'Processing & Dispatch Timeline',
+        body: 'Orders paid via our online gateway begin processing immediately upon webhook confirmation. Bank transfer orders enter processing once settled and confirmed. Most in-stock items ship within 24 business hours.',
       },
       {
-        "heading": "Shipping Destinations & Coverage",
-        "body": "We provide priority regional delivery and international courier fulfillment. Standard ground delivery takes 3–5 business days, while express courier options are available for urgent requests."
+        heading: 'Nigerian State Delivery Fees & Transit Times',
+        body: 'Lagos State: ₦2,500 (1–2 business days).\nAbuja FCT, Ogun, Oyo, Ogun/Southwest corridors: ₦3,500–₦4,500 (2–3 business days).\nRivers, Enugu, Kano, Kaduna & Regional States: ₦4,500–₦6,500 (3–5 business days).\nOrders of ₦75,000 ($50) or more receive complimentary standard domestic shipping.',
       },
       {
-        "heading": "Tracking & Notifications",
-        "body": "You will receive an updated order milestone notification and tracking code as soon as your package has been handed over to our logistics partner."
-      }
-    ]
+        heading: 'International Delivery & Tracking',
+        body: 'International courier orders ship via DHL / Express Air in 5–8 business days. Live carrier tracking numbers and milestone updates (Processing, Shipped, Delivered) appear automatically in your Account and email confirmations.',
+      },
+    ],
   },
-  "returns": {
-    "eyebrow": "RETURNS & EXCHANGES",
-    "title": "Our commitment to quality assurance.",
-    "intro": "We stand behind the craftsmanship and performance of every item in the VANTÉRA collection.",
-    "sections": [
+  returns: {
+    eyebrow: 'RETURN & REFUND POLICY',
+    title: 'Our 14-day quality and satisfaction guarantee.',
+    intro: 'We stand behind every VANTÉRA item and make returns or cancellations straightforward inside your account.',
+    sections: [
       {
-        "heading": "Return Window",
-        "body": "Unused items in original packaging with seals intact may be returned within 14 days of delivery for exchange or store credit."
+        heading: '14-Day Return Window',
+        body: 'Unused items in original, sealed packaging may be requested for return within 14 days of delivery. You can submit a return or cancellation request directly inside your Account Order History without calling support first.',
       },
       {
-        "heading": "Damaged or Defective Items",
-        "body": "In the unlikely event an item arrives damaged or exhibits manufacturing faults, contact our support desk at emmanueladarikwu@gmail.com or WhatsApp within 48 hours for immediate replacement."
+        heading: 'Damaged, Faulty, or Incorrect Items',
+        body: 'If an item arrives damaged or exhibits a manufacturing fault, report it via your Account portal or contact emmanueladarikwu@gmail.com / WhatsApp (+234 913 279 3670) within 48 hours of delivery for a full replacement or refund at zero extra cost.',
       },
       {
-        "heading": "Return Process",
-        "body": "To initiate a return, message our concierge team with your order reference (VAN-2026-XXXX) and photographs of the product condition. We will issue shipping instructions promptly."
-      }
-    ]
+        heading: 'Refunds & Processing',
+        body: 'Approved cancellations before dispatch or verified returned items are refunded to your original payment method or bank account within 2–5 business days. Approved refunds automatically restore order stock and send confirmation to your email.',
+      },
+    ],
   },
-  "privacy": {
-    "eyebrow": "PRIVACY POLICY",
-    "title": "Your privacy and data security.",
-    "intro": "VANTÉRA respects your personal information and handles your data with strict confidentiality.",
-    "sections": [
+  privacy: {
+    eyebrow: 'PRIVACY POLICY',
+    title: 'Your privacy, encryption, and data protection.',
+    intro: 'VANTÉRA collects only the information needed to authenticate your account, deliver your orders, and prevent fraud.',
+    sections: [
       {
-        "heading": "Information We Collect",
-        "body": "We collect information necessary to fulfill your orders: name, shipping address, email, phone number, and transaction references. We never store payment banking credentials on client devices."
+        heading: 'Information We Collect',
+        body: 'When you register or check out, we store your name, verified email address, Nigerian phone number (+234), saved delivery addresses, and order history. Passwords are stored exclusively as salted cryptographic hashes. Card details are never stored on VANTÉRA servers.',
       },
       {
-        "heading": "Use of Information",
-        "body": "Your details are utilized solely for order processing, customer support communication, and security verification. We do not sell or trade customer personal data with external third parties."
+        heading: 'Cookies & Essential Storage',
+        body: 'We use essential tokens for account sign-in and cart persistence, alongside currency and analytics preferences managed via our on-site Cookie Notice. You can opt for Essential Only cookies at any time.',
       },
       {
-        "heading": "Data Security",
-        "body": "All transactions and account sessions are secured using encrypted server-side tokens and modern industry-standard cryptographic protocols."
-      }
-    ]
+        heading: 'Security Controls',
+        body: 'All traffic is served over HTTPS with strict transport security headers, rate-limited authentication, HMAC-verified payment webhooks, and strict role isolation between customer accounts and executive administration.',
+      },
+    ],
   },
-  "terms": {
-    "eyebrow": "TERMS OF SERVICE",
-    "title": "Official terms and purchase conditions.",
-    "intro": "These terms govern the purchase of goods and access to services provided by VANTÉRA.",
-    "sections": [
+  terms: {
+    eyebrow: 'TERMS OF SERVICE',
+    title: 'Official terms and conditions of sale.',
+    intro: 'These terms govern account registration, purchases, payments, delivery, and returns on VANTÉRA.',
+    sections: [
       {
-        "heading": "Purchases & Payment",
-        "body": "All orders are subject to acceptance and payment verification. Pricing is displayed in USD. Upon completing order checkout, the buyer agrees to fulfill payment via direct bank transfer using the generated order reference."
+        heading: 'Accounts, Inventory & Orders',
+        body: 'Checkout requires an authenticated VANTÉRA account. Inventory is reserved atomically at checkout; items marked Out of Stock cannot be ordered. If an online card payment fails or is cancelled, reserved stock is released and your bag items remain available to retry.',
       },
       {
-        "heading": "Product Representation",
-        "body": "We make every effort to display product colors, textures, and specifications accurately. Specifications reflect real-world performance metrics."
+        heading: 'Pricing, Currency & Payment Settlement',
+        body: 'Prices are available in Nigerian Naira (₦) and US Dollars ($). Online gateway orders are marked paid strictly upon cryptographic gateway/webhook verification. Bank transfer orders remain awaiting payment until verified.',
       },
       {
-        "heading": "Governing Law",
-        "body": "These terms are interpreted and enforced in accordance with applicable commercial trade laws, with direct escalation to executive management under CEO Adnuel."
-      }
-    ]
-  }
+        heading: 'Governing Law & Disputes',
+        body: 'Purchases and services are governed under the laws of the Federal Republic of Nigeria, with direct resolution through our executive customer care desk (emmanueladarikwu@gmail.com).',
+      },
+    ],
+  },
 };

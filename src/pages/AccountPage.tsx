@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.tsx';
+import { useCart } from '../contexts/CartContext.tsx';
 import { formatUSD, formatNGN, convertUsdCentsToNgn } from '../lib/commerceLogic.ts';
 import { safeFetchJson } from '../lib/safeFetch.ts';
 import { clientAuthFallback } from '../lib/clientAuthFallback.ts';
+import { NIGERIAN_STATES, getLgasForState, validateNigerianPhone } from '../data/nigeriaLocations.ts';
 
 interface AccountPageProps {
   onNavigate: (url: string) => void;
@@ -11,12 +13,13 @@ interface AccountPageProps {
 
 export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMode }) => {
   const { user, token, loginCustomer, logoutCustomer, updateUser } = useAuth();
+  const { setIsCartOpen } = useCart();
 
-  // Mode: 'login' | 'register' | 'forgot'
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>(
+  // Mode: 'login' | 'register' | 'forgot' | 'verify'
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'verify'>(
     initialMode === 'register' ? 'register' : 'login'
   );
-  const [activeTab, setActiveTab] = useState<'orders' | 'profile' | 'addresses'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'profile' | 'addresses' | 'security'>('orders');
 
   // Form states
   const [email, setEmail] = useState('');
@@ -27,22 +30,61 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [returnToCart, setReturnToCart] = useState(false);
+
+  // Nigerian Registration Fields
+  const [regState, setRegState] = useState('Lagos');
+  const [regLga, setRegLga] = useState('Ikeja');
+  const [regAddress, setRegAddress] = useState('');
+  const [phoneValidation, setPhoneValidation] = useState<{ valid: boolean; formatted: string; error?: string }>({ valid: true, formatted: '' });
+
+  // Email verification state
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Forgot password multi-step state
+  const [forgotStep, setForgotStep] = useState<'request' | 'code' | 'reset'>('request');
+  const [resetCode, setResetCode] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+
+  // Password Change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState('');
+
+  // Return & Cancellation Request Modal
+  const [returnModalOrder, setReturnModalOrder] = useState<any | null>(null);
+  const [returnType, setReturnType] = useState<'cancellation' | 'return'>('cancellation');
+  const [returnReason, setReturnReason] = useState('');
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnSuccessMessage, setReturnSuccessMessage] = useState('');
+  const [returnErrorMessage, setReturnErrorMessage] = useState('');
 
   // Sync mode with prop or URL search parameters (e.g. /account?mode=register)
   useEffect(() => {
-    if (initialMode && ['login', 'register', 'forgot'].includes(initialMode)) {
-      setAuthMode(initialMode);
-      return;
-    }
     try {
       const params = new URLSearchParams(window.location.search);
       const modeParam = params.get('mode');
-      if (modeParam === 'register') {
+      if (modeParam === 'register' || initialMode === 'register') {
         setAuthMode('register');
-      } else if (modeParam === 'login') {
+      } else if (modeParam === 'login' || initialMode === 'login') {
         setAuthMode('login');
+      } else if (initialMode === 'forgot') {
+        setAuthMode('forgot');
       }
-    } catch {}
+      if (params.get('returnTo') === 'cart') {
+        setReturnToCart(true);
+      }
+    } catch {
+      if (initialMode && ['login', 'register', 'forgot'].includes(initialMode)) {
+        setAuthMode(initialMode);
+      }
+    }
   }, [initialMode]);
 
   // Customer data
@@ -55,9 +97,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     phone: '',
     streetAddress: '',
     apartment: '',
-    city: '',
-    state: '',
-    postalCode: '',
+    city: 'Ikeja',
+    state: 'Lagos',
+    postalCode: '100001',
     country: 'Nigeria',
     isDefault: true,
   });
@@ -128,17 +170,26 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
       if (result.ok && result.data?.token && result.data?.user) {
         loginCustomer(result.data.token, result.data.user);
         setSuccessMessage('Logged in successfully');
+        if (returnToCart) {
+          setIsCartOpen(true);
+          onNavigate('/');
+        }
         return;
       }
 
-      // If server explicitly returned a business error (e.g. 401 with message)
-      if (result.status === 401 && result.data?.error) {
-        // Double-check local fallback
-        const fallback = clientAuthFallback.login(cleanEmail, password);
-        if (fallback.success && fallback.token && fallback.user) {
-          loginCustomer(fallback.token, fallback.user as any);
-          setSuccessMessage('Logged in successfully');
-          return;
+      // If server explicitly returned a business error (e.g. 401/429 with message)
+      if ((result.status === 401 || result.status === 429) && result.data?.error) {
+        if (result.status === 401) {
+          const fallback = clientAuthFallback.login(cleanEmail, password);
+          if (fallback.success && fallback.token && fallback.user) {
+            loginCustomer(fallback.token, fallback.user as any);
+            setSuccessMessage('Logged in successfully');
+            if (returnToCart) {
+              setIsCartOpen(true);
+              onNavigate('/');
+            }
+            return;
+          }
         }
         setErrorMessage(result.data.error);
         return;
@@ -149,6 +200,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
       if (fallback.success && fallback.token && fallback.user) {
         loginCustomer(fallback.token, fallback.user as any);
         setSuccessMessage('Logged in successfully');
+        if (returnToCart) {
+          setIsCartOpen(true);
+          onNavigate('/');
+        }
         return;
       }
 
@@ -158,6 +213,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
       if (fallback.success && fallback.token && fallback.user) {
         loginCustomer(fallback.token, fallback.user as any);
         setSuccessMessage('Logged in successfully');
+        if (returnToCart) {
+          setIsCartOpen(true);
+          onNavigate('/');
+        }
         return;
       }
       setErrorMessage('Invalid email or password. Please verify your credentials.');
@@ -183,6 +242,15 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
       return;
     }
 
+    if (cleanPhone) {
+      const phoneValidationCheck = validateNigerianPhone(cleanPhone);
+      if (!phoneValidationCheck.valid) {
+        setErrorMessage(phoneValidationCheck.error || 'Please enter a valid Nigerian phone number (+234...).');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     if (password.length < 6) {
       setErrorMessage('Password must be at least 6 characters.');
       setIsSubmitting(false);
@@ -196,7 +264,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     }
 
     try {
-      // 1. Send registration to server API
+      // 1. Send registration to server API with Nigerian fields
       const result = await safeFetchJson<{ token?: string; user?: any; error?: string }>('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -204,14 +272,19 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           name: cleanName,
           email: cleanEmail,
           password,
-          phone: cleanPhone,
+          phone: cleanPhone ? validateNigerianPhone(cleanPhone).formatted : '',
+          state: regState,
+          lga: regLga,
+          address: regAddress,
         }),
       });
 
       if (result.ok && result.data?.token && result.data?.user) {
         clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
         loginCustomer(result.data.token, result.data.user);
-        setSuccessMessage('Your VANTÉRA client account has been opened successfully! Welcome.');
+        setVerifyEmailAddress(cleanEmail);
+        setAuthMode('verify');
+        setSuccessMessage('Account created! A 6-digit verification code has been dispatched to your email.');
         return;
       }
 
@@ -225,6 +298,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
       const fallback = clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
       if (fallback.success && fallback.token && fallback.user) {
         loginCustomer(fallback.token, fallback.user as any);
+        if (returnToCart) {
+          setIsCartOpen(true);
+          onNavigate('/');
+          return;
+        }
         setSuccessMessage('Your VANTÉRA client account has been opened successfully! Welcome.');
         return;
       }
@@ -234,6 +312,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
       const fallback = clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
       if (fallback.success && fallback.token && fallback.user) {
         loginCustomer(fallback.token, fallback.user as any);
+        if (returnToCart) {
+          setIsCartOpen(true);
+          onNavigate('/');
+          return;
+        }
         setSuccessMessage('Your VANTÉRA client account has been opened successfully! Welcome.');
         return;
       }
@@ -243,34 +326,224 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     }
   };
 
-  // Handle Forgot Password
+  // Handle Verify Email via 6-digit code
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verificationCode.trim()) return;
+    setIsSubmitting(true);
+    setErrorMessage('');
+    try {
+      const res = await safeFetchJson<{ success?: boolean; message?: string; error?: string; user?: any }>('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verifyEmailAddress || user?.email || email, code: verificationCode.trim() }),
+      });
+      if (res.ok && res.data?.success) {
+        setSuccessMessage('✓ Email address verified successfully!');
+        setVerificationCode('');
+        if (user) {
+          updateUser({ ...user, isEmailVerified: true, emailVerified: true });
+        }
+        if (returnToCart) {
+          setIsCartOpen(true);
+          onNavigate('/');
+          return;
+        }
+        setAuthMode('login');
+      } else {
+        setErrorMessage(res.data?.error || 'Invalid verification code. Please check your inbox or spam folder.');
+      }
+    } catch {
+      setErrorMessage('Verification failed. Please check your network.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const targetEmail = verifyEmailAddress || user?.email || email;
+    if (!targetEmail || resendCooldown > 0) return;
+    setErrorMessage('');
+    setSuccessMessage('');
+    try {
+      const res = await safeFetchJson<{ success?: boolean; message?: string }>('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      if (res.ok) {
+        setSuccessMessage('✓ A fresh 6-digit verification code has been dispatched to your email.');
+        setResendCooldown(60);
+        const timer = setInterval(() => {
+          setResendCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch {
+      setErrorMessage('Unable to resend verification code right now.');
+    }
+  };
+
+  // Handle Change Password (Security Tab)
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordChangeError('');
+    setPasswordChangeSuccess('');
+    if (!currentPassword || !newPassword) {
+      setPasswordChangeError('Current password and new password are required.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordChangeError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordChangeError('New passwords do not match.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await safeFetchJson<{ success?: boolean; message?: string; error?: string }>('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (res.ok && res.data?.success) {
+        setPasswordChangeSuccess('✓ Password successfully updated.');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+      } else {
+        setPasswordChangeError(res.data?.error || 'Unable to update password. Check your current password.');
+      }
+    } catch {
+      setPasswordChangeError('Password update failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle Return or Cancellation Request
+  const handleCreateReturnRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!returnModalOrder || !returnReason.trim()) return;
+    setReturnSubmitting(true);
+    setReturnErrorMessage('');
+    try {
+      const res = await safeFetchJson<{ success?: boolean; order?: any; error?: string }>(
+        `/api/customer/orders/${returnModalOrder.id}/return`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            type: returnType,
+            reason: returnReason.trim(),
+            notes: returnReason.trim(),
+          }),
+        }
+      );
+      if (res.ok && res.data?.success) {
+        if (res.data.order) {
+          setOrders((prev) =>
+            prev.map((o) => (o.id === res.data!.order.id ? res.data!.order : o))
+          );
+        }
+        setReturnSuccessMessage(
+          `✓ Your ${returnType} request for ${returnModalOrder.orderReference} has been logged and sent to CEO Adnuel.`
+        );
+        setReturnModalOrder(null);
+        setReturnReason('');
+      } else {
+        setReturnErrorMessage(res.data?.error || 'Failed to file request.');
+      }
+    } catch {
+      setReturnErrorMessage('Failed to submit request. Please try again.');
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
+
+  // Handle Forgot Password (3 steps: request OTP -> verify code -> reset password)
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
     setIsSubmitting(true);
 
-    const cleanEmail = email.trim();
-    if (!cleanEmail) {
-      setErrorMessage('Please enter your registered email address.');
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
-      const result = await safeFetchJson<{ message?: string; error?: string }>('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail }),
-      });
-
-      if (result.ok && result.data?.message) {
-        setSuccessMessage(result.data.message);
-      } else {
-        setSuccessMessage('If an account exists with this email, recovery instructions have been dispatched.');
+      if (forgotStep === 'request') {
+        const cleanEmail = email.trim();
+        if (!cleanEmail) {
+          setErrorMessage('Please enter your registered email address.');
+          return;
+        }
+        const result = await safeFetchJson<{ message?: string; error?: string }>('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail }),
+        });
+        setSuccessMessage(
+          result.data?.message || 'If an account exists with this email, a 6-digit security code has been sent.'
+        );
+        setForgotStep('code');
+      } else if (forgotStep === 'code') {
+        const res = await safeFetchJson<{ success?: boolean; resetToken?: string; error?: string }>(
+          '/api/auth/verify-reset-code',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim(), code: resetCode.trim() }),
+          }
+        );
+        if (res.ok && res.data?.success && res.data?.resetToken) {
+          setResetToken(res.data.resetToken);
+          setSuccessMessage('✓ Security code verified. Enter your new password below.');
+          setForgotStep('reset');
+        } else {
+          setErrorMessage(res.data?.error || 'Invalid or expired security code.');
+        }
+      } else if (forgotStep === 'reset') {
+        if (forgotNewPassword.length < 8) {
+          setErrorMessage('New password must be at least 8 characters long.');
+          return;
+        }
+        if (forgotNewPassword !== forgotConfirmPassword) {
+          setErrorMessage('Passwords do not match.');
+          return;
+        }
+        const res = await safeFetchJson<{ success?: boolean; message?: string; error?: string }>(
+          '/api/auth/reset-password',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resetToken, newPassword: forgotNewPassword }),
+          }
+        );
+        if (res.ok && res.data?.success) {
+          setSuccessMessage('✓ Password updated successfully! Please sign in with your new credentials.');
+          setForgotStep('request');
+          setResetCode('');
+          setResetToken('');
+          setForgotNewPassword('');
+          setForgotConfirmPassword('');
+          setAuthMode('login');
+        } else {
+          setErrorMessage(res.data?.error || 'Could not reset password. Request a fresh code.');
+        }
       }
     } catch {
-      setSuccessMessage('If an account exists with this email, recovery instructions have been dispatched.');
+      setErrorMessage('Unable to complete recovery step. Please check your connection.');
     } finally {
       setIsSubmitting(false);
     }
@@ -318,8 +591,20 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
   // Handle Add Address
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setErrorMessage('');
+
+    const phoneCheck = validateNigerianPhone(newAddress.phone);
+    if (newAddress.country === 'Nigeria' && !phoneCheck.valid) {
+      setErrorMessage(phoneCheck.error || 'Please provide a valid Nigerian +234 phone number.');
+      return;
+    }
+
+    const formattedPayload = {
+      ...newAddress,
+      phone: newAddress.country === 'Nigeria' && phoneCheck.valid ? phoneCheck.formatted : newAddress.phone,
+    };
+
+    setIsSubmitting(true);
 
     try {
       const result = await safeFetchJson<{ address: any }>('/api/customer/addresses', {
@@ -328,14 +613,14 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(newAddress),
+        body: JSON.stringify(formattedPayload),
       });
 
       if (result.ok && result.data?.address) {
         setAddresses((prev) => [...prev, result.data!.address]);
         setIsAddingAddress(false);
       } else if (user) {
-        const updatedAddrs = clientAuthFallback.saveAddress(user.id, newAddress);
+        const updatedAddrs = clientAuthFallback.saveAddress(user.id, formattedPayload);
         setAddresses(updatedAddrs);
         setIsAddingAddress(false);
       }
@@ -345,15 +630,15 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         phone: '',
         streetAddress: '',
         apartment: '',
-        city: '',
-        state: '',
-        postalCode: '',
+        city: 'Ikeja',
+        state: 'Lagos',
+        postalCode: '100001',
         country: 'Nigeria',
         isDefault: false,
       });
     } catch {
       if (user) {
-        const updatedAddrs = clientAuthFallback.saveAddress(user.id, newAddress);
+        const updatedAddrs = clientAuthFallback.saveAddress(user.id, formattedPayload);
         setAddresses(updatedAddrs);
         setIsAddingAddress(false);
       }
@@ -419,22 +704,22 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
   };
 
   return (
-    <div className="w-full px-3.5 py-6 space-y-6 font-sans">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-12 lg:py-16 space-y-8 font-meta">
       {/* If Not Logged In: Show Authentication Card */}
       {!user ? (
-        <div className="w-full border border-white/5 bg-[#121212] p-5 rounded-xs shadow-sm space-y-5">
-          <div className="text-center space-y-1.5 mb-2">
-            <div className="w-8 h-8 gold-gradient-bg text-[#0B0B0B] flex items-center justify-center font-editorial text-sm font-bold mx-auto rounded-xs">
+        <div className="w-full max-w-md mx-auto border border-white/10 bg-[#141416] p-6 sm:p-8 rounded-xs space-y-6">
+          <div className="text-center space-y-2 mb-2">
+            <div className="w-9 h-9 gold-gradient-bg flex items-center justify-center font-editorial text-base font-medium mx-auto rounded-xs">
               V
             </div>
-            <h1 className="font-editorial text-xl font-bold text-[#F8F7F4] break-words">
+            <h1 className="font-editorial text-2xl font-medium text-[#F5F1E8] break-words">
               {authMode === 'login' && 'Sign In to VANTÉRA'}
               {authMode === 'register' && 'Open Client Account'}
               {authMode === 'forgot' && 'Reset Password'}
             </h1>
-            <p className="text-[11px] text-[#8E8B82] font-light break-words">
-              {authMode === 'login' && 'Access saved shipping details and track your luxury orders.'}
-              {authMode === 'register' && 'Create your personal client account for seamless checkout and tracking.'}
+            <p className="text-xs text-[#A8A297] break-words">
+              {authMode === 'login' && 'Access saved Nigerian shipping addresses and track your orders.'}
+              {authMode === 'register' && 'Create your client account for seamless checkout and tracking.'}
               {authMode === 'forgot' && 'Enter your email to receive recovery instructions.'}
             </p>
           </div>
@@ -533,10 +818,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-[#D4AF37] hover:bg-[#E5C158] active:bg-[#B89326] text-[#0B0B0B] py-3.5 px-4 text-xs uppercase tracking-widest font-meta font-black rounded-xs shadow-[0_4px_25px_rgba(212,175,55,0.45)] hover:shadow-[0_6px_30px_rgba(212,175,55,0.6)] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <span>{isSubmitting ? 'SIGNING IN...' : 'SIGN IN'}</span>
-                  <span className="text-sm font-bold">→</span>
+                  <span>{isSubmitting ? 'Signing In...' : 'Sign In'}</span>
+                  <span className="text-sm">→</span>
                 </button>
 
                 <div className="text-center text-[11px] text-[#8E8B82]">
@@ -590,16 +875,76 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
-                    Phone / WhatsApp (Optional)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-meta uppercase tracking-wider text-[#A9A69F]">
+                      Phone / WhatsApp (+234 format)
+                    </label>
+                    {phone && (
+                      <span className={`text-[9px] font-mono ${validateNigerianPhone(phone).valid ? 'text-[#10b981]' : 'text-red-400'}`}>
+                        {validateNigerianPhone(phone).valid ? '✓ Valid format' : 'Invalid format'}
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. 08123456789"
+                    placeholder="+234 812 345 6789"
                     className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    State / Location (Nigeria)
+                  </label>
+                  <select
+                    value={regState}
+                    onChange={(e) => {
+                      const s = e.target.value;
+                      setRegState(s);
+                      const lgas = getLgasForState(s);
+                      setRegLga(lgas[0] || '');
+                    }}
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  >
+                    {NIGERIAN_STATES.map((s) => (
+                      <option key={s.state} value={s.state} className="bg-[#181818] text-[#F8F7F4]">
+                        {s.state} ({s.zone === 'lagos' ? 'Lagos Zone' : s.deliveryEstimate})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                      LGA / City
+                    </label>
+                    <select
+                      value={regLga}
+                      onChange={(e) => setRegLga(e.target.value)}
+                      className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    >
+                      {getLgasForState(regState).map((city) => (
+                        <option key={city} value={city} className="bg-[#181818] text-[#F8F7F4]">
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                      Delivery Address
+                    </label>
+                    <input
+                      type="text"
+                      value={regAddress}
+                      onChange={(e) => setRegAddress(e.target.value)}
+                      placeholder="e.g. 14 Admiralty Way"
+                      className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -631,15 +976,14 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                 </div>
               </div>
 
-              {/* Dedicated Bottom Container Anchoring the Action Button via Flexbox */}
               <div className="mt-auto pt-4 border-t border-white/10 space-y-3 w-full">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-[#D4AF37] hover:bg-[#E5C158] active:bg-[#B89326] text-[#0B0B0B] py-3.5 px-4 text-xs uppercase tracking-widest font-meta font-black rounded-xs shadow-[0_4px_25px_rgba(212,175,55,0.45)] hover:shadow-[0_6px_30px_rgba(212,175,55,0.6)] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <span>{isSubmitting ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}</span>
-                  <span className="text-sm font-bold">→</span>
+                  <span>{isSubmitting ? 'Creating Account...' : 'Create Account'}</span>
+                  <span className="text-sm">→</span>
                 </button>
 
                 <div className="text-center text-[11px] text-[#8E8B82]">
@@ -660,29 +1004,151 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
             </form>
           )}
 
-          {authMode === 'forgot' && (
-            <form onSubmit={handleForgot} className="space-y-3.5">
+          {authMode === 'verify' && (
+            <form onSubmit={handleVerifyEmail} className="space-y-4">
+              <div className="text-center space-y-2">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] font-editorial text-xl mx-auto">
+                  ✉
+                </div>
+                <h3 className="font-editorial text-lg text-[#F8F7F4] font-bold">
+                  Verify Your Email Address
+                </h3>
+                <p className="text-xs text-[#8E8B82] leading-relaxed">
+                  A 6-digit confirmation security code was dispatched to{' '}
+                  <strong className="text-[#D4AF37]">{verifyEmailAddress || email}</strong>. Enter it below to activate verified client privileges.
+                </p>
+              </div>
+
               <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
-                  Registered Email
+                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1 text-center">
+                  6-Digit Verification Code
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  className="w-full text-center tracking-[0.5em] font-mono text-lg bg-[#181818] border border-white/10 px-4 py-3 text-[#D4AF37] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
                 />
               </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || verificationCode.length < 6}
+                className="w-full gold-gradient-bg text-[#0B0B0B] py-3 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? 'Verifying...' : 'Verify Email & Enter Vault'}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setErrorMessage('');
+                  }}
+                  className="text-[11px] text-[#8E8B82] hover:text-[#D4AF37] underline"
+                >
+                  Skip for now and continue to account
+                </button>
+              </div>
+            </form>
+          )}
+
+          {authMode === 'forgot' && (
+            <form onSubmit={handleForgot} className="space-y-3.5">
+              {forgotStep === 'request' && (
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Registered Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+              )}
+
+              {forgotStep === 'code' && (
+                <div>
+                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Enter 6-Digit Security Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    className="w-full text-center tracking-[0.45em] font-mono text-base bg-[#181818] border border-white/10 px-3 py-2.5 text-[#D4AF37] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+              )}
+
+              {forgotStep === 'reset' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                      New Password (min. 8 characters)
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={forgotNewPassword}
+                      onChange={(e) => setForgotNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={forgotConfirmPassword}
+                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    />
+                  </div>
+                </div>
+              )}
 
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="w-full gold-gradient-bg text-[#0B0B0B] py-2.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
               >
-                {isSubmitting ? 'Sending...' : 'Send Recovery Instructions'}
+                {isSubmitting
+                  ? 'Processing...'
+                  : forgotStep === 'request'
+                  ? 'Send 6-Digit Reset Code'
+                  : forgotStep === 'code'
+                  ? 'Verify Security Code'
+                  : 'Save New Password'}
               </button>
+
+              {forgotStep !== 'request' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotStep('request');
+                    setErrorMessage('');
+                  }}
+                  className="w-full text-center text-[11px] text-[#8E8B82] hover:text-[#D4AF37] cursor-pointer"
+                >
+                  Request a new code
+                </button>
+              )}
 
               <div className="text-center pt-3 border-t border-white/5 text-[11px] text-[#8E8B82]">
                 Remembered your password?{' '}
@@ -690,6 +1156,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                   type="button"
                   onClick={() => {
                     setAuthMode('login');
+                    setForgotStep('request');
                     setErrorMessage('');
                   }}
                   className="font-medium text-[#D4AF37] underline cursor-pointer"
@@ -704,25 +1171,96 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         /* If Logged In: Customer Portal */
         <div className="space-y-6">
           {/* Header */}
-          <div className="border border-white/5 bg-[#121212] p-5 rounded-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-[9px] uppercase tracking-widest font-mono text-[#D4AF37] block">
-                CLIENT ATELIER ACCOUNT
+          <div className="border border-white/10 bg-[#141416] p-6 sm:p-8 rounded-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase tracking-[0.22em] text-[#C8A96A] block">
+                Client Account {user.isEmailVerified === false && !user.emailVerified ? '· Email Verification Pending' : '· Verified'}
               </span>
-              <h1 className="font-editorial text-2xl font-bold text-[#F8F7F4]">
+              <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#F5F1E8]">
                 Welcome, {user.name}
               </h1>
-              <p className="text-xs text-[#8E8B82] mt-0.5 font-mono">
+              <p className="text-xs text-[#A8A297] font-mono">
                 {user.email} {user.phone ? `· ${user.phone}` : ''}
               </p>
             </div>
-            <button
-              onClick={logoutCustomer}
-              className="px-4 py-2 text-xs border border-white/10 text-[#EDEDED] hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
-            >
-              Sign Out
-            </button>
+            <div className="flex items-center gap-2.5">
+              {returnToCart && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCartOpen(true);
+                    onNavigate('/');
+                  }}
+                  className="gold-gradient-bg text-[#0B0B0B] px-4 py-2 text-xs font-meta font-bold uppercase tracking-wider rounded-xs cursor-pointer"
+                >
+                  Return to Checkout →
+                </button>
+              )}
+              <button
+                onClick={logoutCustomer}
+                className="px-4 py-2 text-xs border border-white/10 text-[#EDEDED] hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
+
+          {/* Email Verification Banner when pending */}
+          {user.isEmailVerified === false && !user.emailVerified && (
+            <form onSubmit={handleVerifyEmail} className="border border-[#D4AF37]/40 bg-[#1A160B] p-5 rounded-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-[#D4AF37] block">
+                    ACTION REQUIRED · SECURITY VERIFICATION
+                  </span>
+                  <h3 className="font-editorial text-base text-[#F8F7F4] font-semibold">
+                    Verify Your Email ({user.email})
+                  </h3>
+                  <p className="text-xs text-[#A9A69F] mt-0.5">
+                    Enter the 6-digit code dispatched to your inbox to unlock verified client receipts.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0}
+                  onClick={handleResendVerification}
+                  className="text-[11px] font-meta text-[#D4AF37] underline hover:text-white disabled:opacity-50 cursor-pointer shrink-0"
+                >
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
+                </button>
+              </div>
+
+              {errorMessage && (
+                <div className="p-2.5 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                  {errorMessage}
+                </div>
+              )}
+              {successMessage && (
+                <div className="p-2.5 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
+                  {successMessage}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Enter 6-digit OTP"
+                  className="flex-1 bg-[#121212] border border-white/10 px-3.5 py-2 text-sm font-mono tracking-[0.35em] text-[#D4AF37] rounded-xs focus:border-[#D4AF37] focus:outline-hidden"
+                />
+                <button
+                  type="submit"
+                  disabled={isSubmitting || verificationCode.length < 6}
+                  className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs font-meta font-bold uppercase tracking-wider rounded-xs hover:brightness-110 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmitting ? 'Verifying...' : 'Verify Email'}
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Navigation Tabs */}
           <div className="flex border-b border-white/10 gap-6 text-xs">
@@ -756,11 +1294,27 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
             >
               Saved Addresses ({addresses.length})
             </button>
+            <button
+              onClick={() => setActiveTab('security')}
+              className={`pb-3 uppercase tracking-wider font-meta font-semibold transition-colors cursor-pointer ${
+                activeTab === 'security'
+                  ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]'
+                  : 'text-[#8E8B82] hover:text-[#EDEDED]'
+              }`}
+            >
+              Security
+            </button>
           </div>
 
           {/* Tab 1: Orders */}
           {activeTab === 'orders' && (
             <div className="space-y-4">
+              {returnSuccessMessage && (
+                <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
+                  {returnSuccessMessage}
+                </div>
+              )}
+
               {orders.length === 0 ? (
                 <div className="border border-white/5 bg-[#121212] p-10 text-center space-y-3 rounded-xs">
                   <div className="font-editorial text-3xl text-[#D4AF37]">V</div>
@@ -796,7 +1350,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span
                               className={`px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider rounded-xs ${
                                 isPaid
@@ -812,6 +1366,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                             <span className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider bg-[#181818] text-[#EDEDED] border border-white/10 rounded-xs">
                               Status: {order.fulfilmentStatus || 'processing'}
                             </span>
+
+                            {order.returnRequested && (
+                              <span className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider bg-[#2D2412] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xs">
+                                Return: {order.returnStatus || 'pending'}
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -836,7 +1396,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                                   <p className="text-[10px] text-[#8E8B82]">Qty: {item.quantity}</p>
                                 </div>
                               </div>
-                              <span className="font-semibold text-[#D4AF37]">{formatUSD(item.totalCents || 0)}</span>
+                              <span className="font-semibold text-[#D4AF37]">
+                                {order.currency === 'NGN'
+                                  ? formatNGN(convertUsdCentsToNgn(item.totalCents || 0, order.exchangeRateUsed || 1500))
+                                  : formatUSD(item.totalCents || 0)}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -882,11 +1446,24 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                                   setProofOrderRef(order.orderReference);
                                   setPaymentProofNotes(order.paymentProofNotes || '');
                                 }}
-                                className="bg-[#181818] border border-white/10 text-[#F8F7F4] px-3.5 py-1.5 text-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
+                                className="bg-[#181818] border border-white/10 text-[#F8F7F4] px-3 py-1.5 text-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
                               >
                                 Submit Transfer Ref
                               </button>
                             )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReturnModalOrder(order);
+                                setReturnType(order.fulfilmentStatus === 'shipped' || order.fulfilmentStatus === 'delivered' ? 'return' : 'cancellation');
+                                setReturnReason('');
+                                setReturnErrorMessage('');
+                              }}
+                              className="border border-white/10 text-[#A0A09A] hover:border-[#D4AF37] hover:text-[#D4AF37] px-3 py-1.5 text-xs rounded-xs transition-colors cursor-pointer"
+                            >
+                              Request Return / Cancel
+                            </button>
 
                             <a
                               href={`https://wa.me/2349132793670?text=${encodeURIComponent(
@@ -993,6 +1570,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
               {isAddingAddress && (
                 <form onSubmit={handleAddAddress} className="border border-white/5 bg-[#121212] p-4 space-y-3 max-w-xl text-xs rounded-xs">
                   <h4 className="font-meta uppercase tracking-wider text-[#D4AF37] text-[10px]">New Delivery Address</h4>
+                  {errorMessage && (
+                    <div className="p-2.5 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                      {errorMessage}
+                    </div>
+                  )}
                   <div>
                     <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Full Name</label>
                     <input
@@ -1000,16 +1582,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                       required
                       value={newAddress.fullName}
                       onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
+                      placeholder="Full recipient name"
                       className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Phone</label>
+                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Phone (+234 format)</label>
                     <input
                       type="tel"
                       required
                       value={newAddress.phone}
                       onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
+                      placeholder="+234 801 234 5678"
                       className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
                     />
                   </div>
@@ -1020,34 +1604,48 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                       required
                       value={newAddress.streetAddress}
                       onChange={(e) => setNewAddress({ ...newAddress, streetAddress: e.target.value })}
+                      placeholder="Plot / House number, street"
                       className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">City</label>
-                      <input
-                        type="text"
-                        required
+                      <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Nigerian State / FCT</label>
+                      <select
+                        value={newAddress.state}
+                        onChange={(e) => {
+                          const s = e.target.value;
+                          const lgas = getLgasForState(s);
+                          setNewAddress({ ...newAddress, state: s, city: lgas[0] || '' });
+                        }}
+                        className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
+                      >
+                        {NIGERIAN_STATES.map((s) => (
+                          <option key={s.state} value={s.state} className="bg-[#181818] text-[#F8F7F4]">
+                            {s.state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">LGA / City</label>
+                      <select
                         value={newAddress.city}
                         onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
                         className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">State</label>
-                      <input
-                        type="text"
-                        required
-                        value={newAddress.state}
-                        onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
-                        className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
-                      />
+                      >
+                        {getLgasForState(newAddress.state || 'Lagos').map((city) => (
+                          <option key={city} value={city} className="bg-[#181818] text-[#F8F7F4]">
+                            {city}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <button
                     type="submit"
-                    className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs uppercase tracking-wider font-meta font-bold rounded-xs cursor-pointer hover:opacity-90"
+                    disabled={isSubmitting}
+                    className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs uppercase tracking-wider font-meta font-bold rounded-xs cursor-pointer hover:opacity-90 disabled:opacity-50"
                   >
                     Save Address
                   </button>
@@ -1084,6 +1682,172 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Tab 4: Security & Password */}
+          {activeTab === 'security' && (
+            <div className="border border-white/5 bg-[#121212] p-5 rounded-xs space-y-4 max-w-xl">
+              <h3 className="font-editorial text-base text-[#F8F7F4] border-b border-white/5 pb-2">
+                Security Credentials & Password
+              </h3>
+
+              {passwordChangeSuccess && (
+                <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
+                  {passwordChangeSuccess}
+                </div>
+              )}
+
+              {passwordChangeError && (
+                <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                  {passwordChangeError}
+                </div>
+              )}
+
+              <form onSubmit={handleChangePassword} className="space-y-3.5 text-xs font-meta">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Current Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                    New Password (min. 8 characters) *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                    Confirm New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="gold-gradient-bg text-[#0B0B0B] px-5 py-2.5 text-xs uppercase tracking-wider font-bold rounded-xs hover:opacity-90 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Updating...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Return & Cancellation Modal */}
+          {returnModalOrder && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+              <div className="bg-[#121212] border border-[#D4AF37]/30 p-6 rounded-xs max-w-lg w-full space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <h4 className="font-editorial text-base text-[#F8F7F4]">
+                    Request Return / Cancellation
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setReturnModalOrder(null)}
+                    className="text-[#888880] hover:text-[#EDEDED] text-lg font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <p className="text-xs text-[#8E8B82] leading-relaxed">
+                  Order Reference: <strong className="font-mono text-[#D4AF37]">{returnModalOrder.orderReference}</strong>
+                </p>
+
+                {returnErrorMessage && (
+                  <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                    {returnErrorMessage}
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateReturnRequest} className="space-y-3.5 text-xs font-meta">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                      Request Type
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setReturnType('cancellation')}
+                        className={`p-2.5 text-xs border rounded-xs transition-colors cursor-pointer ${
+                          returnType === 'cancellation'
+                            ? 'border-[#D4AF37] bg-[#181818] text-[#D4AF37] font-semibold'
+                            : 'border-white/10 bg-[#0B0B0B] text-[#888880]'
+                        }`}
+                      >
+                        Order Cancellation
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReturnType('return')}
+                        className={`p-2.5 text-xs border rounded-xs transition-colors cursor-pointer ${
+                          returnType === 'return'
+                            ? 'border-[#D4AF37] bg-[#181818] text-[#D4AF37] font-semibold'
+                            : 'border-white/10 bg-[#0B0B0B] text-[#888880]'
+                        }`}
+                      >
+                        Return / Exchange
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                      Reason & Details *
+                    </label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={returnReason}
+                      onChange={(e) => setReturnReason(e.target.value)}
+                      placeholder="Please detail why you wish to cancel or return this order..."
+                      className="w-full bg-[#181818] border border-white/10 p-3 text-xs text-[#EDEDED] placeholder-[#555] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setReturnModalOrder(null)}
+                      className="px-4 py-2 border border-white/10 text-[#888880] hover:text-[#EDEDED] text-xs rounded-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={returnSubmitting || !returnReason.trim()}
+                      className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xs hover:brightness-110 disabled:opacity-40"
+                    >
+                      {returnSubmitting ? 'Submitting...' : 'Submit Request to CEO'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 

@@ -6,6 +6,8 @@ export interface AuthUser {
   email: string;
   phone?: string;
   role: 'admin' | 'customer';
+  isEmailVerified?: boolean;
+  emailVerified?: boolean;
 }
 
 interface AuthContextType {
