@@ -237,13 +237,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
       const res = await fetch('/api/admin/suppliers/cj/status', {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
+      if (res.status === 401 || res.status === 403) {
+        logoutAdmin();
+        onNavigate('/admin/login');
+        return;
+      }
       const data = await res.json().catch(() => null);
       if (data?.cj) {
         setCjStatus(data.cj);
       } else {
         setCjStatus({
           status: 'Connection unavailable',
-          message: 'Unable to retrieve CJ Dropshipping status from backend.',
+          message: data?.error || 'Unable to retrieve CJ Dropshipping status from backend.',
           configured: false,
           hasAccessToken: false,
           hasRefreshToken: false,
@@ -280,6 +285,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}` },
       });
+      if (res.status === 401 || res.status === 403) {
+        logoutAdmin();
+        onNavigate('/admin/login');
+        return;
+      }
       const data = await res.json().catch(() => null);
       if (data?.cj) {
         setCjStatus(data.cj);
@@ -287,8 +297,22 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
           `CJ Dropshipping: ${data.cj.status} — ${data.cj.message}`,
           data.cj.status === 'Connected' ? 'success' : 'error'
         );
+        loadDashboardData();
       } else {
-        showToast('CJ connection test returned an unexpected response.', 'error');
+        const msg = data?.error || 'CJ connection test returned an unexpected response.';
+        setCjStatus((prev) => ({
+          status: 'Connection unavailable',
+          message: msg,
+          configured: prev?.configured ?? false,
+          hasAccessToken: prev?.hasAccessToken ?? false,
+          hasRefreshToken: prev?.hasRefreshToken ?? false,
+          accessTokenExpiresAt: prev?.accessTokenExpiresAt ?? null,
+          refreshTokenExpiresAt: prev?.refreshTokenExpiresAt ?? null,
+          lastTestedAt: new Date().toISOString(),
+          lastRefreshedAt: prev?.lastRefreshedAt ?? null,
+          accountInfo: null,
+        }));
+        showToast(msg, 'error');
       }
     } catch {
       setCjStatus((prev) => ({

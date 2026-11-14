@@ -26,7 +26,6 @@ Thumbs.db
 .playwright-cli/
 *.zip
 public/assets/aistudio/
-src/assets/
 
 # Android Capacitor build outputs & copied assets
 android/app/build/

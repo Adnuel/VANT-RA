@@ -9,3 +9,6 @@ archives
 tests
 public/vantera-android-project.zip
 public/vantera-project.zip
+.env*
+!.env.example
+data/cj_tokens.json

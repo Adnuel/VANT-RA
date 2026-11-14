@@ -45,6 +45,9 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          skipWaiting: true,
+          clientsClaim: true,
+          cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
           globIgnores: ['**/products/**', '**/manus-storage/**', '**/*.zip', '**/festive_*.png', '**/vantera-flagship-hero.jpg'],
           maximumFileSizeToCacheInBytes: 4000000,
@@ -104,8 +107,9 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio environment to prevent WebSocket closed errors
-      hmr: false,
+      // HMR and WS are disabled in AI Studio environment to prevent WebSocket closed errors
+      hmr: false as const,
+      ws: false as const,
       watch: null,
     },
   };

@@ -92,7 +92,7 @@ export interface CjServiceOptions {
 
 const DEFAULT_REFRESH_BUFFER_MS = 24 * 60 * 60 * 1000; // Refresh 24 hours before token expiry
 const REFRESH_TOKEN_SAFETY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes before refresh token expiry
-const DEFAULT_MIN_REQUEST_SPACING_MS = 1100; // Respect CJ API 2.0 QPS = 1 limit
+const DEFAULT_MIN_REQUEST_SPACING_MS = 1500; // Respect CJ API 2.0 QPS limit with safety margin
 const DEFAULT_REQUEST_TIMEOUT_MS = 12000;
 
 function sleep(ms: number): Promise<void> {
@@ -318,13 +318,24 @@ export class CjDropshippingService {
     return expiryMs - this.nowFn() > REFRESH_TOKEN_SAFETY_BUFFER_MS;
   }
 
-  private async waitForRateLimitSlot(): Promise<void> {
-    if (this.minRequestSpacingMs <= 0) return;
-    const elapsed = this.nowFn() - this.lastUpstreamCallAt;
-    if (this.lastUpstreamCallAt > 0 && elapsed < this.minRequestSpacingMs) {
-      await sleep(this.minRequestSpacingMs - elapsed);
-    }
-    this.lastUpstreamCallAt = this.nowFn();
+  private rateLimitQueue: Promise<void> = Promise.resolve();
+
+  private async enqueueUpstreamCall<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.rateLimitQueue.then(async () => {
+      if (this.minRequestSpacingMs > 0 && this.lastUpstreamCallAt > 0) {
+        const elapsed = this.nowFn() - this.lastUpstreamCallAt;
+        if (elapsed < this.minRequestSpacingMs) {
+          await sleep(this.minRequestSpacingMs - elapsed);
+        }
+      }
+      try {
+        return await fn();
+      } finally {
+        this.lastUpstreamCallAt = this.nowFn();
+      }
+    });
+    this.rateLimitQueue = run.then(() => undefined, () => undefined);
+    return run;
   }
 
   private async callCjJson<T>(
@@ -332,49 +343,49 @@ export class CjDropshippingService {
     init: { method: 'GET' | 'POST'; headers?: Record<string, string>; body?: string },
     extraSecrets: string[] = []
   ): Promise<{ httpStatus: number; payload: CjApiEnvelope<T> }> {
-    await this.waitForRateLimitSlot();
+    return this.enqueueUpstreamCall(async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+      try {
+        const response = await this.fetchImpl(url, {
+          method: init.method,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(init.headers || {}),
+          },
+          body: init.body,
+          signal: controller.signal,
+        });
 
-    try {
-      const response = await this.fetchImpl(url, {
-        method: init.method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(init.headers || {}),
-        },
-        body: init.body,
-        signal: controller.signal,
-      });
+        const rawText = await response.text();
+        let payload: CjApiEnvelope<T> = {};
+        if (rawText && rawText.trim()) {
+          try {
+            payload = JSON.parse(rawText) as CjApiEnvelope<T>;
+          } catch {
+            throw new CjConnectionUnavailableError(
+              `CJ Dropshipping returned an unexpected non-JSON response (HTTP ${response.status}).`
+            );
+          }
+        }
 
-      const rawText = await response.text();
-      let payload: CjApiEnvelope<T> = {};
-      if (rawText && rawText.trim()) {
-        try {
-          payload = JSON.parse(rawText) as CjApiEnvelope<T>;
-        } catch {
+        return { httpStatus: response.status, payload };
+      } catch (err: any) {
+        if (err instanceof CjConnectionUnavailableError || err instanceof CjAuthError) {
+          throw err;
+        }
+        if (err?.name === 'AbortError') {
           throw new CjConnectionUnavailableError(
-            `CJ Dropshipping returned an unexpected non-JSON response (HTTP ${response.status}).`
+            'CJ Dropshipping API request timed out. Please verify network connectivity and retry.'
           );
         }
+        const clean = sanitizeCjErrorMessage(err?.message, [...this.collectKnownSecrets(), ...extraSecrets]);
+        throw new CjConnectionUnavailableError(`Unable to reach CJ Dropshipping API servers: ${clean}`);
+      } finally {
+        clearTimeout(timer);
       }
-
-      return { httpStatus: response.status, payload };
-    } catch (err: any) {
-      if (err instanceof CjConnectionUnavailableError || err instanceof CjAuthError) {
-        throw err;
-      }
-      if (err?.name === 'AbortError') {
-        throw new CjConnectionUnavailableError(
-          'CJ Dropshipping API request timed out. Please verify network connectivity and retry.'
-        );
-      }
-      const clean = sanitizeCjErrorMessage(err?.message, [...this.collectKnownSecrets(), ...extraSecrets]);
-      throw new CjConnectionUnavailableError(`Unable to reach CJ Dropshipping API servers: ${clean}`);
-    } finally {
-      clearTimeout(timer);
-    }
+    });
   }
 
   private parseTokenPayload(
@@ -551,12 +562,11 @@ export class CjDropshippingService {
           [apiKey, tokenRecord.accessToken, tokenRecord.refreshToken]
         );
 
-        // If CJ reports token invalid/expired, clear stale token and force a clean re-auth once
+        // If CJ reports token invalid/expired, refresh via stored refreshToken first (avoiding getAccessToken 5-min cooldown)
         if (
           isCjAuthCode(verifyCall.httpStatus, verifyCall.payload?.code, verifyCall.payload?.message) &&
           !isCjRateLimitCode(verifyCall.httpStatus, verifyCall.payload?.code, verifyCall.payload?.message)
         ) {
-          this.clearStoredTokens();
           tokenRecord = await this.ensureValidToken({ forceRefresh: true });
           verifyCall = await this.callCjJson<any>(
             CJ_SETTING_GET_URL,
@@ -568,6 +578,25 @@ export class CjDropshippingService {
             },
             [apiKey, tokenRecord.accessToken, tokenRecord.refreshToken]
           );
+
+          // If the refreshed token was also rejected by CJ, clear the stored tokens and force a clean API key exchange
+          if (
+            isCjAuthCode(verifyCall.httpStatus, verifyCall.payload?.code, verifyCall.payload?.message) &&
+            !isCjRateLimitCode(verifyCall.httpStatus, verifyCall.payload?.code, verifyCall.payload?.message)
+          ) {
+            this.clearStoredTokens();
+            tokenRecord = await this.ensureValidToken({ forceRefresh: true });
+            verifyCall = await this.callCjJson<any>(
+              CJ_SETTING_GET_URL,
+              {
+                method: 'GET',
+                headers: {
+                  'CJ-Access-Token': tokenRecord.accessToken,
+                },
+              },
+              [apiKey, tokenRecord.accessToken, tokenRecord.refreshToken]
+            );
+          }
         }
 
         const { httpStatus, payload } = verifyCall;
@@ -580,10 +609,11 @@ export class CjDropshippingService {
 
         if (ok) {
           const settingData = payload.data || {};
+          const rawQps = settingData.qpsLimit ?? settingData.setting?.qpsLimit;
           const accountInfo: CjAccountInfo = {
             openId: settingData.openId ?? tokenRecord.openId ?? null,
             isSandbox: typeof settingData.isSandbox === 'boolean' ? settingData.isSandbox : undefined,
-            qpsLimit: typeof settingData.qpsLimit === 'number' ? settingData.qpsLimit : undefined,
+            qpsLimit: typeof rawQps === 'number' ? rawQps : undefined,
           };
 
           const status: CjPublicStatus = {
@@ -660,6 +690,7 @@ export class CjDropshippingService {
         const sanitizedMsg = sanitizeCjErrorMessage(err?.message, this.collectKnownSecrets());
 
         if (err instanceof CjAuthError) {
+          this.clearStoredTokens();
           const status: CjPublicStatus = {
             status: 'Authentication failed',
             message: sanitizedMsg,

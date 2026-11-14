@@ -433,3 +433,76 @@ test('sanitizeCjErrorMessage removes CJ API key patterns and explicit secret str
   assert.equal(sanitized.includes('secret999'), false);
   assert.equal(sanitized.includes('mySecretTok123'), false);
 });
+
+test('CJ Auth: when setting/get rejects stale access token, testConnection tries refreshAccessToken before getAccessToken', async () => {
+  const tokenPath = makeTempTokenPath();
+  const fakeApiKey = 'CJ555@api@reactiverefresh555';
+  const nowMs = Date.parse('2026-11-13T12:00:00.000Z');
+  const validExpiry = new Date(nowMs + 180 * 24 * 60 * 60 * 1000).toISOString();
+
+  let getAccessCalls = 0;
+  let refreshCalls = 0;
+  let settingCalls = 0;
+
+  const service = new CjDropshippingService({
+    tokenFilePath: tokenPath,
+    getApiKey: () => fakeApiKey,
+    now: () => nowMs,
+    minRequestSpacingMs: 0,
+    fetchImpl: async (input, init) => {
+      const url = String(input);
+      if (url === CJ_GET_ACCESS_TOKEN_URL) {
+        getAccessCalls += 1;
+        return jsonResponse({
+          code: 200,
+          result: true,
+          data: {
+            openId: 5005,
+            accessToken: 'stale_access_token',
+            accessTokenExpiryDate: validExpiry,
+            refreshToken: 'valid_refresh_token',
+            refreshTokenExpiryDate: validExpiry,
+          },
+        });
+      }
+      if (url === CJ_REFRESH_ACCESS_TOKEN_URL) {
+        refreshCalls += 1;
+        const body = JSON.parse(String(init?.body));
+        assert.equal(body.refreshToken, 'valid_refresh_token');
+        return jsonResponse({
+          code: 200,
+          result: true,
+          data: {
+            openId: 5005,
+            accessToken: 'fresh_access_token',
+            accessTokenExpiryDate: validExpiry,
+            refreshToken: 'fresh_refresh_token',
+            refreshTokenExpiryDate: validExpiry,
+          },
+        });
+      }
+      if (url === CJ_SETTING_GET_URL) {
+        settingCalls += 1;
+        const tok = (init?.headers as Record<string, string>)['CJ-Access-Token'];
+        if (tok === 'stale_access_token') {
+          return jsonResponse({ code: 1600001, result: false, message: 'Access token invalid' }, 401);
+        }
+        assert.equal(tok, 'fresh_access_token');
+        return jsonResponse({ code: 200, result: true, data: { openId: 5005, isSandbox: false } });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    },
+  });
+
+  try {
+    // First call gets initial tokens, then setting/get rejects stale_access_token,
+    // which must trigger refreshAccessToken (NOT a second getAccessToken) and succeed.
+    const res = await service.testConnection();
+    assert.equal(res.status, 'Connected');
+    assert.equal(getAccessCalls, 1, 'Should not call getAccessToken again when refreshToken is valid');
+    assert.equal(refreshCalls, 1, 'Should refresh via refreshAccessToken first');
+    assert.equal(settingCalls, 2);
+  } finally {
+    cleanupTempFile(tokenPath);
+  }
+});

@@ -31,7 +31,39 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = process.cwd();
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+function resolveServerPort(argv: string[] = process.argv, env: NodeJS.ProcessEnv = process.env): number {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--port' || arg === '-p') {
+      const next = argv[i + 1];
+      const parsed = next ? parseInt(next, 10) : NaN;
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    } else if (arg.startsWith('--port=')) {
+      const parsed = parseInt(arg.slice('--port='.length), 10);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+  }
+
+  const envPort = env.PORT ? parseInt(env.PORT, 10) : NaN;
+  const nginxPort = env.NGINX_PORT ? parseInt(env.NGINX_PORT, 10) : NaN;
+  const defaultAppPort = env.DEFAULT_APP_PORT ? parseInt(env.DEFAULT_APP_PORT, 10) : NaN;
+
+  if (Number.isFinite(envPort) && envPort > 0) {
+    // Avoid colliding with the container's reverse-proxy NGINX_PORT (e.g. 8080) during dev preview
+    if (Number.isFinite(nginxPort) && envPort === nginxPort) {
+      return Number.isFinite(defaultAppPort) && defaultAppPort > 0 ? defaultAppPort : 3000;
+    }
+    return envPort;
+  }
+
+  if (Number.isFinite(defaultAppPort) && defaultAppPort > 0) {
+    return defaultAppPort;
+  }
+
+  return 3000;
+}
+
+const PORT = resolveServerPort();
 
 app.use(
   express.json({
@@ -94,8 +126,10 @@ function clearFailedLoginAttempts(key: string) {
   loginAttemptTracker.delete(key);
 }
 
-// Serve static assets from public
-app.use(express.static(path.resolve(ROOT_DIR, 'public')));
+// Serve product media and, in development, public static assets
+if (process.env.NODE_ENV !== 'production') {
+  app.use(express.static(path.resolve(ROOT_DIR, 'public')));
+}
 app.use('/products', express.static(path.resolve(ROOT_DIR, 'public/products')));
 app.use('/manus-storage', express.static(path.resolve(ROOT_DIR, 'public/manus-storage')));
 
@@ -1680,9 +1714,44 @@ app.put('/api/admin/suppliers/:id', requireAdmin, (req: AuthenticatedRequest, re
 });
 
 // CJ Dropshipping API 2.0 Authentication Status & Connection Test (CEO Only — never exposes keys or tokens)
+function syncCjSupplierStatus(cjStatus: {
+  status: 'Connected' | 'Authentication failed' | 'Connection unavailable';
+  message: string;
+  lastTestedAt: string | null;
+}) {
+  try {
+    const cjSupplier = db.getSuppliers().find((s) => s.integrationType === 'cjdropshipping_api');
+    if (!cjSupplier) return;
+    const mappedStatus =
+      cjStatus.status === 'Connected'
+        ? 'operational'
+        : cjStatus.status === 'Authentication failed'
+        ? 'credentials_required'
+        : 'pending_setup';
+    if (
+      cjSupplier.status !== mappedStatus ||
+      cjSupplier.notes !== cjStatus.message ||
+      (cjStatus.lastTestedAt && cjSupplier.lastSyncedAt !== cjStatus.lastTestedAt)
+    ) {
+      db.updateSupplier(
+        cjSupplier.id,
+        {
+          status: mappedStatus,
+          notes: cjStatus.message,
+          lastSyncedAt: cjStatus.lastTestedAt || new Date().toISOString(),
+        },
+        'CJ API 2.0 Auth Monitor'
+      );
+    }
+  } catch {
+    // Non-fatal sync update
+  }
+}
+
 app.get('/api/admin/suppliers/cj/status', requireAdmin, async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const cjStatus = await cjService.getStatus();
+    syncCjSupplierStatus(cjStatus);
     res.json({ cj: cjStatus });
   } catch {
     res.status(500).json({
@@ -1705,6 +1774,7 @@ app.get('/api/admin/suppliers/cj/status', requireAdmin, async (_req: Authenticat
 app.post('/api/admin/suppliers/cj/test', requireAdmin, async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const cjStatus = await cjService.testConnection();
+    syncCjSupplierStatus(cjStatus);
     res.json({ cj: cjStatus });
   } catch {
     res.status(500).json({
@@ -2069,6 +2139,9 @@ app.get('/api/download-zip', async (_req: Request, res: Response) => {
           item === '.aistudio' ||
           item === '.playwright-cli' ||
           item === 'aistudio' ||
+          item === 'cj_tokens.json' ||
+          item === 'backups' ||
+          (item.startsWith('.env') && item !== '.env.example') ||
           item.endsWith('.zip') ||
           item === '.DS_Store'
         ) {
@@ -2192,15 +2265,34 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: false },
+      server: { middlewareMode: true, hmr: false, ws: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    // Production build static serving
-    app.use(express.static(path.resolve(ROOT_DIR, 'dist')));
+    // Production build static serving (dist takes precedence over public, never cache entry/SW files)
+    const distDir = path.resolve(ROOT_DIR, 'dist');
+    app.use(
+      express.static(distDir, {
+        setHeaders: (res, filePath) => {
+          const normalized = filePath.replace(/\\/g, '/');
+          if (
+            normalized.endsWith('/index.html') ||
+            normalized.endsWith('/sw.js') ||
+            normalized.endsWith('/registerSW.js') ||
+            normalized.endsWith('/manifest.webmanifest')
+          ) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+          } else if (normalized.includes('/assets/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      })
+    );
+    app.use(express.static(path.resolve(ROOT_DIR, 'public')));
     app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(ROOT_DIR, 'dist/index.html'));
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.sendFile(path.resolve(distDir, 'index.html'));
     });
   }
 
