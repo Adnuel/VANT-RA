@@ -28,6 +28,7 @@ import {
 import {
   CURATED_CATEGORIES,
   getCuratedCategoryById,
+  getCuratedSpecById,
   matchesCuratedSpec,
   findMatchingCuratedSpec,
   type CuratedProductTypeSpec,
@@ -2301,7 +2302,129 @@ app.post('/api/admin/suppliers/cj/products/import', requireAdmin, async (req: Au
   }
 });
 
-// CJ One-Click Curated Bulk Import (Strictly Restricted to CEO's 5 Curated Categories & Specific Product Types, Max 60% Profit Cap)
+// Helper: resolve curated specs from optional curatedSpecId / curatedCategoryId
+function resolveCuratedSpecsFilter(curatedSpecId?: string, curatedCategoryId?: string): {
+  error?: string;
+  specs: CuratedProductTypeSpec[];
+} {
+  if (curatedSpecId) {
+    const spec = getCuratedSpecById(curatedSpecId);
+    if (!spec) {
+      return { error: `Unknown curated product type "${curatedSpecId}".`, specs: [] };
+    }
+    return { specs: [spec] };
+  }
+  if (curatedCategoryId) {
+    const cat = getCuratedCategoryById(curatedCategoryId);
+    if (!cat) {
+      return { error: `Unknown curated category "${curatedCategoryId}".`, specs: [] };
+    }
+    return { specs: cat.items };
+  }
+  return { specs: CURATED_CATEGORIES.flatMap((c) => c.items) };
+}
+
+// CJ Curated Discovery (Scans CJ API across pages for ALL products carrying or similar to each CEO-approved product name)
+app.post('/api/admin/suppliers/cj/products/curated-discover', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const body = req.body || {};
+    const curatedSpecId = body.curatedSpecId ? String(body.curatedSpecId).trim() : '';
+    const curatedCategoryId = body.curatedCategoryId ? String(body.curatedCategoryId).trim() : '';
+    const countryCode = body.countryCode ? String(body.countryCode).trim().toUpperCase() : undefined;
+    const maxPagesPerKeyword = Math.max(1, Math.min(5, Number(body.maxPagesPerKeyword) || (curatedSpecId ? 3 : 2)));
+
+    const resolved = resolveCuratedSpecsFilter(curatedSpecId, curatedCategoryId);
+    if (resolved.error) {
+      return res.status(400).json({ error: resolved.error });
+    }
+
+    const existingPidSet = new Set(db.getProducts().map((p) => p.cjPid).filter(Boolean) as string[]);
+    const seenPids = new Set<string>();
+    const candidates: Array<{
+      pid: string;
+      title: string;
+      specId: string;
+      specLabel: string;
+      categoryId: string;
+      alreadyImported: boolean;
+      warehouseInventoryNum: number | null;
+      hasImage: boolean;
+    }> = [];
+    const searchErrors: Array<{ specId: string; specLabel: string; reason: string }> = [];
+
+    for (const spec of resolved.specs) {
+      for (const kw of spec.searchKeywords) {
+        for (let page = 1; page <= maxPagesPerKeyword; page++) {
+          try {
+            const searchRes = await cjService.searchProducts({
+              keyword: kw,
+              page,
+              size: 100,
+              countryCode,
+            });
+
+            if (searchRes.products.length === 0) break;
+
+            for (const cand of searchRes.products) {
+              if (!cand.pid || seenPids.has(cand.pid)) continue;
+              if (!cand.supplierPriceCents || cand.supplierPriceCents <= 0) continue;
+              if (cand.warehouseInventoryNum === 0) continue;
+              if (!matchesCuratedSpec(cand.productNameEn, cand.categoryName, spec)) continue;
+
+              seenPids.add(cand.pid);
+              candidates.push({
+                pid: cand.pid,
+                title: cand.productNameEn,
+                specId: spec.id,
+                specLabel: spec.label,
+                categoryId: spec.categoryId,
+                alreadyImported: existingPidSet.has(cand.pid),
+                warehouseInventoryNum: cand.warehouseInventoryNum,
+                hasImage: Boolean(cand.productImage),
+              });
+            }
+
+            if (searchRes.products.length < 100 || page * 100 >= searchRes.total) {
+              break;
+            }
+          } catch (searchErr: any) {
+            searchErrors.push({
+              specId: spec.id,
+              specLabel: spec.label,
+              reason: searchErr?.message || `CJ search failed for "${kw}" (page ${page})`,
+            });
+            break;
+          }
+        }
+      }
+    }
+
+    // Prioritize in-stock items with images first
+    candidates.sort((a, b) => {
+      const aStock = (a.warehouseInventoryNum ?? 1) > 0 ? 1 : 0;
+      const bStock = (b.warehouseInventoryNum ?? 1) > 0 ? 1 : 0;
+      if (aStock !== bStock) return bStock - aStock;
+      const aImg = a.hasImage ? 1 : 0;
+      const bImg = b.hasImage ? 1 : 0;
+      return bImg - aImg;
+    });
+
+    res.json({
+      success: true,
+      curatedSpecId: curatedSpecId || null,
+      curatedCategoryId: curatedCategoryId || 'all',
+      totalFound: candidates.length,
+      newCount: candidates.filter((c) => !c.alreadyImported).length,
+      alreadyImportedCount: candidates.filter((c) => c.alreadyImported).length,
+      candidates,
+      searchErrors,
+    });
+  } catch (err: any) {
+    handleCjRouteError(res, err, 'Failed to discover matching curated CJ products.');
+  }
+});
+
+// CJ One-Click Curated Bulk Import (Imports EVERY CJ product carrying or similar to CEO's approved names, Max 60% Profit Cap)
 app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const body = req.body || {};
@@ -2311,11 +2434,34 @@ app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (re
       : 60;
     const countryCode = body.countryCode ? String(body.countryCode).trim().toUpperCase() : undefined;
     const curatedCategoryId = body.curatedCategoryId ? String(body.curatedCategoryId).trim() : '';
-    const maxPerType = Math.max(1, Math.min(3, Number(body.maxPerType) || 1));
+    const curatedSpecId = body.curatedSpecId ? String(body.curatedSpecId).trim() : '';
+    const maxPagesPerKeyword = Math.max(1, Math.min(5, Number(body.maxPagesPerKeyword) || 2));
+    const maxProducts = Math.max(1, Math.min(500, Number(body.maxProducts) || 250));
 
-    const explicitPids: string[] = Array.isArray(body.pids)
-      ? Array.from(new Set<string>(body.pids.map((p: any) => String(p || '').trim()).filter(Boolean))).slice(0, 50)
-      : [];
+    type RawTargetInput = { pid: string; specId?: string };
+    const explicitTargets: RawTargetInput[] = [];
+    if (Array.isArray(body.targets)) {
+      const seen = new Set<string>();
+      for (const t of body.targets) {
+        const pid = String(t?.pid || '').trim();
+        if (!pid || seen.has(pid)) continue;
+        seen.add(pid);
+        explicitTargets.push({
+          pid,
+          specId: t?.specId ? String(t.specId).trim() : undefined,
+        });
+        if (explicitTargets.length >= 50) break;
+      }
+    } else if (Array.isArray(body.pids)) {
+      const seen = new Set<string>();
+      for (const p of body.pids) {
+        const pid = String(p || '').trim();
+        if (!pid || seen.has(pid)) continue;
+        seen.add(pid);
+        explicitTargets.push({ pid });
+        if (explicitTargets.length >= 50) break;
+      }
+    }
 
     type ImportTarget = {
       pid: string;
@@ -2327,37 +2473,41 @@ app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (re
     const skippedCountReasons: Array<{ cjPid: string; reason: string }> = [];
     let preSkippedCount = 0;
 
-    if (explicitPids.length > 0 && !curatedCategoryId) {
-      for (const pid of explicitPids) {
-        targets.push({ pid, spec: null });
+    if (explicitTargets.length > 0 && !curatedCategoryId && !curatedSpecId) {
+      for (const t of explicitTargets) {
+        targets.push({
+          pid: t.pid,
+          spec: t.specId ? getCuratedSpecById(t.specId) || null : null,
+        });
       }
     } else {
-      let categoriesToProcess = CURATED_CATEGORIES;
-      if (curatedCategoryId) {
-        const cat = getCuratedCategoryById(curatedCategoryId);
-        if (!cat) {
-          return res.status(400).json({ error: `Unknown curated category "${curatedCategoryId}".` });
-        }
-        categoriesToProcess = [cat];
+      const resolved = resolveCuratedSpecsFilter(curatedSpecId, curatedCategoryId);
+      if (resolved.error) {
+        return res.status(400).json({ error: resolved.error });
       }
 
-      for (const cat of categoriesToProcess) {
-        for (const spec of cat.items) {
-          let matchedForSpec = 0;
-          for (const kw of spec.searchKeywords) {
-            if (matchedForSpec >= maxPerType) break;
+      for (const spec of resolved.specs) {
+        if (targets.length >= maxProducts) break;
+        let matchedForSpec = 0;
+        for (const kw of spec.searchKeywords) {
+          if (targets.length >= maxProducts) break;
+          for (let page = 1; page <= maxPagesPerKeyword; page++) {
+            if (targets.length >= maxProducts) break;
             try {
               const searchRes = await cjService.searchProducts({
                 keyword: kw,
-                page: 1,
-                size: 8,
+                page,
+                size: 100,
                 countryCode,
               });
+
+              if (searchRes.products.length === 0) break;
 
               const candidates = searchRes.products
                 .filter((cand) => {
                   if (!cand.pid || seenPids.has(cand.pid)) return false;
                   if (!cand.supplierPriceCents || cand.supplierPriceCents <= 0) return false;
+                  if (cand.warehouseInventoryNum === 0) return false;
                   return matchesCuratedSpec(cand.productNameEn, cand.categoryName, spec);
                 })
                 .sort((a, b) => {
@@ -2370,26 +2520,31 @@ app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (re
                 });
 
               for (const picked of candidates) {
-                if (matchedForSpec >= maxPerType) break;
+                if (targets.length >= maxProducts) break;
                 seenPids.add(picked.pid);
                 targets.push({ pid: picked.pid, spec });
                 matchedForSpec += 1;
+              }
+
+              if (searchRes.products.length < 100 || page * 100 >= searchRes.total) {
+                break;
               }
             } catch (searchErr: any) {
               skippedCountReasons.push({
                 cjPid: spec.label,
                 reason: searchErr?.message || `CJ search failed for "${kw}"`,
               });
+              break;
             }
           }
+        }
 
-          if (matchedForSpec === 0) {
-            preSkippedCount += 1;
-            skippedCountReasons.push({
-              cjPid: spec.label,
-              reason: `No verified in-stock CJ match found for curated item "${spec.label}".`,
-            });
-          }
+        if (matchedForSpec === 0) {
+          preSkippedCount += 1;
+          skippedCountReasons.push({
+            cjPid: spec.label,
+            reason: `No verified in-stock CJ match found for "${spec.label}".`,
+          });
         }
       }
     }
@@ -2419,6 +2574,7 @@ app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (re
       variantCount: number;
     }> = [];
     const errors: Array<{ cjPid: string; reason: string }> = [...skippedCountReasons];
+    const existingPidSet = new Set(db.getProducts().map((p) => p.cjPid).filter(Boolean) as string[]);
 
     for (const target of targets) {
       try {
@@ -2428,12 +2584,14 @@ app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (re
         });
 
         const matchedSpec =
-          target.spec || findMatchingCuratedSpec(detail.productNameEn, detail.categoryName);
+          target.spec && matchesCuratedSpec(detail.productNameEn, detail.categoryName, target.spec)
+            ? target.spec
+            : findMatchingCuratedSpec(detail.productNameEn, detail.categoryName);
         if (!matchedSpec) {
           skippedCount += 1;
           errors.push({
             cjPid: target.pid,
-            reason: `Skipped "${detail.productNameEn}" — not in VANTÉRA's 5 curated product specifications.`,
+            reason: `Skipped "${detail.productNameEn}" — does not match VANTÉRA's approved product names.`,
           });
           continue;
         }
@@ -2505,6 +2663,16 @@ app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (re
             ? mappedVariants.reduce((sum, v) => sum + v.stockQuantity, 0)
             : Math.max(0, detail.totalInventory ?? 0);
 
+        // Prevent creating brand-new unavailable 0-stock items from bulk discovery; still update existing items if they hit 0 stock
+        if (totalStock <= 0 && !existingPidSet.has(detail.pid)) {
+          skippedCount += 1;
+          errors.push({
+            cjPid: target.pid,
+            reason: `Skipped "${detail.productNameEn}" — currently 0 units available on CJ.`,
+          });
+          continue;
+        }
+
         const retailPriceCents =
           mappedVariants.length > 0
             ? Math.min(...mappedVariants.map((v) => v.retailPriceCents))
@@ -2535,6 +2703,7 @@ app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (re
           `${AUTHORIZED_CEO_NAME} (Curated Bulk Import · ${matchedSpec.label} <=${maxProfitPercent}%)`
         );
 
+        existingPidSet.add(detail.pid);
         if (saved.created) importedCount += 1;
         else updatedCount += 1;
 
@@ -2564,6 +2733,7 @@ app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (re
       success: true,
       maxProfitPercent,
       curatedCategoryId: curatedCategoryId || 'all',
+      curatedSpecId: curatedSpecId || null,
       totalRequested: targets.length,
       importedCount,
       updatedCount,

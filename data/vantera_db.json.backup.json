@@ -246,7 +246,10 @@
         "mode": "markup_percent",
         "value": 80
       },
-      "cjLastSyncedAt": "2026-11-14T21:05:54.289Z"
+      "cjLastSyncedAt": "2026-11-16T09:09:13.461Z",
+      "addedByCeo": true,
+      "protectedFromAutoPrune": true,
+      "updatedAt": "2026-11-16T09:08:33.974Z"
     }
   ],
   "orders": [
@@ -295,7 +298,7 @@
       "paymentReference": "WAVY_TX_12345",
       "paymentGateway": "wavy",
       "paymentMethod": "card_online",
-      "paymentStatus": "paid",
+      "paymentStatus": "refunded",
       "paymentProofNotes": "Gateway Reference: WAVY_TX_12345",
       "paymentVerifiedAt": "2026-11-16T08:40:29.464Z",
       "paymentVerifiedBy": "Wavy Gateway (wavy_webhook)",
@@ -307,7 +310,7 @@
       "supplierName": null,
       "notes": null,
       "createdAt": "2026-11-16T08:40:29.461Z",
-      "updatedAt": "2026-11-16T08:40:29.489Z",
+      "updatedAt": "2026-11-16T09:11:02.051Z",
       "returnRequested": true,
       "returnReason": "Ordered wrong model size",
       "returnNotes": "Seal remains intact",
@@ -453,7 +456,7 @@
       "status": "operational",
       "notes": "CJ Dropshipping API 2.0 authenticated and ready.",
       "createdAt": "2026-10-15T08:22:07.163Z",
-      "lastSyncedAt": "2026-11-16T08:57:26.089Z"
+      "lastSyncedAt": "2026-11-16T09:15:09.055Z"
     },
     {
       "id": "sup_manual_direct",
@@ -467,6 +470,62 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "log_1794820510201_s00q",
+      "timestamp": "2026-11-16T09:15:10.201Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794820506012_irs6",
+      "timestamp": "2026-11-16T09:15:06.012Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794820262051_64nk",
+      "timestamp": "2026-11-16T09:11:02.051Z",
+      "actor": "Adnuel (emmanueladarikwu@gmail.com)",
+      "action": "CONFIRM_REFUND",
+      "details": "Order VAN-2026-9145 ($47.00) refunded. Reason: Customer return request"
+    },
+    {
+      "id": "log_1794820153461_j6m5",
+      "timestamp": "2026-11-16T09:09:13.461Z",
+      "actor": "Adnuel (CJ Stock Sync)",
+      "action": "CJ_INVENTORY_SYNC",
+      "details": "Synced CJ stock for 360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand: 35063 units"
+    },
+    {
+      "id": "log_1794820137029_mz81",
+      "timestamp": "2026-11-16T09:08:57.029Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794820113974_9770",
+      "timestamp": "2026-11-16T09:08:33.974Z",
+      "actor": "Adnuel",
+      "action": "UPDATE_PRODUCT",
+      "details": "Updated product: 360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand (360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-)"
+    },
+    {
+      "id": "log_1794820110789_xodv",
+      "timestamp": "2026-11-16T09:08:30.789Z",
+      "actor": "Adnuel",
+      "action": "UPDATE_PRODUCT",
+      "details": "Updated product: 360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand (360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-)"
+    },
+    {
+      "id": "log_1794820099833_ey2g",
+      "timestamp": "2026-11-16T09:08:19.833Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
     {
       "id": "log_1794819501756_hlqp",
       "timestamp": "2026-11-16T08:58:21.756Z",
@@ -998,6 +1057,16 @@
       "orderId": "ord_fb1b99b76de7eded",
       "recipient": "upgrade_test_1794818429292@example.com",
       "channel": "email",
+      "event": "payment_verified",
+      "message": "Your refund for VANTÉRA order VAN-2026-9145 ($47.00) has been confirmed.",
+      "id": "notif_1794820262053_hbqv",
+      "status": "dispatched",
+      "timestamp": "2026-11-16T09:11:02.053Z"
+    },
+    {
+      "orderId": "ord_fb1b99b76de7eded",
+      "recipient": "upgrade_test_1794818429292@example.com",
+      "channel": "email",
       "event": "order_status_updated",
       "message": "Your return/cancellation request for VAN-2026-9145 has been approved.",
       "id": "notif_1794818429489_ehsz",
@@ -1187,6 +1256,22 @@
     }
   ],
   "events": [
+    {
+      "id": "evt_1794820262051_b4bb47ea",
+      "type": "refund_confirmed",
+      "timestamp": "2026-11-16T09:11:02.051Z",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "sessionId": null,
+      "status": "completed",
+      "metadata": {
+        "orderId": "ord_fb1b99b76de7eded",
+        "orderReference": "VAN-2026-9145",
+        "amountCents": 4700,
+        "reason": "Customer return request"
+      }
+    },
     {
       "id": "evt_1794819383021_a9c386a9",
       "type": "product_viewed",
@@ -2262,7 +2347,7 @@
     "ngnExchangeRate": 1352.11,
     "enableNgn": true,
     "enableUsd": true,
-    "lastUpdated": "2026-11-16T08:58:21.756Z",
+    "lastUpdated": "2026-11-16T09:15:06.012Z",
     "isManualOverride": false,
     "manualOverrideBy": null,
     "manualOverrideReason": null,
@@ -2326,7 +2411,7 @@
     }
   ],
   "imageAudit": {
-    "lastScannedAt": "2026-11-16T08:42:59.520Z",
+    "lastScannedAt": "2026-11-16T09:08:33.974Z",
     "totalProducts": 1,
     "withWorkingImages": 1,
     "missingImages": 0,

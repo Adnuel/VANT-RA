@@ -26,6 +26,8 @@ import {
 } from '../server/cj.ts';
 import {
   CURATED_CATEGORIES,
+  ALL_CURATED_SPECS,
+  getCuratedSpecById,
   findMatchingCuratedSpec,
   matchesCuratedSpec,
   mapLegacyCategoryToCurated,
@@ -683,4 +685,61 @@ test('curatedCjCatalog: strictly matches CEO handwritten 5 categories and reject
   // Legacy category mapping preserves old DB products under the new categories
   assert.equal(mapLegacyCategoryToCurated('room-desk'), 'laptop-workspace');
   assert.equal(mapLegacyCategoryToCurated('charging'), 'premium-tech-accessories');
+});
+
+test('curatedCjCatalog: getCuratedSpecById & broad similar-name matching across all 39 handwritten names', () => {
+  assert.equal(ALL_CURATED_SPECS.length, 39);
+
+  // getCuratedSpecById resolves specs directly and returns undefined for unknown IDs
+  const magWire = getCuratedSpecById('tech-magnetic-wire');
+  assert.ok(magWire);
+  assert.equal(magWire.categoryId, 'premium-tech-accessories');
+
+  const foldStand = getCuratedSpecById('work-foldable-laptop-stand');
+  assert.ok(foldStand);
+  assert.equal(foldStand.categoryId, 'laptop-workspace');
+
+  const miniProj = getCuratedSpecById('life-mini-projector');
+  assert.ok(miniProj);
+  assert.equal(miniProj.categoryId, 'trending-lifestyle-gadgets');
+
+  assert.equal(getCuratedSpecById('nonexistent-spec-id'), undefined);
+
+  // Broad similar-name variations carrying the approved product names must match cleanly
+  assert.equal(
+    matchesCuratedSpec('Magnetic USB Charging Cord 3A Nylon Braided', 'Cables', magWire),
+    true
+  );
+  assert.equal(
+    findMatchingCuratedSpec('3 in 1 Foldable MagSafe Charging Station Fast Dock')?.id,
+    'tech-3in1-charging-stand'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('Three-in-One Wireless Charger Stand QI2')?.id,
+    'tech-3in1-charging-stand'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('LED Table Lamp Touch Sensor Eye Protection')?.id,
+    'home-smart-desk-lamp'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('USB Rechargeable Pocket Thermal Printer Bluetooth')?.id,
+    'life-mini-printer'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('Aluminium Alloy Laptop Riser Holder Desk Bracket')?.id,
+    'work-aluminum-laptop-stand'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('Smart Universal Travel Adapter Plug Worldwide')?.id,
+    'carry-smart-travel-accessories'
+  );
+
+  // Exclusion guards still block crossed-out "Magnetic Phone Holder" and car mounts / cases / screen-only items
+  const deskPhoneHolder = getCuratedSpecById('work-desktop-phone-holder')!;
+  const magSafeStand = getCuratedSpecById('tech-magsafe-stand')!;
+  assert.equal(matchesCuratedSpec('Magnetic Phone Holder Car Air Vent Mount', 'Car Mounts', magWire), false);
+  assert.equal(matchesCuratedSpec('Car Mount Phone Holder Dashboard', 'Car Mounts', deskPhoneHolder), false);
+  assert.equal(matchesCuratedSpec('MagSafe Leather Case Wallet Cover', 'Phone Cases', magSafeStand), false);
+  assert.equal(matchesCuratedSpec('Projector Curtain Screen Only 100 inch', 'Home Audio', miniProj), false);
 });

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { CATEGORIES, type Product } from '../data/catalog.ts';
 import { formatUSD, formatNGN, convertUsdCentsToNgn } from '../lib/commerceLogic.ts';
 import {
@@ -6,7 +6,12 @@ import {
   calculateProfitBreakdown,
   type CjPricingMode,
 } from '../lib/cjPricing.ts';
-import { CURATED_CATEGORIES } from '../lib/curatedCjCatalog.ts';
+import {
+  CURATED_CATEGORIES,
+  ALL_CURATED_SPECS,
+  getCuratedSpecById,
+  type CuratedProductTypeSpec,
+} from '../lib/curatedCjCatalog.ts';
 
 interface CjWarehouseInventoryItem {
   countryCode: string;
@@ -148,15 +153,19 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
     results: Array<{ productId: string; title: string; success: boolean; stockQuantity?: number; error?: string }>;
   } | null>(null);
 
-  // One-Click Curated Bulk Import (Max 60% Profit, Strictly CEO's 5 Curated Categories) state
+  // One-Click Curated Bulk Import (Every Matching CJ Product Across All 39 Approved Names, Max 60% Profit)
   const [isBulkImporting, setIsBulkImporting] = useState(false);
   const [bulkImportProgress, setBulkImportProgress] = useState<string | null>(null);
+  const [skipExistingOnBulk, setSkipExistingOnBulk] = useState(true);
+  const [showPerProductTypeImport, setShowPerProductTypeImport] = useState(false);
+  const cancelBulkImportRef = useRef(false);
   const [bulkImportSummary, setBulkImportSummary] = useState<{
     importedCount: number;
     updatedCount: number;
     skippedCount: number;
     failedCount: number;
     maxProfitPercent: number;
+    stoppedEarly?: boolean;
     items: Array<{
       cjPid: string;
       productId: string;
@@ -472,76 +481,215 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
     }
   };
 
-  const handleBulkImportAll = async (onlyCategoryId?: string) => {
+  const handleStopBulkImport = () => {
+    cancelBulkImportRef.current = true;
+    setBulkImportProgress('Stopping after current batch finishes (already-imported items remain saved)...');
+  };
+
+  const handleBulkImportAll = async (opts?: { categoryId?: string; specId?: string }) => {
     if (!adminToken || isBulkImporting) return;
+
+    let targetSpecs: CuratedProductTypeSpec[] = ALL_CURATED_SPECS;
+    if (opts?.specId) {
+      const found = getCuratedSpecById(opts.specId);
+      targetSpecs = found ? [found] : [];
+    } else if (opts?.categoryId) {
+      const cat = CURATED_CATEGORIES.find((c) => c.id === opts.categoryId);
+      targetSpecs = cat ? cat.items : [];
+    }
+
+    if (targetSpecs.length === 0) {
+      onShowToast('Selected curated category or product name was not found.', 'error');
+      return;
+    }
+
+    cancelBulkImportRef.current = false;
     setIsBulkImporting(true);
     setBulkImportSummary(null);
     setSearchError(null);
-
-    const targetCategories = onlyCategoryId
-      ? CURATED_CATEGORIES.filter((c) => c.id === onlyCategoryId)
-      : CURATED_CATEGORIES;
 
     let totalImported = 0;
     let totalUpdated = 0;
     let totalSkipped = 0;
     let totalFailed = 0;
-    const allItems: any[] = [];
+    const allItems: Array<{
+      cjPid: string;
+      productId: string;
+      title: string;
+      category?: string;
+      curatedType?: string;
+      created: boolean;
+      appliedProfitPercent: number;
+      supplierCostCents: number;
+      retailPriceCents: number;
+      retailNgn: number;
+      stockQuantity: number;
+      variantCount: number;
+    }> = [];
     const allErrors: Array<{ cjPid: string; reason: string }> = [];
+    const processedPidsThisRun = new Set<string>();
+    const BATCH_SIZE = 8;
 
     try {
-      for (let idx = 0; idx < targetCategories.length; idx++) {
-        const cat = targetCategories[idx];
+      for (let specIdx = 0; specIdx < targetSpecs.length; specIdx++) {
+        if (cancelBulkImportRef.current) break;
+
+        const spec = targetSpecs[specIdx];
         setBulkImportProgress(
-          `Importing (${idx + 1}/${targetCategories.length}): ${cat.label}...`
+          `(${specIdx + 1}/${targetSpecs.length}) Scanning CJ for every product matching "${spec.label}"...`
         );
 
-        const res = await fetch('/api/admin/suppliers/cj/products/bulk-import', {
+        const discoverRes = await fetch('/api/admin/suppliers/cj/products/curated-discover', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
-            curatedCategoryId: cat.id,
-            maxProfitPercent: 60,
+            curatedSpecId: spec.id,
             countryCode: warehouseCountry || undefined,
+            maxPagesPerKeyword: opts?.specId ? 3 : 2,
           }),
         });
 
-        const data = await res.json().catch(() => null);
-        if (!res.ok) {
+        const discoverData = await discoverRes.json().catch(() => null);
+        if (!discoverRes.ok) {
+          totalFailed += 1;
           allErrors.push({
-            cjPid: cat.label,
-            reason: data?.error || `HTTP ${res.status}`,
+            cjPid: spec.label,
+            reason: discoverData?.error || `Discovery failed (HTTP ${discoverRes.status})`,
           });
           continue;
         }
 
-        totalImported += data.importedCount ?? 0;
-        totalUpdated += data.updatedCount ?? 0;
-        totalSkipped += data.skippedCount ?? 0;
-        totalFailed += data.failedCount ?? 0;
-        if (Array.isArray(data.items)) allItems.push(...data.items);
-        if (Array.isArray(data.errors)) allErrors.push(...data.errors);
+        const rawCandidates: Array<{
+          pid: string;
+          title: string;
+          specId: string;
+          specLabel: string;
+          alreadyImported: boolean;
+        }> = Array.isArray(discoverData?.candidates) ? discoverData.candidates : [];
 
+        if (rawCandidates.length === 0) {
+          totalSkipped += 1;
+          allErrors.push({
+            cjPid: spec.label,
+            reason: `No in-stock CJ products found carrying "${spec.label}".`,
+          });
+          setBulkImportSummary({
+            importedCount: totalImported,
+            updatedCount: totalUpdated,
+            skippedCount: totalSkipped,
+            failedCount: totalFailed,
+            maxProfitPercent: 60,
+            items: [...allItems],
+            errors: [...allErrors],
+          });
+          continue;
+        }
+
+        const uniqueForRun = rawCandidates.filter((c) => {
+          if (!c.pid || processedPidsThisRun.has(c.pid)) return false;
+          processedPidsThisRun.add(c.pid);
+          return true;
+        });
+
+        const candidatesToImport = skipExistingOnBulk
+          ? uniqueForRun.filter((c) => !c.alreadyImported)
+          : uniqueForRun;
+
+        const skippedAlreadyCount = uniqueForRun.length - candidatesToImport.length;
+        if (skippedAlreadyCount > 0) {
+          totalSkipped += skippedAlreadyCount;
+        }
+
+        if (candidatesToImport.length === 0) {
+          setBulkImportSummary({
+            importedCount: totalImported,
+            updatedCount: totalUpdated,
+            skippedCount: totalSkipped,
+            failedCount: totalFailed,
+            maxProfitPercent: 60,
+            items: [...allItems],
+            errors: [...allErrors],
+          });
+          continue;
+        }
+
+        for (let offset = 0; offset < candidatesToImport.length; offset += BATCH_SIZE) {
+          if (cancelBulkImportRef.current) break;
+
+          const batch = candidatesToImport.slice(offset, offset + BATCH_SIZE);
+          const batchEnd = Math.min(offset + batch.length, candidatesToImport.length);
+
+          setBulkImportProgress(
+            `(${specIdx + 1}/${targetSpecs.length}) Importing "${spec.label}" (${batchEnd}/${candidatesToImport.length} matches · ${totalImported + totalUpdated} saved)...`
+          );
+
+          const res = await fetch('/api/admin/suppliers/cj/products/bulk-import', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify({
+              targets: batch.map((c) => ({ pid: c.pid, specId: c.specId || spec.id })),
+              maxProfitPercent: 60,
+              countryCode: warehouseCountry || undefined,
+            }),
+          });
+
+          const data = await res.json().catch(() => null);
+          if (!res.ok) {
+            totalFailed += batch.length;
+            allErrors.push({
+              cjPid: spec.label,
+              reason: data?.error || `Batch import error (HTTP ${res.status})`,
+            });
+            continue;
+          }
+
+          totalImported += data.importedCount ?? 0;
+          totalUpdated += data.updatedCount ?? 0;
+          totalSkipped += data.skippedCount ?? 0;
+          totalFailed += data.failedCount ?? 0;
+          if (Array.isArray(data.items)) allItems.push(...data.items);
+          if (Array.isArray(data.errors)) allErrors.push(...data.errors);
+
+          setBulkImportSummary({
+            importedCount: totalImported,
+            updatedCount: totalUpdated,
+            skippedCount: totalSkipped,
+            failedCount: totalFailed,
+            maxProfitPercent: 60,
+            items: [...allItems],
+            errors: [...allErrors],
+          });
+
+          window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
+          onCatalogUpdated();
+        }
+      }
+
+      const stoppedEarly = cancelBulkImportRef.current;
+      if (stoppedEarly) {
         setBulkImportSummary({
           importedCount: totalImported,
           updatedCount: totalUpdated,
           skippedCount: totalSkipped,
           failedCount: totalFailed,
           maxProfitPercent: 60,
+          stoppedEarly: true,
           items: allItems,
           errors: allErrors,
         });
-
-        window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
-        onCatalogUpdated();
       }
 
       const totalProcessed = totalImported + totalUpdated;
       onShowToast(
-        `Curated Import complete: ${totalImported} new, ${totalUpdated} updated across ${targetCategories.length} categories (max 60% profit cap).`,
+        stoppedEarly
+          ? `Import stopped: ${totalImported} new and ${totalUpdated} updated products were permanently saved.`
+          : `Import complete: ${totalImported} new, ${totalUpdated} updated matching CJ products (max 60% profit cap).`,
         totalProcessed > 0 ? 'success' : 'info'
       );
 
@@ -551,6 +699,7 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
     } catch (err: any) {
       onShowToast(err?.message || 'Unable to bulk import curated CJ products.', 'error');
     } finally {
+      cancelBulkImportRef.current = false;
       setBulkImportProgress(null);
       setIsBulkImporting(false);
     }
@@ -609,7 +758,7 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
             </span>
           </div>
           <p className="text-xs text-[#77746d]">
-            Search CJ&apos;s live supplier database or run One-Click Curated Import to import only your 5 approved VANTÉRA categories &amp; product types (capped at max 60% profit).
+            Search CJ&apos;s live supplier database or run One-Click Import to find and import every available CJ product carrying or similar to your 39 approved VANTÉRA product names across all 5 categories (capped at max 60% profit).
           </p>
         </div>
 
@@ -621,9 +770,19 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
             className="bg-[#121210] text-[#f8f7f4] px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50 cursor-pointer"
           >
             {isBulkImporting
-              ? bulkImportProgress || 'Importing Curated Collection...'
-              : 'One-Click Import Curated Collection · Max 60% Profit'}
+              ? bulkImportProgress || 'Importing All Matching CJ Products...'
+              : 'One-Click Import All Matching Products · Max 60% Profit'}
           </button>
+
+          {isBulkImporting && (
+            <button
+              type="button"
+              onClick={handleStopBulkImport}
+              className="border border-[#9b1c1c] bg-[#fdf2f2] text-[#9b1c1c] px-3.5 py-2 text-xs font-mono font-semibold uppercase tracking-wider hover:bg-[#9b1c1c] hover:text-white transition-colors cursor-pointer"
+            >
+              Stop Import
+            </button>
+          )}
 
           <button
             type="button"
@@ -638,25 +797,83 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
         </div>
       </div>
 
-      {/* Per-Category Quick Curated Import Bar */}
-      <div className="bg-[#f8f7f4] border border-[#e7e4de] p-3.5 space-y-2">
+      {/* Per-Category & Per-Product-Name Quick Import Bar */}
+      <div className="bg-[#f8f7f4] border border-[#e7e4de] p-3.5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono uppercase text-[#77746d]">
-          <span>Curated 5-Category Collection Import (Imports only approved VANTÉRA product types):</span>
-          {bulkImportProgress && <span className="text-[#121210] font-semibold">{bulkImportProgress}</span>}
+          <span>
+            Curated Collection Import (Pulls every matching product per name across all {ALL_CURATED_SPECS.length} handwritten items):
+          </span>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-1.5 text-[#121210] cursor-pointer normal-case font-sans text-xs">
+              <input
+                type="checkbox"
+                checked={skipExistingOnBulk}
+                onChange={(e) => setSkipExistingOnBulk(e.target.checked)}
+                disabled={isBulkImporting}
+              />
+              <span>Skip already imported products</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowPerProductTypeImport((prev) => !prev)}
+              className="underline text-[#121210] hover:text-[#856404] cursor-pointer"
+            >
+              {showPerProductTypeImport
+                ? 'Hide Individual Product Names'
+                : `Import by Individual Product Name (${ALL_CURATED_SPECS.length} names)`}
+            </button>
+          </div>
         </div>
+
+        {bulkImportProgress && (
+          <div className="text-[11px] font-mono text-[#121210] bg-white border border-[#c4a66b]/50 px-3 py-2 font-semibold">
+            {bulkImportProgress}
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2">
           {CURATED_CATEGORIES.map((cat) => (
             <button
               key={cat.id}
               type="button"
               disabled={isBulkImporting || isSearching}
-              onClick={() => handleBulkImportAll(cat.id)}
+              onClick={() => handleBulkImportAll({ categoryId: cat.id })}
               className="border border-[#e7e4de] bg-white hover:border-[#121210] text-[#121210] px-3 py-1.5 text-[11px] font-mono transition-colors disabled:opacity-50 cursor-pointer"
             >
-              + Import {cat.label} ({cat.items.length} types)
+              + Import All {cat.label} ({cat.items.length} names)
             </button>
           ))}
         </div>
+
+        {showPerProductTypeImport && (
+          <div className="border-t border-[#e7e4de] pt-3 space-y-3">
+            <p className="text-[11px] text-[#77746d]">
+              Click any approved product name below to scan CJ and import every in-stock item carrying that name or similar variations (max 60% profit):
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {CURATED_CATEGORIES.map((cat) => (
+                <div key={cat.id} className="bg-white border border-[#e7e4de] p-3 space-y-2">
+                  <div className="font-mono text-[10px] uppercase font-bold text-[#121210] border-b border-[#e7e4de] pb-1.5">
+                    {cat.label}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cat.items.map((spec) => (
+                      <button
+                        key={spec.id}
+                        type="button"
+                        disabled={isBulkImporting || isSearching}
+                        onClick={() => handleBulkImportAll({ specId: spec.id })}
+                        className="border border-[#e7e4de] bg-[#fbfaf7] hover:bg-[#121210] hover:text-[#f8f7f4] text-[#121210] px-2 py-1 text-[10px] font-mono transition-colors disabled:opacity-50 cursor-pointer text-left"
+                      >
+                        + {spec.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bulk Import Summary Banner */}
@@ -664,7 +881,7 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
         <div className="bg-[#fbfaf7] border border-[#c4a66b]/50 p-4 text-xs space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
             <strong className="text-[#121210]">
-              Curated One-Click Import Summary (Max {bulkImportSummary.maxProfitPercent}% Profit Cap):{' '}
+              Curated Matching Import Summary{bulkImportSummary.stoppedEarly ? ' (Stopped by CEO)' : ''} (Max {bulkImportSummary.maxProfitPercent}% Profit Cap):{' '}
               {bulkImportSummary.importedCount} imported · {bulkImportSummary.updatedCount} updated
               {bulkImportSummary.skippedCount > 0 ? ` · ${bulkImportSummary.skippedCount} skipped` : ''}
             </strong>
@@ -677,7 +894,7 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
             </button>
           </div>
           {bulkImportSummary.items.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
               {bulkImportSummary.items.map((item) => (
                 <div key={item.cjPid} className="bg-white border border-[#e7e4de] p-2.5 space-y-1">
                   <div className="font-semibold text-[#121210] truncate" title={item.title}>
