@@ -1,5 +1,6 @@
 import React from 'react';
-import { Product } from '../data/catalog.ts';
+import { Product, CATEGORIES } from '../data/catalog.ts';
+import { getCuratedCategoryById, mapLegacyCategoryToCurated } from '../lib/curatedCjCatalog.ts';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
 import { useWishlist } from '../contexts/WishlistContext.tsx';
@@ -59,11 +60,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
     }
   };
 
-  const categoryLabel = product.category.replace('-', ' ');
+  const mappedCatId = mapLegacyCategoryToCurated(product.category);
+  const curatedCat = getCuratedCategoryById(String(mappedCatId));
+  const categoryObj = CATEGORIES.find((c) => c.id === mappedCatId || c.id === product.category);
+  const categoryLabel = curatedCat?.shortLabel || categoryObj?.label || product.category.replace(/-/g, ' ');
   const statusNote = isOutOfStock
     ? 'Out of stock'
     : isLowStock
-    ? `${product.stockQuantity} left`
+    ? 'Low stock'
     : product.trending
     ? 'Featured'
     : null;

@@ -55,10 +55,11 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
 
   const navItems = [
     { label: 'Shop', href: '/shop' },
-    { label: 'Charging', href: '/category/charging' },
-    { label: 'Cases', href: '/category/phone-cases' },
-    { label: 'Desk', href: '/category/room-desk' },
-    { label: 'Track', href: '/track' },
+    { label: 'Tech', href: '/category/premium-tech-accessories' },
+    { label: 'Smart Home', href: '/category/smart-home-technology' },
+    { label: 'Workspace', href: '/category/laptop-workspace' },
+    { label: 'Lifestyle', href: '/category/trending-lifestyle-gadgets' },
+    { label: 'Everyday', href: '/category/premium-everyday-accessories' },
   ];
 
   const wishlistedProducts = products.filter((p) => wishlistIds.includes(p.id));
@@ -71,7 +72,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
           {/* Left: Minimal Navigation (Desktop) */}
           <nav
             aria-label="Primary Navigation"
-            className="hidden lg:flex items-center gap-7 text-[11px] uppercase tracking-[0.2em] font-medium text-[#A8A297] lg:flex-1"
+            className="hidden lg:flex items-center gap-4 xl:gap-5 text-[10px] xl:text-[11px] uppercase tracking-[0.14em] xl:tracking-[0.18em] font-medium text-[#A8A297] lg:flex-1"
           >
             {navItems.map((item) => {
               const isActive = activePath === item.href;
@@ -253,6 +254,17 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   {item.label}
                 </a>
               ))}
+              <a
+                href="/track"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsMobileMenuOpen(false);
+                  onNavigate('/track');
+                }}
+                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#F5F1E8] hover:text-[#C8A96A]"
+              >
+                Order Tracking
+              </a>
               <a
                 href="/about"
                 onClick={(e) => {
@@ -578,22 +590,32 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
               <ul className="space-y-3 text-sm text-[#A8A297]">
                 <li>
                   <button type="button" onClick={() => onNavigate('/shop')} className="hover:text-[#F5F1E8] cursor-pointer">
-                    All Hardware
+                    All Collections
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/category/charging')} className="hover:text-[#F5F1E8] cursor-pointer">
-                    MagSafe & Charging
+                  <button type="button" onClick={() => onNavigate('/category/premium-tech-accessories')} className="hover:text-[#F5F1E8] cursor-pointer">
+                    Premium Tech Accessories
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/category/phone-cases')} className="hover:text-[#F5F1E8] cursor-pointer">
-                    Phone Cases
+                  <button type="button" onClick={() => onNavigate('/category/smart-home-technology')} className="hover:text-[#F5F1E8] cursor-pointer">
+                    Smart Home Technology
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/category/room-desk')} className="hover:text-[#F5F1E8] cursor-pointer">
-                    Desk & Audio
+                  <button type="button" onClick={() => onNavigate('/category/laptop-workspace')} className="hover:text-[#F5F1E8] cursor-pointer">
+                    Laptop & Workspace Accessories
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => onNavigate('/category/trending-lifestyle-gadgets')} className="hover:text-[#F5F1E8] cursor-pointer">
+                    Trending Lifestyle Gadgets
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => onNavigate('/category/premium-everyday-accessories')} className="hover:text-[#F5F1E8] cursor-pointer">
+                    Premium Everyday Accessories
                   </button>
                 </li>
                 <li>

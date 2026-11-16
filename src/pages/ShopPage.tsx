@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Product, CATEGORIES } from '../data/catalog.ts';
+import { mapLegacyCategoryToCurated } from '../lib/curatedCjCatalog.ts';
 import { ProductCard } from '../components/ProductCard.tsx';
 import { TechSpecsModal } from '../components/TechSpecsModal.tsx';
 import { trackEvent } from '../lib/tracker.ts';
@@ -29,7 +30,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
 
   useEffect(() => {
     if (activeCategory) {
-      setSelectedCategory(activeCategory);
+      setSelectedCategory(String(mapLegacyCategoryToCurated(activeCategory)));
       trackEvent('category_visited', { category: activeCategory });
     } else {
       setSelectedCategory('all');
@@ -64,9 +65,8 @@ export const ShopPage: React.FC<ShopPageProps> = ({
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       if (selectedCategory !== 'all') {
-        if (selectedCategory === 'festive-season') {
-          if (!p.festiveBestseller && p.category !== 'festive-season') return false;
-        } else if (p.category !== selectedCategory) {
+        const mappedProductCat = mapLegacyCategoryToCurated(p.category);
+        if (mappedProductCat !== selectedCategory && p.category !== selectedCategory) {
           return false;
         }
       }
@@ -128,9 +128,8 @@ export const ShopPage: React.FC<ShopPageProps> = ({
           {getPageHeading()}
         </h1>
         <p className="text-sm sm:text-base text-[#A8A297] max-w-2xl leading-relaxed">
-          {selectedCategory === 'phones'
-            ? 'Flagship devices are managed by direct concierge allocation.'
-            : 'Phone cases, magnetic wireless charging, desk architecture, and everyday carry essentials.'}
+          {currentCategoryObj?.description ||
+            'Premium tech accessories, smart home technology, laptop & workspace gear, lifestyle gadgets, and everyday carry essentials.'}
         </p>
       </div>
 
@@ -150,11 +149,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
                 : 'bg-[#141416] border border-white/10 text-[#A8A297] hover:text-[#F5F1E8]'
             }`}
           >
-            All ({products.length})
+            All Collections
           </button>
 
           {CATEGORIES.map((cat) => {
-            const count = products.filter((p) => p.category === cat.id).length;
             const isSelected = selectedCategory === cat.id;
             return (
               <button
@@ -171,7 +169,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
                     : 'bg-[#141416] border border-white/10 text-[#A8A297] hover:text-[#F5F1E8]'
                 }`}
               >
-                {cat.label} ({count})
+                {cat.label}
               </button>
             );
           })}
@@ -215,10 +213,6 @@ export const ShopPage: React.FC<ShopPageProps> = ({
             >
               In Stock Only
             </button>
-
-            <span className="text-xs uppercase tracking-[0.16em] text-[#A8A297] tabular-nums">
-              {sortedProducts.length} {sortedProducts.length === 1 ? 'Piece' : 'Pieces'}
-            </span>
 
             <select
               value={sortBy}

@@ -24,6 +24,12 @@ import {
   CJ_FREIGHT_CALCULATE_URL,
   CjApiRequestError,
 } from '../server/cj.ts';
+import {
+  CURATED_CATEGORIES,
+  findMatchingCuratedSpec,
+  matchesCuratedSpec,
+  mapLegacyCategoryToCurated,
+} from '../src/lib/curatedCjCatalog.ts';
 import { db } from '../server/db.ts';
 
 function makeTempTokenPath(): string {
@@ -80,9 +86,12 @@ test('cjPricing: cleans HTML descriptions, maps VANTÉRA categories, and parses 
   const clean = stripHtmlDescription('<p>Aluminum <strong>MagSafe</strong> Stand<br/>Fast Qi2</p><script>alert(1)</script>');
   assert.equal(clean, 'Aluminum MagSafe Stand\nFast Qi2');
 
-  assert.equal(suggestVanteraCategory('Mobile Phone Accessories > Chargers', 'MagSafe 15W Wireless Charger'), 'charging');
-  assert.equal(suggestVanteraCategory('Consumer Electronics', 'ANC Wireless Earbuds'), 'audio');
-  assert.equal(suggestVanteraCategory('Phone Cases', 'Aramid Case'), 'phone-cases');
+  assert.equal(suggestVanteraCategory('Mobile Phone Accessories > Chargers', 'MagSafe 15W Wireless Charger'), 'premium-tech-accessories');
+  assert.equal(suggestVanteraCategory('Consumer Electronics', 'ANC Wireless Earbuds'), 'premium-tech-accessories');
+  assert.equal(suggestVanteraCategory('Smart Lighting', 'Motion Sensor Night Light'), 'smart-home-technology');
+  assert.equal(suggestVanteraCategory('Workspace', 'Foldable Aluminum Laptop Stand'), 'laptop-workspace');
+  assert.equal(suggestVanteraCategory('Kitchen & Home', 'Mini Portable Thermal Printer'), 'trending-lifestyle-gadgets');
+  assert.equal(suggestVanteraCategory('Travel Goods', 'Minimalist RFID Metal Wallet'), 'premium-everyday-accessories');
 
   assert.deepEqual(parseVariantAttributes('Obsidian Black-USB-C'), {
     label: 'Obsidian Black · USB · C',
@@ -452,7 +461,7 @@ test('DB Integration: upsertCjProduct, syncCjProductStock, and variant-aware ord
     assert.equal(syncedZero.isAvailable, false);
     assert.equal(syncedZero.variants![0].isAvailable, false);
 
-    // Add a legacy non-CJ product and confirm removeNonCjProducts removes only non-CJ items
+    // 1. Add an un-flagged legacy non-CJ product and confirm removeNonCjProducts removes ONLY un-protected legacy items
     db.addProduct(
       {
         title: 'Legacy Non-CJ Item',
@@ -472,16 +481,91 @@ test('DB Integration: upsertCjProduct, syncCjProductStock, and variant-aware ord
         priceBasis: 'official',
         sourceDescription: false,
         trending: false,
+        addedByCeo: false,
+        protectedFromAutoPrune: false,
       },
-      'Test Runner'
+      'System'
     );
+
+    // 2. Add a CEO-added manual product (defaults to addedByCeo: true, protectedFromAutoPrune: true)
+    const ceoManual = db.addProduct(
+      {
+        title: 'CEO Signature Obsidian Charger',
+        slug: 'ceo-signature-obsidian-charger',
+        category: 'charging',
+        retailPriceCents: 4500,
+        supplierCostCents: 1800,
+        stockQuantity: 15,
+        isAvailable: true,
+        availability: 'In Stock · Ready to Ship',
+        description: 'CEO added durable product',
+        image: 'https://example.com/ceo-charger.jpg',
+        imageAlt: 'CEO Signature Obsidian Charger',
+        imageNeedsReview: false,
+        sourceTitle: null,
+        referencePriceCents: null,
+        priceBasis: 'ceo-direct',
+        sourceDescription: true,
+        trending: false,
+      },
+      'Adnuel'
+    );
+    assert.equal(ceoManual.addedByCeo, true);
+    assert.equal(ceoManual.protectedFromAutoPrune, true);
+
+    // Adding another product with the same title must auto-deduplicate slug and never fail
+    const ceoManualDup = db.addProduct(
+      {
+        title: 'CEO Signature Obsidian Charger',
+        slug: '',
+        category: 'charging',
+        retailPriceCents: 4900,
+        supplierCostCents: 2000,
+        stockQuantity: 8,
+        isAvailable: true,
+        availability: 'In Stock · Ready to Ship',
+        description: 'Duplicate title still saves safely',
+        image: 'https://example.com/ceo-charger-2.jpg',
+        imageAlt: 'CEO Signature Obsidian Charger',
+        imageNeedsReview: false,
+        sourceTitle: null,
+        referencePriceCents: null,
+        priceBasis: 'ceo-direct',
+        sourceDescription: true,
+        trending: false,
+      },
+      'Adnuel'
+    );
+    assert.notEqual(ceoManualDup.slug, ceoManual.slug);
+
+    // Pruning legacy non-CJ items MUST preserve both CJ products AND CEO-added products
     const pruneResult = db.removeNonCjProducts('Test Runner');
     assert.ok(pruneResult.removedCount >= 1);
     const remaining = db.getProducts();
-    assert.ok(remaining.every((p) => p.supplierSource === 'cjdropshipping' || Boolean(p.cjPid)));
+    assert.ok(!remaining.some((p) => p.slug === 'legacy-non-cj-item'));
+    assert.ok(remaining.some((p) => p.id === ceoManual.id));
+    assert.ok(remaining.some((p) => p.id === ceoManualDup.id));
+    assert.ok(remaining.some((p) => p.id === imported.product.id));
+
+    // Only explicit deleteProduct removes a saved product
+    const delRes = db.deleteProduct(ceoManualDup.id, 'Adnuel');
+    assert.equal(delRes.deleted.id, ceoManualDup.id);
+    assert.ok(!db.getProducts().some((p) => p.id === ceoManualDup.id));
+    assert.ok(db.getProducts().some((p) => p.id === ceoManual.id));
+
+    // Verify backup recovery restores saved CEO product if primary DB file is corrupted
+    const backupDbPath = `${dbPath}.backup.json`;
+    assert.ok(fs.existsSync(backupDbPath), 'Expected shadow backup file to exist');
+    fs.writeFileSync(dbPath, '{corrupted json', 'utf8');
+    db.resetCacheForTests();
+    const recoveredProducts = db.getProducts();
+    assert.ok(recoveredProducts.some((p) => p.id === ceoManual.id));
   } finally {
+    const backupDbPath = `${dbPath}.backup.json`;
     if (backup !== null) {
       fs.writeFileSync(dbPath, backup, 'utf8');
+      fs.writeFileSync(backupDbPath, backup, 'utf8');
+      db.resetCacheForTests();
     }
   }
 });
@@ -519,4 +603,84 @@ test('cjPricing: calculateProductDependentPricingCents scales profit by product 
   const clamped = calculateProductDependentPricingCents(200, { maxProfitPercent: 120 });
   assert.ok(clamped.markupPercent <= 60);
   assert.equal(clamped.retailPriceCents, 320);
+});
+
+test('curatedCjCatalog: strictly matches CEO handwritten 5 categories and rejects non-curated items', () => {
+  assert.equal(CURATED_CATEGORIES.length, 5);
+  assert.deepEqual(
+    CURATED_CATEGORIES.map((c) => c.id),
+    [
+      'premium-tech-accessories',
+      'smart-home-technology',
+      'laptop-workspace',
+      'trending-lifestyle-gadgets',
+      'premium-everyday-accessories',
+    ]
+  );
+
+  // Category 1: Premium Tech Accessories
+  assert.equal(
+    findMatchingCuratedSpec('100W Magnetic USB Charging Wire Cable')?.categoryId,
+    'premium-tech-accessories'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('3-in-1 Wireless Charging Stand for iPhone & Watch')?.categoryId,
+    'premium-tech-accessories'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('Wireless Lavalier Microphone Clip-on Lapel')?.categoryId,
+    'premium-tech-accessories'
+  );
+
+  // Excluded "magnetic phone holder" from handwritten list must NOT match Magnetic Wire
+  const magneticWireSpec = CURATED_CATEGORIES[0].items.find((i) => i.id === 'tech-magnetic-wire')!;
+  assert.equal(matchesCuratedSpec('Car Magnetic Phone Holder Mount', 'Auto', magneticWireSpec), false);
+
+  // Category 2: Smart Home Technology
+  assert.equal(
+    findMatchingCuratedSpec('Smart LED Desk Lamp Touch Dimming')?.categoryId,
+    'smart-home-technology'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('Automatic Foam Soap Dispenser USB Rechargeable')?.categoryId,
+    'smart-home-technology'
+  );
+
+  // Category 3: Laptop & Workspace Accessories
+  assert.equal(
+    findMatchingCuratedSpec('Monitor Light Bar Screenbar Asymmetric LED')?.categoryId,
+    'laptop-workspace'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('Mini Desktop Vacuum Cleaner Cordless')?.categoryId,
+    'laptop-workspace'
+  );
+
+  // Category 4: Trending Lifestyle Gadgets
+  assert.equal(
+    findMatchingCuratedSpec('Mini Portable Thermal Printer Wireless Pocket')?.categoryId,
+    'trending-lifestyle-gadgets'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('Portable USB Blender Juicer Cup')?.categoryId,
+    'trending-lifestyle-gadgets'
+  );
+
+  // Category 5: Premium Everyday Accessories
+  assert.equal(
+    findMatchingCuratedSpec('Minimalist RFID Slim Metal Wallet')?.categoryId,
+    'premium-everyday-accessories'
+  );
+  assert.equal(
+    findMatchingCuratedSpec('Portable Travel Jewellery Box Leather')?.categoryId,
+    'premium-everyday-accessories'
+  );
+
+  // Completely unrelated non-curated products must return null so bulk import rejects them
+  assert.equal(findMatchingCuratedSpec('Cotton Summer Dress Floral Skirt', 'Women Clothing'), null);
+  assert.equal(findMatchingCuratedSpec('Pet Dog Grooming Winter Coat', 'Pet Supplies'), null);
+
+  // Legacy category mapping preserves old DB products under the new categories
+  assert.equal(mapLegacyCategoryToCurated('room-desk'), 'laptop-workspace');
+  assert.equal(mapLegacyCategoryToCurated('charging'), 'premium-tech-accessories');
 });

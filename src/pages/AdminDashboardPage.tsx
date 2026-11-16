@@ -101,7 +101,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [productForm, setProductForm] = useState({
     title: '',
-    category: 'phone-cases',
+    category: 'premium-tech-accessories',
     retailPrice: '9.99',
     supplierCost: '3.50',
     stockQuantity: 30,
@@ -149,6 +149,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
   const [isTestingCj, setIsTestingCj] = useState(false);
   const [syncingCjProductId, setSyncingCjProductId] = useState<string | null>(null);
   const [isPruningNonCj, setIsPruningNonCj] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [confirmDeleteProductId, setConfirmDeleteProductId] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
   // Load all admin data including real analytics & real customer events
   const loadDashboardData = async () => {
@@ -715,23 +718,43 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const retailPriceCents = Math.round(parseFloat(productForm.retailPrice) * 100);
-    const supplierCostCents = productForm.supplierCost ? Math.round(parseFloat(productForm.supplierCost) * 100) : null;
+    if (isSavingProduct) return;
 
+    const title = productForm.title.trim();
+    if (!title) {
+      showToast('Product title is required.', 'error');
+      return;
+    }
+
+    const retailPriceNum = parseFloat(productForm.retailPrice);
+    const retailPriceCents = Math.round(retailPriceNum * 100);
+    if (!Number.isFinite(retailPriceCents) || retailPriceCents <= 0) {
+      showToast('Please enter a valid positive retail price in USD.', 'error');
+      return;
+    }
+
+    const parsedSupplierCost = productForm.supplierCost ? parseFloat(productForm.supplierCost) : null;
+    const supplierCostCents =
+      parsedSupplierCost !== null && Number.isFinite(parsedSupplierCost) && parsedSupplierCost >= 0
+        ? Math.round(parsedSupplierCost * 100)
+        : null;
+    const stockQuantity = Math.max(0, parseInt(String(productForm.stockQuantity), 10) || 0);
+
+    setIsSavingProduct(true);
     try {
       if (editingProduct) {
-        await fetch(`/api/admin/products/${editingProduct.id}`, {
+        const res = await fetch(`/api/admin/products/${editingProduct.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
-            title: productForm.title,
+            title,
             category: productForm.category,
             retailPriceCents,
             supplierCostCents,
-            stockQuantity: parseInt(String(productForm.stockQuantity), 10),
+            stockQuantity,
             isAvailable: productForm.isAvailable,
             description: productForm.description,
             image: productForm.image || null,
@@ -739,39 +762,84 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
             supplierLink: productForm.supplierLink,
           }),
         });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.product) {
+          showToast(data?.error || 'Failed to update product.', 'error');
+          return;
+        }
         setEditingProduct(null);
+        showToast(`"${data.product.title}" updated and saved.`, 'success');
       } else if (isAddingProduct) {
-        await fetch('/api/admin/products', {
+        const res = await fetch('/api/admin/products', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
-            title: productForm.title,
+            title,
             category: productForm.category,
             retailPriceCents,
             supplierCostCents,
-            stockQuantity: parseInt(String(productForm.stockQuantity), 10),
+            stockQuantity,
             isAvailable: productForm.isAvailable,
-            availability: 'Ready for Order',
+            availability: productForm.isAvailable && stockQuantity > 0 ? 'In Stock · Ready to Ship' : 'Out of Stock',
             description: productForm.description,
             image: productForm.image || null,
-            imageAlt: productForm.title,
+            imageAlt: title,
             imageNeedsReview: false,
-            sourceTitle: productForm.title,
+            sourceTitle: title,
             referencePriceCents: retailPriceCents,
-            priceBasis: 'provisional-estimate',
+            priceBasis: 'ceo-direct',
             sourceDescription: true,
             trending: false,
             supplierName: productForm.supplierName,
             supplierLink: productForm.supplierLink,
+            supplierSource: 'manual',
+            addedByCeo: true,
+            protectedFromAutoPrune: true,
           }),
         });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.product) {
+          showToast(data?.error || 'Failed to save new product.', 'error');
+          return;
+        }
         setIsAddingProduct(false);
+        showToast(`"${data.product.title}" saved permanently to your VANTÉRA catalog.`, 'success');
       }
-      loadDashboardData();
-    } catch {}
+      window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
+      await loadDashboardData();
+    } catch {
+      showToast('Network error while saving product. Please retry.', 'error');
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string, productTitle: string) => {
+    if (!adminToken || deletingProductId) return;
+    setDeletingProductId(productId);
+    try {
+      const res = await fetch(`/api/admin/products/${encodeURIComponent(productId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        showToast(data?.error || 'Failed to remove product.', 'error');
+        return;
+      }
+      setConfirmDeleteProductId(null);
+      setProducts((prev) => prev.filter((item) => item.id !== productId));
+      showToast(`Removed "${productTitle}" from your catalog.`, 'info');
+      window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
+      await loadDashboardData();
+    } catch {
+      showToast('Network error while removing product.', 'error');
+    } finally {
+      setDeletingProductId(null);
+    }
   };
 
   const handleSaveBankSettings = async (e: React.FormEvent) => {
@@ -980,7 +1048,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                 setIsAddingProduct(true);
                 setProductForm({
                   title: '',
-                  category: 'phone-cases',
+                  category: 'premium-tech-accessories',
                   retailPrice: '9.99',
                   supplierCost: '3.50',
                   stockQuantity: 30,
@@ -1846,7 +1914,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                 >
                   {isPruningNonCj
                     ? 'Removing Old Products...'
-                    : `Remove Old Non-CJ Products (${products.filter((p) => p.supplierSource !== 'cjdropshipping' && !p.cjPid).length})`}
+                    : `Remove Old Non-CJ Products (${products.filter((p) => p.supplierSource !== 'cjdropshipping' && !p.cjPid && p.addedByCeo !== true && p.protectedFromAutoPrune !== true).length})`}
                 </button>
                 <button
                   type="button"
@@ -1855,7 +1923,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                     setIsAddingProduct(true);
                     setProductForm({
                       title: '',
-                      category: 'phone-cases',
+                      category: 'premium-tech-accessories',
                       retailPrice: '9.99',
                       supplierCost: '3.50',
                       stockQuantity: 30,
@@ -1944,7 +2012,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                             </button>
                           )}
                           <button
+                            type="button"
                             onClick={() => {
+                              setConfirmDeleteProductId(null);
                               setEditingProduct(p);
                               setIsAddingProduct(false);
                               setProductForm({
@@ -1964,6 +2034,34 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                           >
                             Edit
                           </button>
+                          {confirmDeleteProductId === p.id ? (
+                            <span className="inline-flex items-center gap-1.5 ml-2">
+                              <button
+                                type="button"
+                                disabled={deletingProductId === p.id}
+                                onClick={() => handleDeleteProduct(p.id, p.title)}
+                                className="bg-[#9b1c1c] text-white px-2 py-0.5 text-[10px] font-mono uppercase font-semibold hover:bg-[#7f1d1d] disabled:opacity-50 cursor-pointer"
+                              >
+                                {deletingProductId === p.id ? 'Removing...' : 'Confirm'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={deletingProductId === p.id}
+                                onClick={() => setConfirmDeleteProductId(null)}
+                                className="text-[#77746d] text-[10px] font-mono uppercase hover:text-[#121210] cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteProductId(p.id)}
+                              className="text-[#9b1c1c] font-mono text-[10px] uppercase font-semibold hover:underline cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -3056,14 +3154,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                       type="button"
                       onClick={() => {
                         const samples: Record<string, string> = {
-                          'phone-cases': 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?auto=format&fit=crop&w=800&q=80',
-                          'charging': 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=800&q=80',
-                          'audio': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
-                          'photography': 'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?auto=format&fit=crop&w=800&q=80',
-                          'room-desk': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80',
-                          'computer': 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&w=800&q=80',
+                          'premium-tech-accessories': 'https://images.unsplash.com/photo-1588508065123-287b28e013da?auto=format&fit=crop&w=800&q=80',
+                          'smart-home-technology': 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80',
+                          'laptop-workspace': 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&w=800&q=80',
+                          'trending-lifestyle-gadgets': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
+                          'premium-everyday-accessories': 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=800&q=80',
                         };
-                        const suggested = samples[productForm.category] || samples['phone-cases'];
+                        const suggested = samples[productForm.category] || samples['premium-tech-accessories'];
                         setProductForm({ ...productForm, image: suggested });
                       }}
                       className="text-[11px] text-[#c4a66b] hover:underline font-mono"
@@ -3123,9 +3220,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#121210] text-[#f8f7f4] px-5 py-2 uppercase tracking-wider font-semibold hover:bg-[#c4a66b] hover:text-[#121210]"
+                  disabled={isSavingProduct}
+                  className="bg-[#121210] text-[#f8f7f4] px-5 py-2 uppercase tracking-wider font-semibold hover:bg-[#c4a66b] hover:text-[#121210] disabled:opacity-50 cursor-pointer"
                 >
-                  Save Product Changes
+                  {isSavingProduct ? 'Saving...' : 'Save Product Changes'}
                 </button>
               </div>
             </form>

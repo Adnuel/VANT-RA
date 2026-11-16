@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Product } from '../data/catalog.ts';
+import { Product, CATEGORIES } from '../data/catalog.ts';
+import { mapLegacyCategoryToCurated } from '../lib/curatedCjCatalog.ts';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
 
@@ -51,6 +52,9 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
     product.availability === 'out_of_stock' ||
     (activeVariant ? !activeVariant.isAvailable : false);
   const isReservedPhone = product.category === 'phones';
+  const mappedCatId = mapLegacyCategoryToCurated(product.category);
+  const categoryObj = CATEGORIES.find((c) => c.id === mappedCatId || c.id === product.category);
+  const categoryLabel = categoryObj?.label || product.category.replace(/-/g, ' ');
 
   const finishes = [
     { name: 'Obsidian Noir', hex: '#141416' },
@@ -143,7 +147,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-[#C8A96A]">
-                  {product.category.replace('-', ' ')}
+                  {categoryLabel}
                 </p>
                 <h2 id="tech-specs-title" className="font-editorial text-2xl font-medium text-[#F5F1E8] mt-1">
                   {product.title}
@@ -165,7 +169,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
               <div className="flex justify-between">
                 <span className="text-[#A8A297] uppercase tracking-[0.12em] text-[10px]">Availability</span>
                 <span className={isOutOfStock ? 'text-[#E57373]' : 'text-[#F5F1E8]'}>
-                  {isOutOfStock ? 'Out of stock' : `${effectiveStock} units ready`}
+                  {isOutOfStock ? 'Out of stock' : effectiveStock <= 5 ? 'Low stock' : 'In stock'}
                 </span>
               </div>
               <div className="flex justify-between">

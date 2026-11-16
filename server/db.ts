@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { INITIAL_PRODUCTS } from '../src/data/catalog.ts';
 import type { Product, ProductVariant } from '../src/data/catalog.ts';
 import { calculateRealAnalytics } from '../src/lib/analyticsLogic.ts';
 import type { AnalyticsTimeRange } from '../src/lib/analyticsLogic.ts';
@@ -329,8 +328,9 @@ export interface DatabaseSchema {
   processedWebhooks?: Record<string, { timestamp: string; payload: any }>;
 }
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_DIR = path.resolve(process.env.VANTERA_DATA_DIR || process.env.DATA_DIR || path.join(process.cwd(), 'data'));
 const DB_FILE = path.join(DATA_DIR, 'vantera_db.json');
+const DB_BACKUP_FILE = `${DB_FILE}.backup.json`;
 const TOKEN_SECRET = process.env.SESSION_SECRET || 'vantera-secret-key-2026-elevated-tech';
 
 export const AUTHORIZED_CEO_EMAIL = 'emmanueladarikwu@gmail.com';
@@ -344,16 +344,11 @@ function ensureDataDirectory() {
   }
 }
 
-function loadDatabase(): DatabaseSchema {
-  if (dbCache) return dbCache;
-  ensureDataDirectory();
-
-  if (fs.existsSync(DB_FILE)) {
-    try {
-      const content = fs.readFileSync(DB_FILE, 'utf8');
-      dbCache = JSON.parse(content);
-      if (dbCache) {
-        if (!Array.isArray(dbCache.events)) dbCache.events = [];
+function hydrateDatabaseSchema(parsed: DatabaseSchema): DatabaseSchema {
+  dbCache = parsed;
+  if (dbCache) {
+    if (!Array.isArray(dbCache.products)) dbCache.products = [];
+    if (!Array.isArray(dbCache.events)) dbCache.events = [];
         if (!Array.isArray(dbCache.carts)) dbCache.carts = [];
         if (!Array.isArray(dbCache.visitorSessions)) dbCache.visitorSessions = [];
         if (!dbCache.currencySettings) {
@@ -445,13 +440,43 @@ function loadDatabase(): DatabaseSchema {
 
         // Preserve existing product catalog without auto-reinjecting legacy seed items
       }
-      return dbCache!;
-    } catch (err) {
-      console.error('Failed to parse database file, reinitializing:', err);
-    }
+  return dbCache!;
+}
+
+function tryReadDatabaseFile(filePath: string): DatabaseSchema | null {
+  if (!fs.existsSync(filePath)) return null;
+  const content = fs.readFileSync(filePath, 'utf8');
+  if (!content || !content.trim()) return null;
+  const parsed = JSON.parse(content) as DatabaseSchema;
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.users) || !Array.isArray(parsed.products)) {
+    throw new Error(`Invalid database schema structure in ${filePath}`);
+  }
+  return hydrateDatabaseSchema(parsed);
+}
+
+function loadDatabase(): DatabaseSchema {
+  if (dbCache) return dbCache;
+  ensureDataDirectory();
+
+  try {
+    const primary = tryReadDatabaseFile(DB_FILE);
+    if (primary) return primary;
+  } catch (err) {
+    console.error('Primary database file unreadable, attempting backup recovery:', err);
   }
 
-  // Initial Seed
+  try {
+    const recovered = tryReadDatabaseFile(DB_BACKUP_FILE);
+    if (recovered) {
+      console.warn('Recovered VANTÉRA database from backup copy.');
+      saveDatabase(recovered);
+      return recovered;
+    }
+  } catch (backupErr) {
+    console.error('Backup database file unreadable, initializing clean store schema:', backupErr);
+  }
+
+  // Clean Initial Schema (never resurrect legacy seed products automatically)
   const initialSchema: DatabaseSchema = {
     users: [
       {
@@ -465,7 +490,7 @@ function loadDatabase(): DatabaseSchema {
       },
     ],
     deliveryAddresses: [],
-    products: INITIAL_PRODUCTS,
+    products: [],
     orders: [],
     bankSettings: {
       bankName: 'Guaranty Trust Bank (GTBank)',
@@ -546,11 +571,11 @@ function loadDatabase(): DatabaseSchema {
     verificationCodes: [],
     imageAudit: {
       lastScannedAt: new Date().toISOString(),
-      totalProducts: INITIAL_PRODUCTS.length,
-      withWorkingImages: INITIAL_PRODUCTS.filter((p) => p.image).length,
-      missingImages: INITIAL_PRODUCTS.filter((p) => !p.image).length,
+      totalProducts: 0,
+      withWorkingImages: 0,
+      missingImages: 0,
       repairedImages: 0,
-      awaitingReview: INITIAL_PRODUCTS.filter((p) => p.imageNeedsReview).length,
+      awaitingReview: 0,
     },
     suppliers: [
       {
@@ -590,7 +615,7 @@ function loadDatabase(): DatabaseSchema {
         timestamp: new Date().toISOString(),
         actor: 'System',
         action: 'INITIALIZE_STORE',
-        details: 'VANTÉRA unified database seeded with 60 products and CEO authorization for Adnuel.',
+        details: 'VANTÉRA database initialized cleanly with CEO authorization for Adnuel.',
       },
     ],
     notifications: [],
@@ -606,9 +631,16 @@ function loadDatabase(): DatabaseSchema {
 
 function saveDatabase(data: DatabaseSchema): void {
   ensureDataDirectory();
-  const tempFile = `${DB_FILE}.tmp.${Date.now()}`;
-  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf8');
+  const serialized = JSON.stringify(data, null, 2);
+  const stamp = `${process.pid}.${Date.now()}`;
+  const tempFile = `${DB_FILE}.tmp.${stamp}`;
+  fs.writeFileSync(tempFile, serialized, 'utf8');
   fs.renameSync(tempFile, DB_FILE);
+
+  const backupTempFile = `${DB_BACKUP_FILE}.tmp.${stamp}`;
+  fs.writeFileSync(backupTempFile, serialized, 'utf8');
+  fs.renameSync(backupTempFile, DB_BACKUP_FILE);
+
   dbCache = data;
 }
 
@@ -829,8 +861,21 @@ export const db = {
     const idx = d.products.findIndex((p) => p.id === id || p.slug === id);
     if (idx === -1) throw new Error('Product not found');
     const existing = d.products[idx];
-    const updated = { ...existing, ...updates };
+    const nextRetailCents =
+      typeof updates.retailPriceCents === 'number' && Number.isFinite(updates.retailPriceCents)
+        ? Math.max(1, Math.round(updates.retailPriceCents))
+        : existing.retailPriceCents;
+    const updated: Product = {
+      ...existing,
+      ...updates,
+      retailPriceCents: nextRetailCents,
+      priceCents: nextRetailCents,
+      addedByCeo: existing.addedByCeo ?? true,
+      protectedFromAutoPrune: existing.protectedFromAutoPrune ?? true,
+      updatedAt: new Date().toISOString(),
+    };
     d.products[idx] = updated;
+    d.imageAudit = this.getImageAudit();
     this.addAuditLog(actor, 'UPDATE_PRODUCT', `Updated product: ${updated.title} (${updated.slug})`);
     saveDatabase(d);
     return updated;
@@ -838,19 +883,68 @@ export const db = {
 
   addProduct(productData: Omit<Product, 'id'>, actor: string): Product {
     const d = loadDatabase();
-    const slug = productData.slug || productData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    if (d.products.some((p) => p.slug === slug)) {
-      throw new Error(`A product with slug "${slug}" already exists.`);
+    const title = String(productData.title || '').trim();
+    if (!title) {
+      throw new Error('Product title is required.');
     }
+    const retailPriceCents = Math.round(Number(productData.retailPriceCents));
+    if (!Number.isFinite(retailPriceCents) || retailPriceCents <= 0) {
+      throw new Error('Product retail price must be a positive amount.');
+    }
+    const stockQuantity = Math.max(0, Math.round(Number(productData.stockQuantity) || 0));
+
+    const baseSlug =
+      String(productData.slug || title)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60) || `product-${Date.now()}`;
+
+    let slug = baseSlug;
+    let suffix = 2;
+    while (d.products.some((p) => p.slug === slug || p.id === slug)) {
+      slug = `${baseSlug}-${suffix++}`;
+    }
+
+    const nowIso = new Date().toISOString();
     const newProd: Product = {
       ...productData,
       id: slug,
       slug,
+      title,
+      retailPriceCents,
+      priceCents: retailPriceCents,
+      stockQuantity,
+      isAvailable: typeof productData.isAvailable === 'boolean' ? productData.isAvailable : stockQuantity > 0,
+      supplierSource: productData.supplierSource || 'manual',
+      addedByCeo: productData.addedByCeo ?? true,
+      protectedFromAutoPrune: productData.protectedFromAutoPrune ?? true,
+      createdAt: productData.createdAt || nowIso,
+      updatedAt: nowIso,
     };
-    d.products.push(newProd);
-    this.addAuditLog(actor, 'ADD_PRODUCT', `Added new product: ${newProd.title}`);
+
+    d.products.unshift(newProd);
+    d.imageAudit = this.getImageAudit();
+    this.addAuditLog(actor, 'ADD_PRODUCT', `Added new product: ${newProd.title} (${newProd.slug})`);
     saveDatabase(d);
     return newProd;
+  },
+
+  deleteProduct(id: string, actor: string): { deleted: Product; remainingCount: number } {
+    const d = loadDatabase();
+    const idx = d.products.findIndex((p) => p.id === id || p.slug === id);
+    if (idx === -1) {
+      throw new Error('Product not found');
+    }
+    const [deleted] = d.products.splice(idx, 1);
+    d.imageAudit = this.getImageAudit();
+    this.addAuditLog(actor, 'DELETE_PRODUCT', `Removed product: ${deleted.title} (${deleted.slug})`);
+    saveDatabase(d);
+    return { deleted, remainingCount: d.products.length };
+  },
+
+  resetCacheForTests(): void {
+    dbCache = null;
   },
 
   upsertCjProduct(
@@ -946,6 +1040,10 @@ export const db = {
         cjCategoryName: input.cjCategoryName ?? existing.cjCategoryName,
         cjLastSyncedAt: nowIso,
         trending: input.trending ?? existing.trending,
+        addedByCeo: true,
+        protectedFromAutoPrune: true,
+        createdAt: existing.createdAt || nowIso,
+        updatedAt: nowIso,
       };
       d.products[existingIdx] = updated;
       this.addAuditLog(actor, 'CJ_PRODUCT_UPDATED', `Updated CJ product ${updated.title} (PID: ${cleanPid}, stock: ${totalStock})`);
@@ -996,6 +1094,10 @@ export const db = {
       variants: safeVariants,
       pricingConfig: input.pricingConfig,
       cjLastSyncedAt: nowIso,
+      addedByCeo: true,
+      protectedFromAutoPrune: true,
+      createdAt: nowIso,
+      updatedAt: nowIso,
     };
 
     d.products.unshift(newProduct);
@@ -2768,7 +2870,13 @@ export const db = {
   removeNonCjProducts(actor = 'System'): { removedCount: number; remainingCount: number } {
     const d = loadDatabase();
     const before = d.products.length;
-    d.products = d.products.filter((p) => p.supplierSource === 'cjdropshipping' || Boolean(p.cjPid));
+    d.products = d.products.filter(
+      (p) =>
+        p.supplierSource === 'cjdropshipping' ||
+        Boolean(p.cjPid) ||
+        p.addedByCeo === true ||
+        p.protectedFromAutoPrune === true
+    );
     const removedCount = before - d.products.length;
     if (d.imageAudit) {
       d.imageAudit.totalProducts = d.products.length;
@@ -2780,7 +2888,7 @@ export const db = {
     this.addAuditLog(
       actor,
       'PRUNE_NON_CJ_PRODUCTS',
-      `Removed ${removedCount} non-CJ product(s); ${d.products.length} CJ product(s) remain.`
+      `Removed ${removedCount} legacy non-CJ product(s); ${d.products.length} protected/CJ product(s) remain.`
     );
     saveDatabase(d);
     return { removedCount, remainingCount: d.products.length };

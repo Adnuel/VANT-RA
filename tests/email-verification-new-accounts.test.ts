@@ -9,11 +9,17 @@ const DB_PATH = path.resolve(process.cwd(), 'data', 'vantera_db.json');
 
 test('New-account-only email verification & CJ-only product pruning', async (t) => {
   const originalDbSnapshot = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH, 'utf8') : null;
+  const backupPath = `${DB_PATH}.backup.json`;
+  const originalBackupSnapshot = fs.existsSync(backupPath) ? fs.readFileSync(backupPath, 'utf8') : null;
 
   t.after(() => {
     if (originalDbSnapshot !== null) {
       fs.writeFileSync(DB_PATH, originalDbSnapshot, 'utf8');
     }
+    if (originalBackupSnapshot !== null) {
+      fs.writeFileSync(backupPath, originalBackupSnapshot, 'utf8');
+    }
+    db.resetCacheForTests();
   });
 
   await t.test('New customer registration starts unverified with 6-digit OTP and can refresh pending OTP', () => {
@@ -60,13 +66,27 @@ test('New-account-only email verification & CJ-only product pruning', async (t) 
     assert.equal(typeof status.configured, 'boolean');
   });
 
-  await t.test('removeNonCjProducts removes legacy catalog items while retaining CJdropshipping products', () => {
-    const cjCountBefore = db
+  await t.test('removeNonCjProducts removes legacy catalog items while retaining CJdropshipping & CEO-added products', () => {
+    const protectedCountBefore = db
       .getProducts()
-      .filter((p) => p.supplierSource === 'cjdropshipping' || Boolean(p.cjPid)).length;
+      .filter(
+        (p) =>
+          p.supplierSource === 'cjdropshipping' ||
+          Boolean(p.cjPid) ||
+          p.addedByCeo === true ||
+          p.protectedFromAutoPrune === true
+      ).length;
     const result = db.removeNonCjProducts();
-    assert.equal(result.remainingCount, cjCountBefore);
+    assert.equal(result.remainingCount, protectedCountBefore);
     const remaining = db.getProducts();
-    assert.ok(remaining.every((p) => p.supplierSource === 'cjdropshipping' || Boolean(p.cjPid)));
+    assert.ok(
+      remaining.every(
+        (p) =>
+          p.supplierSource === 'cjdropshipping' ||
+          Boolean(p.cjPid) ||
+          p.addedByCeo === true ||
+          p.protectedFromAutoPrune === true
+      )
+    );
   });
 });

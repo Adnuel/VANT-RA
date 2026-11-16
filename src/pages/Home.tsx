@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product } from '../data/catalog.ts';
+import { CURATED_CATEGORIES, CuratedCategoryId, mapLegacyCategoryToCurated } from '../lib/curatedCjCatalog.ts';
 import { ProductCard } from '../components/ProductCard.tsx';
 import { TechSpecsModal } from '../components/TechSpecsModal.tsx';
 import { FadeInSection } from '../components/FadeInSection.tsx';
@@ -25,7 +26,7 @@ interface StoreReview {
 
 export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
   const { user, token } = useAuth();
-  const [curationTab, setCurationTab] = useState<'all' | 'magsafe' | 'desk' | 'armor'>('all');
+  const [curationTab, setCurationTab] = useState<'all' | CuratedCategoryId>('all');
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
   const [reviews, setReviews] = useState<StoreReview[]>([]);
@@ -55,22 +56,9 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
       return (b.trending ? 1 : 0) - (a.trending ? 1 : 0);
     });
 
-    if (curationTab === 'magsafe') {
+    if (curationTab !== 'all') {
       return availableFirst
-        .filter(
-          (p) =>
-            p.category === 'charging' ||
-            p.title.toLowerCase().includes('magnetic') ||
-            p.title.toLowerCase().includes('wireless')
-        )
-        .slice(0, 6);
-    }
-    if (curationTab === 'desk') {
-      return availableFirst.filter((p) => p.category === 'room-desk').slice(0, 6);
-    }
-    if (curationTab === 'armor') {
-      return availableFirst
-        .filter((p) => p.category === 'phone-cases' || p.category === 'photography')
+        .filter((p) => mapLegacyCategoryToCurated(p.category) === curationTab || p.category === curationTab)
         .slice(0, 6);
     }
     return availableFirst.slice(0, 6);
@@ -172,9 +160,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
             <div className="flex flex-wrap items-center gap-2">
               {[
                 { id: 'all', label: 'All Finds' },
-                { id: 'magsafe', label: 'MagSafe & Power' },
-                { id: 'armor', label: 'Cases' },
-                { id: 'desk', label: 'Desk Gear' },
+                ...CURATED_CATEGORIES.map((c) => ({ id: c.id, label: c.shortLabel })),
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -224,7 +210,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
               onClick={() => onNavigate('/shop')}
               className="px-8 py-3.5 text-[11px] uppercase tracking-[0.22em] font-semibold border border-white/15 hover:border-[#C8A96A] text-[#F5F1E8] hover:text-[#C8A96A] rounded-xs transition-colors cursor-pointer"
             >
-              View All {products.length} {products.length === 1 ? 'Piece' : 'Pieces'} →
+              View Full Collection →
             </button>
           </div>
         </section>

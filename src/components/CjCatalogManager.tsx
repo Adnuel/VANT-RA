@@ -6,6 +6,7 @@ import {
   calculateProfitBreakdown,
   type CjPricingMode,
 } from '../lib/cjPricing.ts';
+import { CURATED_CATEGORIES } from '../lib/curatedCjCatalog.ts';
 
 interface CjWarehouseInventoryItem {
   countryCode: string;
@@ -147,8 +148,9 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
     results: Array<{ productId: string; title: string; success: boolean; stockQuantity?: number; error?: string }>;
   } | null>(null);
 
-  // One-Click Bulk Import (Max 60% Profit) state
+  // One-Click Curated Bulk Import (Max 60% Profit, Strictly CEO's 5 Curated Categories) state
   const [isBulkImporting, setIsBulkImporting] = useState(false);
+  const [bulkImportProgress, setBulkImportProgress] = useState<string | null>(null);
   const [bulkImportSummary, setBulkImportSummary] = useState<{
     importedCount: number;
     updatedCount: number;
@@ -159,6 +161,8 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
       cjPid: string;
       productId: string;
       title: string;
+      category?: string;
+      curatedType?: string;
       created: boolean;
       appliedProfitPercent: number;
       supplierCostCents: number;
@@ -179,7 +183,7 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
 
   // Editable VANTÉRA listing & pricing state
   const [importTitle, setImportTitle] = useState('');
-  const [importCategory, setImportCategory] = useState('room-desk');
+  const [importCategory, setImportCategory] = useState('premium-tech-accessories');
   const [importDescription, setImportDescription] = useState('');
   const [importTrending, setImportTrending] = useState(false);
   const [pricingMode, setPricingMode] = useState<CjPricingMode>('markup_percent');
@@ -276,7 +280,7 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
       setActivePreviewImage(detail.productImage || detail.productImageSet?.[0] || null);
 
       setImportTitle(existing?.title || detail.productNameEn);
-      setImportCategory(existing?.category || data.suggestedCategory || 'room-desk');
+      setImportCategory(existing?.category || data.suggestedCategory || 'premium-tech-accessories');
       setImportDescription(existing?.description || detail.description);
       setImportTrending(Boolean(existing?.trending));
 
@@ -468,64 +472,86 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
     }
   };
 
-  const handleBulkImportAll = async () => {
+  const handleBulkImportAll = async (onlyCategoryId?: string) => {
     if (!adminToken || isBulkImporting) return;
     setIsBulkImporting(true);
     setBulkImportSummary(null);
     setSearchError(null);
 
+    const targetCategories = onlyCategoryId
+      ? CURATED_CATEGORIES.filter((c) => c.id === onlyCategoryId)
+      : CURATED_CATEGORIES;
+
+    let totalImported = 0;
+    let totalUpdated = 0;
+    let totalSkipped = 0;
+    let totalFailed = 0;
+    const allItems: any[] = [];
+    const allErrors: Array<{ cjPid: string; reason: string }> = [];
+
     try {
-      const payload: Record<string, any> = {
-        maxProfitPercent: 60,
-        countryCode: warehouseCountry || undefined,
-      };
+      for (let idx = 0; idx < targetCategories.length; idx++) {
+        const cat = targetCategories[idx];
+        setBulkImportProgress(
+          `Importing (${idx + 1}/${targetCategories.length}): ${cat.label}...`
+        );
 
-      if (searchResults.length > 0) {
-        payload.pids = searchResults.map((item) => item.pid);
-      } else {
-        payload.keyword = keyword.trim();
-        payload.page = 1;
-        payload.size = 12;
+        const res = await fetch('/api/admin/suppliers/cj/products/bulk-import', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            curatedCategoryId: cat.id,
+            maxProfitPercent: 60,
+            countryCode: warehouseCountry || undefined,
+          }),
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          allErrors.push({
+            cjPid: cat.label,
+            reason: data?.error || `HTTP ${res.status}`,
+          });
+          continue;
+        }
+
+        totalImported += data.importedCount ?? 0;
+        totalUpdated += data.updatedCount ?? 0;
+        totalSkipped += data.skippedCount ?? 0;
+        totalFailed += data.failedCount ?? 0;
+        if (Array.isArray(data.items)) allItems.push(...data.items);
+        if (Array.isArray(data.errors)) allErrors.push(...data.errors);
+
+        setBulkImportSummary({
+          importedCount: totalImported,
+          updatedCount: totalUpdated,
+          skippedCount: totalSkipped,
+          failedCount: totalFailed,
+          maxProfitPercent: 60,
+          items: allItems,
+          errors: allErrors,
+        });
+
+        window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
+        onCatalogUpdated();
       }
 
-      const res = await fetch('/api/admin/suppliers/cj/products/bulk-import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.error || `Bulk CJ import failed (HTTP ${res.status}).`);
-      }
-
-      setBulkImportSummary({
-        importedCount: data.importedCount ?? 0,
-        updatedCount: data.updatedCount ?? 0,
-        skippedCount: data.skippedCount ?? 0,
-        failedCount: data.failedCount ?? 0,
-        maxProfitPercent: data.maxProfitPercent ?? 60,
-        items: Array.isArray(data.items) ? data.items : [],
-        errors: Array.isArray(data.errors) ? data.errors : [],
-      });
-
-      const totalProcessed = (data.importedCount ?? 0) + (data.updatedCount ?? 0);
+      const totalProcessed = totalImported + totalUpdated;
       onShowToast(
-        `One-Click Import complete: ${data.importedCount ?? 0} new, ${data.updatedCount ?? 0} updated (max 60% profit cap).`,
+        `Curated Import complete: ${totalImported} new, ${totalUpdated} updated across ${targetCategories.length} categories (max 60% profit cap).`,
         totalProcessed > 0 ? 'success' : 'info'
       );
 
-      window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
-      onCatalogUpdated();
       if (searchResults.length > 0) {
         runSearch(page);
       }
     } catch (err: any) {
-      onShowToast(err?.message || 'Unable to bulk import CJ products.', 'error');
+      onShowToast(err?.message || 'Unable to bulk import curated CJ products.', 'error');
     } finally {
+      setBulkImportProgress(null);
       setIsBulkImporting(false);
     }
   };
@@ -583,22 +609,20 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
             </span>
           </div>
           <p className="text-xs text-[#77746d]">
-            Search CJ&apos;s live supplier database, inspect specs, warehouse stock &amp; shipping rates, configure retail margins (USD &amp; NGN), or import everything in one click capped at 60% max profit.
+            Search CJ&apos;s live supplier database or run One-Click Curated Import to import only your 5 approved VANTÉRA categories &amp; product types (capped at max 60% profit).
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             type="button"
-            onClick={handleBulkImportAll}
+            onClick={() => handleBulkImportAll()}
             disabled={isBulkImporting || isSearching}
             className="bg-[#121210] text-[#f8f7f4] px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210] transition-colors disabled:opacity-50 cursor-pointer"
           >
             {isBulkImporting
-              ? 'Importing (Max 60% Profit)...'
-              : searchResults.length > 0
-              ? `One-Click Import All (${searchResults.length}) · Max 60% Profit`
-              : 'One-Click Import All · Max 60% Profit'}
+              ? bulkImportProgress || 'Importing Curated Collection...'
+              : 'One-Click Import Curated Collection · Max 60% Profit'}
           </button>
 
           <button
@@ -614,12 +638,33 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
         </div>
       </div>
 
+      {/* Per-Category Quick Curated Import Bar */}
+      <div className="bg-[#f8f7f4] border border-[#e7e4de] p-3.5 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono uppercase text-[#77746d]">
+          <span>Curated 5-Category Collection Import (Imports only approved VANTÉRA product types):</span>
+          {bulkImportProgress && <span className="text-[#121210] font-semibold">{bulkImportProgress}</span>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {CURATED_CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              disabled={isBulkImporting || isSearching}
+              onClick={() => handleBulkImportAll(cat.id)}
+              className="border border-[#e7e4de] bg-white hover:border-[#121210] text-[#121210] px-3 py-1.5 text-[11px] font-mono transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              + Import {cat.label} ({cat.items.length} types)
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Bulk Import Summary Banner */}
       {bulkImportSummary && (
         <div className="bg-[#fbfaf7] border border-[#c4a66b]/50 p-4 text-xs space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
             <strong className="text-[#121210]">
-              One-Click Bulk Import Summary (Max {bulkImportSummary.maxProfitPercent}% Profit Cap):{' '}
+              Curated One-Click Import Summary (Max {bulkImportSummary.maxProfitPercent}% Profit Cap):{' '}
               {bulkImportSummary.importedCount} imported · {bulkImportSummary.updatedCount} updated
               {bulkImportSummary.skippedCount > 0 ? ` · ${bulkImportSummary.skippedCount} skipped` : ''}
             </strong>
@@ -638,6 +683,11 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
                   <div className="font-semibold text-[#121210] truncate" title={item.title}>
                     {item.title}
                   </div>
+                  {item.curatedType && (
+                    <div className="text-[10px] font-mono text-[#856404] truncate">
+                      {item.curatedType} · {item.category}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between font-mono text-[10px] text-[#77746d]">
                     <span>
                       Cost {formatUSD(item.supplierCostCents)} → Retail {formatUSD(item.retailPriceCents)}
@@ -650,7 +700,8 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
           )}
           {bulkImportSummary.errors.length > 0 && (
             <div className="text-[11px] text-[#856404] font-mono">
-              Notes: {bulkImportSummary.errors.map((e) => `${e.cjPid}: ${e.reason}`).join(' | ')}
+              Notes: {bulkImportSummary.errors.slice(0, 6).map((e) => `${e.cjPid}: ${e.reason}`).join(' | ')}
+              {bulkImportSummary.errors.length > 6 ? ` (+${bulkImportSummary.errors.length - 6} more)` : ''}
             </div>
           )}
         </div>

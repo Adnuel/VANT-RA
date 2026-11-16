@@ -54,6 +54,10 @@ export interface Product {
     mode: 'markup_percent' | 'margin_percent' | 'fixed_cents';
     value: number;
   };
+  addedByCeo?: boolean;
+  protectedFromAutoPrune?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Category {
@@ -64,42 +68,35 @@ export interface Category {
 
 export const CATEGORIES: Category[] = [
   {
-    "id": "festive-season",
-    "label": "Festive & Holiday Bestsellers",
-    "description": "The most purchased tech gifts, viral gadgets, and festive essentials with live real-time pricing."
+    id: 'premium-tech-accessories',
+    label: 'Premium Tech Accessories',
+    description:
+      'Magnetic charging cables, 3-in-1 & MagSafe stands, USB-C hubs, wireless earbuds, speakers, microphones, and smartwatch essentials.',
   },
   {
-    "id": "phones",
-    "label": "Phones"
+    id: 'smart-home-technology',
+    label: 'Smart Home Technology',
+    description:
+      'Smart LED lighting, motion sensor night lights, RGB ambient lamps, controllers, digital alarm clocks, and automatic dispensers.',
   },
   {
-    "id": "phone-cases",
-    "label": "Phone Cases and Protection"
+    id: 'laptop-workspace',
+    label: 'Laptop & Workspace Accessories',
+    description:
+      'Aluminum & foldable laptop stands, monitor light bars, wireless keyboard & mouse sets, desk vacuums, and cable organizers.',
   },
   {
-    "id": "charging",
-    "label": "Charging and Power"
+    id: 'trending-lifestyle-gadgets',
+    label: 'Trending Lifestyle Gadgets',
+    description:
+      'Mini portable printers, electric cleaning brushes, portable blenders, mini projectors, handheld fans, and smart home tools.',
   },
   {
-    "id": "audio",
-    "label": "Audio and Entertainment"
+    id: 'premium-everyday-accessories',
+    label: 'Premium Everyday Accessories',
+    description:
+      'Minimalist wallets, travel & electronics organizer bags, premium sunglass cases, and portable jewellery boxes.',
   },
-  {
-    "id": "photography",
-    "label": "Phone Photography and Video"
-  },
-  {
-    "id": "room-desk",
-    "label": "Room and Desk Accessories"
-  },
-  {
-    "id": "computer",
-    "label": "Computer Accessories"
-  },
-  {
-    "id": "trending",
-    "label": "Trending Finds"
-  }
 ];
 
 export const INITIAL_PRODUCTS: Product[] = [

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Product } from '../data/catalog.ts';
+import { Product, CATEGORIES } from '../data/catalog.ts';
+import { mapLegacyCategoryToCurated } from '../lib/curatedCjCatalog.ts';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
 import { useWishlist } from '../contexts/WishlistContext.tsx';
@@ -88,8 +89,11 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
     (activeVariant ? !activeVariant.isAvailable : false);
   const isReservedPhone = product.category === 'phones';
   const saved = isInWishlist(product.id);
+  const mappedCatId = mapLegacyCategoryToCurated(product.category);
+  const categoryObj = CATEGORIES.find((c) => c.id === mappedCatId || c.id === product.category);
+  const categoryLabel = categoryObj?.label || product.category.replace(/-/g, ' ');
   const related = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
+    .filter((p) => mapLegacyCategoryToCurated(p.category) === mappedCatId && p.id !== product.id)
     .slice(0, 3);
 
   const handleAddToCart = () => {
@@ -147,14 +151,14 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
         </a>
         <span aria-hidden="true">/</span>
         <a
-          href={`/category/${product.category}`}
+          href={`/category/${mappedCatId}`}
           onClick={(e) => {
             e.preventDefault();
-            onNavigate(`/category/${product.category}`);
+            onNavigate(`/category/${mappedCatId}`);
           }}
           className="hover:text-[#F5F1E8] transition-colors"
         >
-          {product.category.replace('-', ' ')}
+          {categoryLabel}
         </a>
         <span aria-hidden="true">/</span>
         <span className="text-[#F5F1E8] truncate max-w-xs">{product.title}</span>
@@ -253,12 +257,12 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
           <div className="bg-[#141416] border border-white/8 p-6 sm:p-8 rounded-xs space-y-6">
             <div className="space-y-3 border-b border-white/8 pb-6">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[#A8A297]">
-                <span>{product.category.replace('-', ' ')}</span>
+                <span>{categoryLabel}</span>
                 <span className={isOutOfStock ? 'text-[#E57373]' : 'text-[#C8A96A]'}>
                   {isOutOfStock
                     ? 'Out of stock'
                     : effectiveStock <= 5
-                    ? `Only ${effectiveStock} left`
+                    ? 'Low stock'
                     : 'In stock'}
                 </span>
               </div>
@@ -340,7 +344,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                       >
                         <span className="block font-medium">{variant.name}</span>
                         <span className="block text-[9px] uppercase tracking-wider text-[#A8A297]">
-                          {variantOutOfStock ? 'Out of stock' : `${variant.stockQuantity} available`}
+                          {variantOutOfStock ? 'Out of stock' : 'Available'}
                         </span>
                       </button>
                     );
@@ -378,7 +382,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] uppercase tracking-[0.16em] text-[#A8A297]">
-                    Quantity ({effectiveStock} in stock)
+                    Quantity
                   </span>
                   <div className="inline-flex items-center border border-white/12 rounded-xs bg-[#0B0B0C]">
                     <button
@@ -485,7 +489,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                   <div className="pb-4 space-y-2 text-xs">
                     <div className="flex justify-between gap-4">
                       <span className="text-[#A8A297]">Category</span>
-                      <span className="text-[#F5F1E8] capitalize">{product.category.replace('-', ' ')}</span>
+                      <span className="text-[#F5F1E8]">{categoryLabel}</span>
                     </div>
                     {activeVariant?.sku && (
                       <div className="flex justify-between gap-4">
@@ -562,7 +566,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             </h2>
             <button
               type="button"
-              onClick={() => onNavigate(`/category/${product.category}`)}
+              onClick={() => onNavigate(`/category/${mappedCatId}`)}
               className="text-[11px] uppercase tracking-[0.2em] text-[#C8A96A] hover:underline cursor-pointer"
             >
               View Category →

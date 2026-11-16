@@ -1,4 +1,5 @@
 import { convertUsdCentsToNgn } from './commerceLogic.ts';
+import { findMatchingCuratedSpec } from './curatedCjCatalog.ts';
 
 export type CjPricingMode = 'markup_percent' | 'margin_percent' | 'fixed_cents';
 
@@ -222,29 +223,29 @@ export function stripHtmlDescription(rawHtml: string | null | undefined): string
 }
 
 /**
- * Suggests the closest existing VANTÉRA storefront category based on CJ metadata.
+ * Suggests the closest VANTÉRA storefront category from the 5 official collections
+ * based on curated product specification and CJ metadata.
  */
 export function suggestVanteraCategory(cjCategoryName?: string | null, title?: string | null): string {
+  const curated = findMatchingCuratedSpec(title, cjCategoryName);
+  if (curated) {
+    return curated.categoryId;
+  }
+
   const haystack = `${cjCategoryName || ''} ${title || ''}`.toLowerCase();
-  if (/case|screen protector|tempered glass|bumper|cover|shield/.test(haystack)) {
-    return 'phone-cases';
+  if (/wallet|travel|sunglass|eyeglass|jewel|organizer\s*bag|electronics\s*bag|pouch/.test(haystack)) {
+    return 'premium-everyday-accessories';
   }
-  if (/charg|magsafe|power bank|cable|adapter|wireless charger|dock|usb-c|gan/.test(haystack)) {
-    return 'charging';
+  if (/printer|blender|projector|handheld\s*fan|cleaning\s*brush|measuring\s*tape|water\s*dispenser|kitchen/.test(haystack)) {
+    return 'trending-lifestyle-gadgets';
   }
-  if (/earbud|headphone|speaker|audio|mic|sound|anc|earphone/.test(haystack)) {
-    return 'audio';
+  if (/laptop|keyboard|mouse|monitor|cable\s*organizer|desk\s*vacuum|desktop.*holder/.test(haystack)) {
+    return 'laptop-workspace';
   }
-  if (/tripod|gimbal|camera|lens|selfie|ring light|vlog|stabilizer|shutter/.test(haystack)) {
-    return 'photography';
+  if (/smart\s*led|night\s*light|desk\s*lamp|rgb|strip\s*light|alarm\s*clock|soap\s*dispenser|smart\s*home|controller/.test(haystack)) {
+    return 'smart-home-technology';
   }
-  if (/laptop|mouse|keyboard|hub|usb hub|ssd|monitor|computer|webcam/.test(haystack)) {
-    return 'computer';
-  }
-  if (/smartphone|mobile phone|iphone|android phone/.test(haystack) && !/case|holder|stand|mount|charger/.test(haystack)) {
-    return 'phones';
-  }
-  return 'room-desk';
+  return 'premium-tech-accessories';
 }
 
 /**
