@@ -528,162 +528,196 @@ export const CjCatalogManager: React.FC<CjCatalogManagerProps> = ({
     }> = [];
     const allErrors: Array<{ cjPid: string; reason: string }> = [];
     const processedPidsThisRun = new Set<string>();
-    const BATCH_SIZE = 8;
+    const BATCH_SIZE = 3;
+    const PAGES_PER_KEYWORD = opts?.specId ? 2 : 1;
+
+    const pushSummaryUpdate = (stoppedEarly = false) => {
+      setBulkImportSummary({
+        importedCount: totalImported,
+        updatedCount: totalUpdated,
+        skippedCount: totalSkipped,
+        failedCount: totalFailed,
+        maxProfitPercent: 60,
+        stoppedEarly,
+        items: [...allItems],
+        errors: [...allErrors],
+      });
+    };
 
     try {
       for (let specIdx = 0; specIdx < targetSpecs.length; specIdx++) {
         if (cancelBulkImportRef.current) break;
 
         const spec = targetSpecs[specIdx];
-        setBulkImportProgress(
-          `(${specIdx + 1}/${targetSpecs.length}) Scanning CJ for every product matching "${spec.label}"...`
-        );
+        let specDiscoveredCount = 0;
 
-        const discoverRes = await fetch('/api/admin/suppliers/cj/products/curated-discover', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${adminToken}`,
-          },
-          body: JSON.stringify({
-            curatedSpecId: spec.id,
-            countryCode: warehouseCountry || undefined,
-            maxPagesPerKeyword: opts?.specId ? 3 : 2,
-          }),
-        });
+        for (let kwIdx = 0; kwIdx < spec.searchKeywords.length; kwIdx++) {
+          if (cancelBulkImportRef.current) break;
+          const kwLabel = spec.searchKeywords[kwIdx];
 
-        const discoverData = await discoverRes.json().catch(() => null);
-        if (!discoverRes.ok) {
-          totalFailed += 1;
-          allErrors.push({
-            cjPid: spec.label,
-            reason: discoverData?.error || `Discovery failed (HTTP ${discoverRes.status})`,
-          });
-          continue;
+          for (let pageNum = 1; pageNum <= PAGES_PER_KEYWORD; pageNum++) {
+            if (cancelBulkImportRef.current) break;
+
+            setBulkImportProgress(
+              `(${specIdx + 1}/${targetSpecs.length}) Scanning CJ for "${spec.label}" · "${kwLabel}" (p.${pageNum})...`
+            );
+
+            let discoverData: any = null;
+            try {
+              const discoverRes = await fetch('/api/admin/suppliers/cj/products/curated-discover', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${adminToken}`,
+                },
+                body: JSON.stringify({
+                  curatedSpecId: spec.id,
+                  keywordIndex: kwIdx,
+                  page: pageNum,
+                  size: 40,
+                  countryCode: warehouseCountry || undefined,
+                }),
+              });
+
+              if (discoverRes.status === 401 || discoverRes.status === 403) {
+                throw new Error('Admin session expired. Please sign out and sign in again.');
+              }
+
+              discoverData = await discoverRes.json().catch(() => null);
+              if (!discoverRes.ok) {
+                allErrors.push({
+                  cjPid: `${spec.label} (${kwLabel})`,
+                  reason: discoverData?.error || `Discovery HTTP ${discoverRes.status}`,
+                });
+                pushSummaryUpdate();
+                break;
+              }
+            } catch (reqErr: any) {
+              if (reqErr?.message?.includes('Admin session expired')) {
+                throw reqErr;
+              }
+              allErrors.push({
+                cjPid: `${spec.label} (${kwLabel})`,
+                reason: reqErr?.message || 'Network/timeout error during CJ search',
+              });
+              pushSummaryUpdate();
+              break;
+            }
+
+            if (Array.isArray(discoverData?.searchErrors) && discoverData.searchErrors.length > 0) {
+              for (const se of discoverData.searchErrors) {
+                allErrors.push({
+                  cjPid: se.specLabel || spec.label,
+                  reason: se.reason || 'CJ search notice',
+                });
+              }
+            }
+
+            const rawCandidates: Array<{
+              pid: string;
+              title: string;
+              specId: string;
+              specLabel: string;
+              alreadyImported: boolean;
+            }> = Array.isArray(discoverData?.candidates) ? discoverData.candidates : [];
+
+            specDiscoveredCount += rawCandidates.length;
+
+            const uniqueForRun = rawCandidates.filter((c) => {
+              if (!c.pid || processedPidsThisRun.has(c.pid)) return false;
+              processedPidsThisRun.add(c.pid);
+              return true;
+            });
+
+            const candidatesToImport = skipExistingOnBulk
+              ? uniqueForRun.filter((c) => !c.alreadyImported)
+              : uniqueForRun;
+
+            const skippedAlreadyCount = uniqueForRun.length - candidatesToImport.length;
+            if (skippedAlreadyCount > 0) {
+              totalSkipped += skippedAlreadyCount;
+            }
+
+            for (let offset = 0; offset < candidatesToImport.length; offset += BATCH_SIZE) {
+              if (cancelBulkImportRef.current) break;
+
+              const batch = candidatesToImport.slice(offset, offset + BATCH_SIZE);
+              const batchEnd = Math.min(offset + batch.length, candidatesToImport.length);
+
+              setBulkImportProgress(
+                `(${specIdx + 1}/${targetSpecs.length}) Importing "${spec.label}" (${batchEnd}/${candidatesToImport.length} from "${kwLabel}" · ${totalImported + totalUpdated} saved)...`
+              );
+
+              try {
+                const res = await fetch('/api/admin/suppliers/cj/products/bulk-import', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${adminToken}`,
+                  },
+                  body: JSON.stringify({
+                    targets: batch.map((c) => ({ pid: c.pid, specId: c.specId || spec.id })),
+                    maxProfitPercent: 60,
+                    countryCode: warehouseCountry || undefined,
+                  }),
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                  throw new Error('Admin session expired. Please sign out and sign in again.');
+                }
+
+                const data = await res.json().catch(() => null);
+                if (!res.ok) {
+                  totalFailed += batch.length;
+                  allErrors.push({
+                    cjPid: spec.label,
+                    reason: data?.error || `Batch import HTTP ${res.status}`,
+                  });
+                  pushSummaryUpdate();
+                  continue;
+                }
+
+                totalImported += data.importedCount ?? 0;
+                totalUpdated += data.updatedCount ?? 0;
+                totalSkipped += data.skippedCount ?? 0;
+                totalFailed += data.failedCount ?? 0;
+                if (Array.isArray(data.items)) allItems.push(...data.items);
+                if (Array.isArray(data.errors)) allErrors.push(...data.errors);
+
+                pushSummaryUpdate();
+                window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
+                onCatalogUpdated();
+              } catch (batchErr: any) {
+                if (batchErr?.message?.includes('Admin session expired')) {
+                  throw batchErr;
+                }
+                totalFailed += batch.length;
+                allErrors.push({
+                  cjPid: spec.label,
+                  reason: batchErr?.message || 'Network/timeout error importing batch',
+                });
+                pushSummaryUpdate();
+              }
+            }
+
+            if (!discoverData?.hasMorePages) {
+              break;
+            }
+          }
         }
 
-        const rawCandidates: Array<{
-          pid: string;
-          title: string;
-          specId: string;
-          specLabel: string;
-          alreadyImported: boolean;
-        }> = Array.isArray(discoverData?.candidates) ? discoverData.candidates : [];
-
-        if (rawCandidates.length === 0) {
+        if (specDiscoveredCount === 0) {
           totalSkipped += 1;
           allErrors.push({
             cjPid: spec.label,
-            reason: `No in-stock CJ products found carrying "${spec.label}".`,
+            reason: `No new in-stock CJ matches found for "${spec.label}".`,
           });
-          setBulkImportSummary({
-            importedCount: totalImported,
-            updatedCount: totalUpdated,
-            skippedCount: totalSkipped,
-            failedCount: totalFailed,
-            maxProfitPercent: 60,
-            items: [...allItems],
-            errors: [...allErrors],
-          });
-          continue;
-        }
-
-        const uniqueForRun = rawCandidates.filter((c) => {
-          if (!c.pid || processedPidsThisRun.has(c.pid)) return false;
-          processedPidsThisRun.add(c.pid);
-          return true;
-        });
-
-        const candidatesToImport = skipExistingOnBulk
-          ? uniqueForRun.filter((c) => !c.alreadyImported)
-          : uniqueForRun;
-
-        const skippedAlreadyCount = uniqueForRun.length - candidatesToImport.length;
-        if (skippedAlreadyCount > 0) {
-          totalSkipped += skippedAlreadyCount;
-        }
-
-        if (candidatesToImport.length === 0) {
-          setBulkImportSummary({
-            importedCount: totalImported,
-            updatedCount: totalUpdated,
-            skippedCount: totalSkipped,
-            failedCount: totalFailed,
-            maxProfitPercent: 60,
-            items: [...allItems],
-            errors: [...allErrors],
-          });
-          continue;
-        }
-
-        for (let offset = 0; offset < candidatesToImport.length; offset += BATCH_SIZE) {
-          if (cancelBulkImportRef.current) break;
-
-          const batch = candidatesToImport.slice(offset, offset + BATCH_SIZE);
-          const batchEnd = Math.min(offset + batch.length, candidatesToImport.length);
-
-          setBulkImportProgress(
-            `(${specIdx + 1}/${targetSpecs.length}) Importing "${spec.label}" (${batchEnd}/${candidatesToImport.length} matches · ${totalImported + totalUpdated} saved)...`
-          );
-
-          const res = await fetch('/api/admin/suppliers/cj/products/bulk-import', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${adminToken}`,
-            },
-            body: JSON.stringify({
-              targets: batch.map((c) => ({ pid: c.pid, specId: c.specId || spec.id })),
-              maxProfitPercent: 60,
-              countryCode: warehouseCountry || undefined,
-            }),
-          });
-
-          const data = await res.json().catch(() => null);
-          if (!res.ok) {
-            totalFailed += batch.length;
-            allErrors.push({
-              cjPid: spec.label,
-              reason: data?.error || `Batch import error (HTTP ${res.status})`,
-            });
-            continue;
-          }
-
-          totalImported += data.importedCount ?? 0;
-          totalUpdated += data.updatedCount ?? 0;
-          totalSkipped += data.skippedCount ?? 0;
-          totalFailed += data.failedCount ?? 0;
-          if (Array.isArray(data.items)) allItems.push(...data.items);
-          if (Array.isArray(data.errors)) allErrors.push(...data.errors);
-
-          setBulkImportSummary({
-            importedCount: totalImported,
-            updatedCount: totalUpdated,
-            skippedCount: totalSkipped,
-            failedCount: totalFailed,
-            maxProfitPercent: 60,
-            items: [...allItems],
-            errors: [...allErrors],
-          });
-
-          window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
-          onCatalogUpdated();
+          pushSummaryUpdate();
         }
       }
 
       const stoppedEarly = cancelBulkImportRef.current;
-      if (stoppedEarly) {
-        setBulkImportSummary({
-          importedCount: totalImported,
-          updatedCount: totalUpdated,
-          skippedCount: totalSkipped,
-          failedCount: totalFailed,
-          maxProfitPercent: 60,
-          stoppedEarly: true,
-          items: allItems,
-          errors: allErrors,
-        });
-      }
+      pushSummaryUpdate(stoppedEarly);
 
       const totalProcessed = totalImported + totalUpdated;
       onShowToast(

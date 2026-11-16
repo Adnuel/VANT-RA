@@ -2324,14 +2324,14 @@ function resolveCuratedSpecsFilter(curatedSpecId?: string, curatedCategoryId?: s
   return { specs: CURATED_CATEGORIES.flatMap((c) => c.items) };
 }
 
-// CJ Curated Discovery (Scans CJ API across pages for ALL products carrying or similar to each CEO-approved product name)
+// CJ Curated Discovery (Scans CJ API for ALL products carrying or similar to each CEO-approved product name)
 app.post('/api/admin/suppliers/cj/products/curated-discover', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const body = req.body || {};
     const curatedSpecId = body.curatedSpecId ? String(body.curatedSpecId).trim() : '';
     const curatedCategoryId = body.curatedCategoryId ? String(body.curatedCategoryId).trim() : '';
     const countryCode = body.countryCode ? String(body.countryCode).trim().toUpperCase() : undefined;
-    const maxPagesPerKeyword = Math.max(1, Math.min(5, Number(body.maxPagesPerKeyword) || (curatedSpecId ? 3 : 2)));
+    const requestedSize = Math.max(10, Math.min(100, Number(body.size) || 40));
 
     const resolved = resolveCuratedSpecsFilter(curatedSpecId, curatedCategoryId);
     if (resolved.error) {
@@ -2352,6 +2352,108 @@ app.post('/api/admin/suppliers/cj/products/curated-discover', requireAdmin, asyn
     }> = [];
     const searchErrors: Array<{ specId: string; specLabel: string; reason: string }> = [];
 
+    // Fast granular single-call mode (1 CJ search call per HTTP request) to prevent reverse-proxy timeouts
+    const hasGranularKeyword =
+      curatedSpecId &&
+      resolved.specs.length === 1 &&
+      typeof body.keywordIndex === 'number' &&
+      Number.isFinite(body.keywordIndex);
+
+    if (hasGranularKeyword) {
+      const spec = resolved.specs[0];
+      const keywordIndex = Math.max(0, Math.floor(body.keywordIndex));
+      const kw = spec.searchKeywords[keywordIndex];
+      const page = Math.max(1, Math.min(10, Number(body.page) || 1));
+
+      if (!kw) {
+        return res.json({
+          success: true,
+          curatedSpecId,
+          curatedCategoryId: spec.categoryId,
+          keyword: null,
+          keywordIndex,
+          totalKeywords: spec.searchKeywords.length,
+          page,
+          hasMorePages: false,
+          totalRecords: 0,
+          totalFound: 0,
+          newCount: 0,
+          alreadyImportedCount: 0,
+          candidates: [],
+          searchErrors: [],
+        });
+      }
+
+      let hasMorePages = false;
+      let totalRecords = 0;
+
+      try {
+        const searchRes = await cjService.searchProducts({
+          keyword: kw,
+          page,
+          size: requestedSize,
+          countryCode,
+        });
+
+        totalRecords = searchRes.total;
+        hasMorePages = searchRes.products.length >= requestedSize && page * requestedSize < searchRes.total;
+
+        for (const cand of searchRes.products) {
+          if (!cand.pid || seenPids.has(cand.pid)) continue;
+          if (!cand.supplierPriceCents || cand.supplierPriceCents <= 0) continue;
+          if (cand.warehouseInventoryNum === 0) continue;
+          if (!matchesCuratedSpec(cand.productNameEn, cand.categoryName, spec)) continue;
+
+          seenPids.add(cand.pid);
+          candidates.push({
+            pid: cand.pid,
+            title: cand.productNameEn,
+            specId: spec.id,
+            specLabel: spec.label,
+            categoryId: spec.categoryId,
+            alreadyImported: existingPidSet.has(cand.pid),
+            warehouseInventoryNum: cand.warehouseInventoryNum,
+            hasImage: Boolean(cand.productImage),
+          });
+        }
+      } catch (searchErr: any) {
+        searchErrors.push({
+          specId: spec.id,
+          specLabel: spec.label,
+          reason: searchErr?.message || `CJ search failed for "${kw}" (page ${page})`,
+        });
+      }
+
+      candidates.sort((a, b) => {
+        const aStock = (a.warehouseInventoryNum ?? 1) > 0 ? 1 : 0;
+        const bStock = (b.warehouseInventoryNum ?? 1) > 0 ? 1 : 0;
+        if (aStock !== bStock) return bStock - aStock;
+        const aImg = a.hasImage ? 1 : 0;
+        const bImg = b.hasImage ? 1 : 0;
+        return bImg - aImg;
+      });
+
+      return res.json({
+        success: true,
+        curatedSpecId,
+        curatedCategoryId: spec.categoryId,
+        keyword: kw,
+        keywordIndex,
+        totalKeywords: spec.searchKeywords.length,
+        page,
+        hasMorePages,
+        totalRecords,
+        totalFound: candidates.length,
+        newCount: candidates.filter((c) => !c.alreadyImported).length,
+        alreadyImportedCount: candidates.filter((c) => c.alreadyImported).length,
+        candidates,
+        searchErrors,
+      });
+    }
+
+    // Standard multi-page mode
+    const maxPagesPerKeyword = Math.max(1, Math.min(5, Number(body.maxPagesPerKeyword) || (curatedSpecId ? 2 : 1)));
+
     for (const spec of resolved.specs) {
       for (const kw of spec.searchKeywords) {
         for (let page = 1; page <= maxPagesPerKeyword; page++) {
@@ -2359,7 +2461,7 @@ app.post('/api/admin/suppliers/cj/products/curated-discover', requireAdmin, asyn
             const searchRes = await cjService.searchProducts({
               keyword: kw,
               page,
-              size: 100,
+              size: requestedSize,
               countryCode,
             });
 
@@ -2384,7 +2486,7 @@ app.post('/api/admin/suppliers/cj/products/curated-discover', requireAdmin, asyn
               });
             }
 
-            if (searchRes.products.length < 100 || page * 100 >= searchRes.total) {
+            if (searchRes.products.length < requestedSize || page * requestedSize >= searchRes.total) {
               break;
             }
           } catch (searchErr: any) {

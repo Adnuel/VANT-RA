@@ -204,7 +204,7 @@ export interface CjServiceOptions {
 const DEFAULT_REFRESH_BUFFER_MS = 24 * 60 * 60 * 1000; // Refresh 24 hours before token expiry
 const REFRESH_TOKEN_SAFETY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes before refresh token expiry
 const DEFAULT_MIN_REQUEST_SPACING_MS = 350; // Respect CJ API 2.0 rate limits without excessive bulk delay
-const DEFAULT_REQUEST_TIMEOUT_MS = 12000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 25000;
 
 function sleep(ms: number): Promise<void> {
   if (ms <= 0) return Promise.resolve();

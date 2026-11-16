@@ -471,6 +471,13 @@
   ],
   "auditLogs": [
     {
+      "id": "log_1794821057315_dsze",
+      "timestamp": "2026-11-16T09:24:17.315Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
       "id": "log_1794820510201_s00q",
       "timestamp": "2026-11-16T09:15:10.201Z",
       "actor": "CJ API 2.0 Auth Monitor",
@@ -2347,7 +2354,7 @@
     "ngnExchangeRate": 1352.11,
     "enableNgn": true,
     "enableUsd": true,
-    "lastUpdated": "2026-11-16T09:15:06.012Z",
+    "lastUpdated": "2026-11-16T09:24:17.315Z",
     "isManualOverride": false,
     "manualOverrideBy": null,
     "manualOverrideReason": null,
