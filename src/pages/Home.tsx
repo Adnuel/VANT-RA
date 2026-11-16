@@ -193,14 +193,29 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {curatedFinds.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onNavigate={onNavigate}
-                onQuickView={(p) => setQuickViewProduct(p)}
-              />
-            ))}
+            {curatedFinds.length === 0 ? (
+              <div className="col-span-full border border-white/8 bg-[#141416] p-10 text-center space-y-3 rounded-xs">
+                <p className="text-sm text-[#A8A297]">
+                  No pieces currently match this filter.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setCurationTab('all')}
+                  className="text-[11px] uppercase tracking-[0.2em] text-[#C8A96A] underline cursor-pointer"
+                >
+                  Show All Finds
+                </button>
+              </div>
+            ) : (
+              curatedFinds.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onNavigate={onNavigate}
+                  onQuickView={(p) => setQuickViewProduct(p)}
+                />
+              ))
+            )}
           </div>
 
           <div className="flex justify-center pt-4">
@@ -209,7 +224,7 @@ export const Home: React.FC<HomeProps> = ({ products, onNavigate }) => {
               onClick={() => onNavigate('/shop')}
               className="px-8 py-3.5 text-[11px] uppercase tracking-[0.22em] font-semibold border border-white/15 hover:border-[#C8A96A] text-[#F5F1E8] hover:text-[#C8A96A] rounded-xs transition-colors cursor-pointer"
             >
-              View All {products.length} Pieces →
+              View All {products.length} {products.length === 1 ? 'Piece' : 'Pieces'} →
             </button>
           </div>
         </section>

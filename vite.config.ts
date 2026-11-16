@@ -82,17 +82,7 @@ export default defineConfig(() => {
             },
             {
               urlPattern: /\/api\/products/i,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'api-products-cache',
-                expiration: {
-                  maxEntries: 20,
-                  maxAgeSeconds: 60 * 60 * 24,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
+              handler: 'NetworkOnly',
             },
           ],
         },

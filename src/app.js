@@ -3,52 +3,7 @@
  * Supports independent static hosting on Cloudflare Pages and dynamic API fetching.
  */
 
-const VANTERA_INITIAL_PRODUCTS = [
-  {
-    id: 'festive-3in1-foldable-magsafe-charger',
-    title: '3-in-1 Foldable MagSafe Station',
-    category: 'charging',
-    price: 38.00,
-    referencePrice: 65.00,
-    image: '/products/charging-phone-stand.jpg',
-    description: 'Aircraft-grade alloy folding wireless dock. Simultaneous 15W high-speed induction for smartphone, watch, and spatial earbuds.',
-    variantId: 'zd_var_3in1_foldable_gold',
-    trending: true,
-  },
-  {
-    id: 'clear-protective-phone-case',
-    title: 'Titanium Edge MagSafe Shield',
-    category: 'phone-cases',
-    price: 24.00,
-    referencePrice: 42.00,
-    image: '/products/transparent-magsafe-compatible-case.jpg',
-    description: 'Zirconium ceramic impact armor with integrated neodymium magnetic array and anti-yellowing diamond coat.',
-    variantId: 'zd_var_titanium_shield_case',
-    trending: true,
-  },
-  {
-    id: 'magnetic-phone-mount',
-    title: 'Precision Orbit Phone Mount',
-    category: 'room-desk',
-    price: 28.00,
-    referencePrice: 48.00,
-    image: '/products/magnetic-phone-mount.jpg',
-    description: 'CNC-machined weighted aluminum desk mount with dual-axis 360° fluid articulation.',
-    variantId: 'zd_var_precision_orbit_mount',
-    trending: false,
-  },
-  {
-    id: 'foldable-laptop-stand',
-    title: 'Sculptural Laptop Riser',
-    category: 'room-desk',
-    price: 34.00,
-    referencePrice: 58.00,
-    image: '/products/foldable-laptop-stand.jpg',
-    description: 'Minimalist heat-dissipating ergonomic riser crafted from anodized brushed space gray alloy.',
-    variantId: 'zd_var_sculptural_riser',
-    trending: false,
-  },
-];
+const VANTERA_INITIAL_PRODUCTS = [];
 
 class VanteraCart {
   constructor() {

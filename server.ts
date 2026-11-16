@@ -16,14 +16,26 @@ import {
   subscribeToEvents,
   type User,
 } from './server/db.ts';
-import { calculateBusinessProfits } from './src/lib/commerceLogic.ts';
+import { calculateBusinessProfits, convertUsdCentsToNgn } from './src/lib/commerceLogic.ts';
 import type { AnalyticsTimeRange } from './src/lib/analyticsLogic.ts';
+import type { Product, ProductVariant } from './src/data/catalog.ts';
+import {
+  calculateSellingPriceCents,
+  calculateProductDependentPricingCents,
+  suggestVanteraCategory,
+  type CjPricingMode,
+} from './src/lib/cjPricing.ts';
 import { paystack } from './server/paystack.ts';
 import { wavy } from './server/wavy.ts';
 import { fetchLiveExchangeRate, setManualRateOverride, clearManualRateOverride } from './server/currency.ts';
 import { sendTransactionalEmail, emailTemplates, getDomainDnsRecords } from './server/mailer.ts';
 import { calculateDeliveryFee, validateNigerianPhone, NIGERIAN_STATES } from './src/data/nigerianStates.ts';
-import { cjService } from './server/cj.ts';
+import {
+  cjService,
+  CjApiRequestError,
+  CjAuthError,
+  CjConnectionUnavailableError,
+} from './server/cj.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -215,14 +227,18 @@ app.use((req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
 /* PUBLIC STOREFRONT & CUSTOMER AUTH API                                      */
 /* ========================================================================== */
 
-// Register customer (requires mandatory verification code)
+// Register customer (requires mandatory email verification code before session token is issued)
 app.post('/api/auth/register', async (req: Request, res: Response) => {
   try {
     const { name, email, password, phone, state, lga, address } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
-    if (password.length < 6) {
+    const cleanEmail = String(email).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+    if (String(password).length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
@@ -235,11 +251,11 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
       formattedPhone = phoneValidation.formatted;
     }
 
-    const newUser = db.createCustomer(name, email, password, formattedPhone);
+    const newUser = db.createCustomer(String(name), cleanEmail, String(password), formattedPhone);
 
     if (address && String(address).trim() && state && String(state).trim()) {
       db.addDeliveryAddress(newUser.id, {
-        fullName: name.trim(),
+        fullName: String(name).trim(),
         phone: formattedPhone || '',
         streetAddress: String(address).trim(),
         city: (lga ? String(lga).trim() : '') || 'Lagos',
@@ -250,30 +266,38 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
       });
     }
 
-    const token = createToken({ userId: newUser.id, email: newUser.email, role: newUser.role });
-
-    // Send verification email
+    // Dispatch 6-digit verification code to customer email
+    let mailChannel: 'smtp' | 'resend' | 'system_queue' = 'system_queue';
+    let mailSuccess = true;
+    let mailError: string | undefined;
     if (newUser.emailVerificationCode) {
-      await sendTransactionalEmail(emailTemplates.signupVerificationCode(newUser.email, newUser.name, newUser.emailVerificationCode));
+      const mailResult = await sendTransactionalEmail(
+        emailTemplates.signupVerificationCode(newUser.email, newUser.name, newUser.emailVerificationCode)
+      );
+      mailChannel = mailResult.channel;
+      mailSuccess = mailResult.success;
+      mailError = mailResult.error;
     }
 
-    res.json({
-      token,
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        role: newUser.role,
-        isEmailVerified: newUser.isEmailVerified ?? false,
-      },
+    const emailSent = mailSuccess && mailChannel !== 'system_queue';
+
+    return res.status(201).json({
+      requiresVerification: true,
+      email: newUser.email,
+      emailSent,
+      deliveryChannel: mailChannel,
+      message: emailSent
+        ? `A 6-digit verification code has been sent to ${newUser.email}. Enter it below to confirm your new account.`
+        : mailError
+        ? `Pending account created for ${newUser.email}, but email delivery failed (${mailError}). Check SMTP settings and click Resend Code.`
+        : `Pending account created for ${newUser.email}. Live email transport (SMTP or Resend API) is not configured on the server yet, so an email could not be delivered to your inbox.`,
     });
   } catch (err: any) {
-    res.status(400).json({ error: err.message || 'Registration failed' });
+    return res.status(400).json({ error: err.message || 'Registration failed' });
   }
 });
 
-// Login customer with rate limiting protection
+// Login customer with rate limiting protection (blocks unverified new accounts until OTP confirmed)
 app.post('/api/auth/login', (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -297,6 +321,16 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     }
 
     clearFailedLoginAttempts(clientKey);
+
+    // Enforce verification code confirmation for NEW accounts only (existing accounts where isEmailVerified is true or undefined pass straight through)
+    if (user.isEmailVerified === false) {
+      return res.status(403).json({
+        error: 'Please enter the 6-digit verification code sent to your email to confirm your new account before signing in.',
+        requiresVerification: true,
+        email: user.email,
+      });
+    }
+
     const token = createToken({ userId: user.id, email: user.email, role: user.role });
 
     db.addCustomerEvent({
@@ -324,7 +358,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   }
 });
 
-// Verify email address with 6-digit OTP code
+// Verify email address with 6-digit OTP code and activate session for newly registered accounts
 app.post('/api/auth/verify-email', (req: Request, res: Response) => {
   const { email, code } = req.body;
   if (!email || !code) {
@@ -335,9 +369,25 @@ app.post('/api/auth/verify-email', (req: Request, res: Response) => {
     return res.status(400).json({ error: result.error });
   }
   const verifiedUser = db.getUserByEmail(email);
+  const token = verifiedUser
+    ? createToken({ userId: verifiedUser.id, email: verifiedUser.email, role: verifiedUser.role })
+    : undefined;
+
+  if (verifiedUser) {
+    db.addCustomerEvent({
+      type: 'customer_registered',
+      customerId: verifiedUser.id,
+      customerEmail: verifiedUser.email,
+      customerName: verifiedUser.name,
+      status: 'success',
+      metadata: { role: verifiedUser.role, emailVerified: true },
+    });
+  }
+
   res.json({
     success: true,
-    message: 'Email verified successfully.',
+    message: 'Email verified and account confirmed!',
+    token,
     user: verifiedUser
       ? {
           id: verifiedUser.id,
@@ -351,16 +401,29 @@ app.post('/api/auth/verify-email', (req: Request, res: Response) => {
   });
 });
 
-// Resend email verification code
+// Resend email verification code (only for unverified new accounts)
 app.post('/api/auth/resend-verification', async (req: Request, res: Response) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required.' });
   const result = db.resendVerificationCode(email);
-  if (result.code) {
-    const user = db.getUserByEmail(email);
-    await sendTransactionalEmail(emailTemplates.signupVerificationCode(email, user?.name || 'Client', result.code));
+  if (!result.success || !result.code) {
+    return res.status(400).json({ error: result.error || 'Unable to resend verification code.' });
   }
-  res.json({ success: true, message: 'Verification code sent.' });
+  const user = db.getUserByEmail(email);
+  const mailResult = await sendTransactionalEmail(
+    emailTemplates.signupVerificationCode(email, user?.name || 'Client', result.code)
+  );
+  const emailSent = mailResult.success && mailResult.channel !== 'system_queue';
+  res.json({
+    success: true,
+    emailSent,
+    deliveryChannel: mailResult.channel,
+    message: emailSent
+      ? `A fresh 6-digit verification code has been sent to ${email}.`
+      : mailResult.error
+      ? `Code regenerated, but SMTP delivery failed (${mailResult.error}).`
+      : 'Code regenerated, but live email transport (SMTP or Resend API) is not configured on the server yet.',
+  });
 });
 
 // Change account password (authenticated)
@@ -568,17 +631,61 @@ app.delete('/api/customer/cart', requireAuth, (req: AuthenticatedRequest, res: R
 /* STOREFRONT PRODUCTS & CHECKOUT API                                         */
 /* ========================================================================== */
 
-// Get all products
+function sanitizeProductForStorefront(product: Product): Product {
+  const {
+    supplierName: _supplierName,
+    supplierLink: _supplierLink,
+    supplierSource: _supplierSource,
+    cjPid: _cjPid,
+    cjProductSku: _cjProductSku,
+    cjCategoryName: _cjCategoryName,
+    pricingConfig: _pricingConfig,
+    variants,
+    ...rest
+  } = product;
+
+  const sanitizedVariants: ProductVariant[] | undefined = Array.isArray(variants)
+    ? variants.map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        name: v.name,
+        color: v.color,
+        size: v.size,
+        variantKey: v.variantKey,
+        image: v.image,
+        supplierCostCents: null,
+        retailPriceCents: v.retailPriceCents,
+        stockQuantity: v.stockQuantity,
+        isAvailable: v.isAvailable && v.stockQuantity > 0,
+      }))
+    : undefined;
+
+  return {
+    ...rest,
+    supplierCostCents: null,
+    variants: sanitizedVariants,
+  };
+}
+
+// Lightweight readiness & pre-warming health check
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json({ ok: true, status: 'ready' });
+});
+
+// Get all products (supplier costs, keys & CJ internal identifiers stripped)
 app.get('/api/products', (_req: Request, res: Response) => {
-  const products = db.getProducts();
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  const products = db.getProducts().map(sanitizeProductForStorefront);
   res.json({ products });
 });
 
-// Get product by slug
+// Get product by slug (supplier costs, keys & CJ internal identifiers stripped)
 app.get('/api/products/:slug', (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   const product = db.getProductBySlug(req.params.slug);
   if (!product) return res.status(404).json({ error: 'Product not found' });
-  res.json({ product });
+  res.json({ product: sanitizeProductForStorefront(product) });
 });
 
 // Visitor Geo-Location Currency Auto-Detection
@@ -609,6 +716,71 @@ app.post('/api/shipping/calculate', async (req: Request, res: Response) => {
     ...calc,
     statesCount: NIGERIAN_STATES.length,
   });
+});
+
+// Real-Time CJ Dropshipping Freight Quote for Customer Cart (never fabricates quotes)
+app.post('/api/shipping/cj-quote', async (req: Request, res: Response) => {
+  try {
+    const { destinationCountryCode, items, zip } = req.body || {};
+    const endCountry = String(destinationCountryCode || 'NG').trim().toUpperCase();
+    const rawItems = Array.isArray(items) ? items : [];
+    const catalogMap = new Map(db.getProducts().map((p) => [p.id, p]));
+
+    const cjLines = new Map<string, number>();
+    for (const item of rawItems) {
+      const prod = catalogMap.get(String(item?.productId || ''));
+      if (!prod || !Array.isArray(prod.variants) || prod.variants.length === 0) continue;
+      const variant = item.variantId
+        ? prod.variants.find((v) => v.id === item.variantId)
+        : prod.variants.find((v) => v.isAvailable && v.stockQuantity > 0) || prod.variants[0];
+      if (!variant?.cjVid) continue;
+      const qty = Math.max(1, Math.min(99, Math.floor(Number(item.quantity) || 1)));
+      cjLines.set(variant.cjVid, (cjLines.get(variant.cjVid) || 0) + qty);
+    }
+
+    if (cjLines.size === 0) {
+      return res.json({ hasCjItems: false, destinationCountryCode: endCountry, options: [] });
+    }
+
+    const products = Array.from(cjLines.entries()).map(([vid, quantity]) => ({ vid, quantity }));
+    const [freight, fx] = await Promise.all([
+      cjService.calculateFreight({
+        startCountryCode: 'CN',
+        endCountryCode: endCountry,
+        products,
+        zip: zip ? String(zip) : undefined,
+      }),
+      fetchLiveExchangeRate(),
+    ]);
+
+    const options = freight.options.map((opt) => ({
+      ...opt,
+      totalPostageFeeNgn: convertUsdCentsToNgn(opt.totalPostageFeeCents, fx.usdToNgnRate),
+      logisticPriceNgn: convertUsdCentsToNgn(opt.logisticPriceCents, fx.usdToNgnRate),
+    }));
+
+    return res.json({
+      hasCjItems: true,
+      startCountryCode: freight.startCountryCode,
+      endCountryCode: freight.endCountryCode,
+      usdToNgnRate: fx.usdToNgnRate,
+      options,
+    });
+  } catch (err: any) {
+    const status =
+      err instanceof CjAuthError
+        ? 502
+        : err instanceof CjConnectionUnavailableError
+        ? 503
+        : err instanceof CjApiRequestError
+        ? err.httpStatus
+        : 400;
+    return res.status(status).json({
+      hasCjItems: true,
+      error: err?.message || 'Unable to retrieve CJ shipping rates for this destination.',
+      options: [],
+    });
+  }
 });
 
 // Create Order (Checkout — Strictly Authenticated Client Accounts Only)
@@ -657,7 +829,12 @@ app.post('/api/orders', async (req: AuthenticatedRequest, res: Response) => {
     for (const item of cartItems) {
       const prod = catalog.get(item.productId || item.id);
       if (prod) {
-        subtotalCents += prod.retailPriceCents * Math.max(1, Math.min(99, item.quantity || 1));
+        const variant =
+          item.variantId && Array.isArray(prod.variants)
+            ? prod.variants.find((v) => v.id === item.variantId)
+            : undefined;
+        const unitPrice = variant ? variant.retailPriceCents : prod.retailPriceCents;
+        subtotalCents += unitPrice * Math.max(1, Math.min(99, item.quantity || 1));
       }
     }
     const subtotalNgn = Math.round((subtotalCents / 100) * fx.usdToNgnRate);
@@ -1677,6 +1854,21 @@ app.post('/api/admin/products', requireAdmin, (req: AuthenticatedRequest, res: R
   }
 });
 
+// Remove all legacy/non-CJ products while preserving CJdropshipping products (CEO Only)
+app.post('/api/admin/products/prune-non-cj', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = db.removeNonCjProducts(AUTHORIZED_CEO_NAME);
+    res.json({
+      success: true,
+      removedCount: result.removedCount,
+      remainingCount: result.remainingCount,
+      products: db.getProducts(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to remove non-CJ products.' });
+  }
+});
+
 // CEO Customer Management
 app.get('/api/admin/customers', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
   const rawDb = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/vantera_db.json'), 'utf8'));
@@ -1791,6 +1983,563 @@ app.post('/api/admin/suppliers/cj/test', requireAdmin, async (_req: Authenticate
         accountInfo: null,
       },
     });
+  }
+});
+
+function handleCjRouteError(res: Response, err: any, fallback: string) {
+  if (err instanceof CjAuthError) {
+    return res.status(401).json({ error: err.message });
+  }
+  if (err instanceof CjConnectionUnavailableError) {
+    return res.status(503).json({ error: err.message });
+  }
+  if (err instanceof CjApiRequestError) {
+    return res.status(err.httpStatus || 400).json({ error: err.message });
+  }
+  return res.status(500).json({ error: err?.message || fallback });
+}
+
+// CJ Catalogue Search (CEO Only — GET /product/listV2)
+app.get('/api/admin/suppliers/cj/products/search', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const keyword = String(req.query.keyword || '').trim();
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const size = Math.max(1, Math.min(50, Number(req.query.size) || 12));
+    const countryCode = req.query.countryCode ? String(req.query.countryCode).trim().toUpperCase() : undefined;
+    const categoryId = req.query.categoryId ? String(req.query.categoryId).trim() : undefined;
+
+    const [searchResult, fx] = await Promise.all([
+      cjService.searchProducts({ keyword, page, size, countryCode, categoryId }),
+      fetchLiveExchangeRate(),
+    ]);
+
+    const importedByPid = new Map(
+      db
+        .getProducts()
+        .filter((p) => p.cjPid)
+        .map((p) => [p.cjPid!, p])
+    );
+
+    const enrichedProducts = searchResult.products.map((item) => {
+      const existing = importedByPid.get(item.pid);
+      return {
+        ...item,
+        supplierPriceNgn:
+          item.supplierPriceCents !== null ? convertUsdCentsToNgn(item.supplierPriceCents, fx.usdToNgnRate) : null,
+        supplierPriceMaxNgn:
+          item.supplierPriceMaxCents !== null ? convertUsdCentsToNgn(item.supplierPriceMaxCents, fx.usdToNgnRate) : null,
+        alreadyImported: Boolean(existing),
+        importedProductId: existing?.id || null,
+        importedProductSlug: existing?.slug || null,
+      };
+    });
+
+    res.json({
+      ...searchResult,
+      products: enrichedProducts,
+      fx: {
+        usdToNgnRate: fx.usdToNgnRate,
+        provider: fx.provider,
+        lastUpdated: fx.lastUpdated,
+      },
+    });
+  } catch (err: any) {
+    handleCjRouteError(res, err, 'Failed to search CJ Dropshipping product catalogue.');
+  }
+});
+
+// CJ Product Details, Variants, Specifications & Real Stock (CEO Only)
+app.get('/api/admin/suppliers/cj/products/detail', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const pid = String(req.query.pid || '').trim();
+    if (!pid) {
+      return res.status(400).json({ error: 'CJ Product ID (pid) query parameter is required.' });
+    }
+    const countryCode = req.query.countryCode ? String(req.query.countryCode).trim().toUpperCase() : undefined;
+
+    const [detail, fx] = await Promise.all([
+      cjService.getProductDetail(pid, { countryCode, includeInventory: true }),
+      fetchLiveExchangeRate(),
+    ]);
+
+    const existingProduct = db.getProducts().find((p) => p.cjPid === detail.pid) || null;
+    const suggestedCategory = suggestVanteraCategory(detail.categoryName, detail.productNameEn);
+
+    const variantsWithNgn = detail.variants.map((v) => ({
+      ...v,
+      supplierPriceNgn:
+        v.supplierPriceCents !== null ? convertUsdCentsToNgn(v.supplierPriceCents, fx.usdToNgnRate) : null,
+    }));
+
+    res.json({
+      product: {
+        ...detail,
+        supplierPriceNgn:
+          detail.supplierPriceCents !== null ? convertUsdCentsToNgn(detail.supplierPriceCents, fx.usdToNgnRate) : null,
+        supplierPriceMaxNgn:
+          detail.supplierPriceMaxCents !== null
+            ? convertUsdCentsToNgn(detail.supplierPriceMaxCents, fx.usdToNgnRate)
+            : null,
+        variants: variantsWithNgn,
+      },
+      existingProduct,
+      suggestedCategory,
+      fx: {
+        usdToNgnRate: fx.usdToNgnRate,
+        provider: fx.provider,
+        lastUpdated: fx.lastUpdated,
+      },
+    });
+  } catch (err: any) {
+    handleCjRouteError(res, err, 'Failed to retrieve CJ product details.');
+  }
+});
+
+// CJ Live Shipping Freight Calculation by Destination (CEO Only — POST /logistic/freightCalculate)
+app.post('/api/admin/suppliers/cj/freight/calculate', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { startCountryCode, endCountryCode, products, zip } = req.body || {};
+    const [freight, fx] = await Promise.all([
+      cjService.calculateFreight({
+        startCountryCode: startCountryCode || 'CN',
+        endCountryCode: String(endCountryCode || '').trim().toUpperCase(),
+        products: Array.isArray(products) ? products : [],
+        zip: zip ? String(zip) : undefined,
+      }),
+      fetchLiveExchangeRate(),
+    ]);
+
+    const options = freight.options.map((opt) => ({
+      ...opt,
+      logisticPriceNgn: convertUsdCentsToNgn(opt.logisticPriceCents, fx.usdToNgnRate),
+      taxesFeeNgn: convertUsdCentsToNgn(opt.taxesFeeCents, fx.usdToNgnRate),
+      clearanceOperationFeeNgn: convertUsdCentsToNgn(opt.clearanceOperationFeeCents, fx.usdToNgnRate),
+      totalPostageFeeNgn: convertUsdCentsToNgn(opt.totalPostageFeeCents, fx.usdToNgnRate),
+    }));
+
+    res.json({
+      ...freight,
+      options,
+      fx: {
+        usdToNgnRate: fx.usdToNgnRate,
+        provider: fx.provider,
+        lastUpdated: fx.lastUpdated,
+      },
+    });
+  } catch (err: any) {
+    handleCjRouteError(res, err, 'Failed to calculate CJ shipping freight.');
+  }
+});
+
+// CJ Selective Product & Variant Import into VANTÉRA Catalogue (CEO Only)
+app.post('/api/admin/suppliers/cj/products/import', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const body = req.body || {};
+    const cjPid = String(body.cjPid || '').trim();
+    const title = String(body.title || '').trim();
+    const category = String(body.category || 'room-desk').trim();
+    const description = String(body.description || '').trim();
+    const pricingMode: CjPricingMode =
+      body.pricingMode === 'margin_percent' || body.pricingMode === 'fixed_cents'
+        ? body.pricingMode
+        : 'markup_percent';
+    const pricingValue = Number(body.pricingValue);
+
+    if (!cjPid) {
+      return res.status(400).json({ error: 'CJ Product ID (cjPid) is required.' });
+    }
+    if (!title) {
+      return res.status(400).json({ error: 'Product title is required.' });
+    }
+    if (!Number.isFinite(pricingValue) || pricingValue < 0) {
+      return res.status(400).json({ error: 'A valid non-negative pricing value is required.' });
+    }
+    if (pricingMode === 'fixed_cents' && pricingValue <= 0) {
+      return res.status(400).json({ error: 'Fixed selling price must be greater than $0.00.' });
+    }
+
+    const rawVariants = Array.isArray(body.variants) ? body.variants : [];
+    const selectedRawVariants = rawVariants.filter((v: any) => v && v.selected !== false);
+
+    if (rawVariants.length > 0 && selectedRawVariants.length === 0) {
+      return res.status(400).json({ error: 'Select at least one variant to import.' });
+    }
+
+    const mappedVariants: ProductVariant[] = selectedRawVariants.map((v: any, index: number) => {
+      const vid = String(v.vid || v.id || `v_${index}`).trim();
+      const supplierCost =
+        typeof v.supplierCostCents === 'number' && Number.isFinite(v.supplierCostCents) && v.supplierCostCents >= 0
+          ? Math.round(v.supplierCostCents)
+          : typeof body.fallbackSupplierCostCents === 'number' && body.fallbackSupplierCostCents >= 0
+          ? Math.round(body.fallbackSupplierCostCents)
+          : null;
+
+      const customRetail =
+        typeof v.customRetailPriceCents === 'number' &&
+        Number.isFinite(v.customRetailPriceCents) &&
+        v.customRetailPriceCents > 0
+          ? Math.round(v.customRetailPriceCents)
+          : null;
+
+      const calculatedRetail =
+        customRetail ?? calculateSellingPriceCents(supplierCost, pricingMode, pricingValue);
+
+      if (!calculatedRetail || calculatedRetail <= 0) {
+        throw new Error(
+          `Cannot determine retail selling price for variant "${v.name || v.sku || vid}" because supplier cost is missing.`
+        );
+      }
+
+      const stockQty =
+        typeof v.stockQuantity === 'number' && Number.isFinite(v.stockQuantity)
+          ? Math.max(0, Math.round(v.stockQuantity))
+          : 0;
+
+      return {
+        id: `cjv_${vid}`,
+        cjVid: vid,
+        sku: String(v.sku || ''),
+        name: String(v.name || v.variantKey || `Variant ${index + 1}`).trim(),
+        color: v.color ? String(v.color) : undefined,
+        size: v.size ? String(v.size) : undefined,
+        variantKey: v.variantKey ? String(v.variantKey) : undefined,
+        image: v.image ? String(v.image) : null,
+        supplierCostCents: supplierCost,
+        retailPriceCents: calculatedRetail,
+        stockQuantity: stockQty,
+        isAvailable: stockQty > 0,
+      };
+    });
+
+    const fallbackSupplierCost =
+      typeof body.fallbackSupplierCostCents === 'number' &&
+      Number.isFinite(body.fallbackSupplierCostCents) &&
+      body.fallbackSupplierCostCents >= 0
+        ? Math.round(body.fallbackSupplierCostCents)
+        : null;
+
+    const fallbackStock =
+      typeof body.fallbackStockQuantity === 'number' && Number.isFinite(body.fallbackStockQuantity)
+        ? Math.max(0, Math.round(body.fallbackStockQuantity))
+        : 0;
+
+    const totalStock =
+      mappedVariants.length > 0
+        ? mappedVariants.reduce((sum, v) => sum + v.stockQuantity, 0)
+        : fallbackStock;
+
+    const fallbackRetail =
+      mappedVariants.length > 0
+        ? Math.min(...mappedVariants.map((v) => v.retailPriceCents))
+        : calculateSellingPriceCents(fallbackSupplierCost, pricingMode, pricingValue);
+
+    if (!fallbackRetail || fallbackRetail <= 0) {
+      return res.status(400).json({
+        error: 'Unable to calculate a valid selling price. Specify a fixed USD price or ensure supplier price exists.',
+      });
+    }
+
+    const result = db.upsertCjProduct(
+      {
+        cjPid,
+        cjProductSku: body.cjProductSku ? String(body.cjProductSku) : null,
+        cjCategoryName: body.cjCategoryName ? String(body.cjCategoryName) : null,
+        title,
+        category,
+        description,
+        image: body.image ? String(body.image) : null,
+        galleryImages: Array.isArray(body.galleryImages) ? body.galleryImages.map(String) : [],
+        cjSpecs: Array.isArray(body.cjSpecs)
+          ? body.cjSpecs
+              .filter((s: any) => s && s.label && s.value)
+              .map((s: any) => ({ label: String(s.label), value: String(s.value) }))
+          : [],
+        retailPriceCents: fallbackRetail,
+        supplierCostCents: fallbackSupplierCost,
+        stockQuantity: totalStock,
+        isAvailable: totalStock > 0,
+        variants: mappedVariants,
+        pricingConfig: {
+          mode: pricingMode,
+          value: pricingValue,
+        },
+        trending: Boolean(body.trending),
+      },
+      AUTHORIZED_CEO_NAME
+    );
+
+    res.json({
+      success: true,
+      created: result.created,
+      product: result.product,
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err?.message || 'Failed to import CJ product.' });
+  }
+});
+
+// CJ One-Click Bulk Import with Product-Dependent Tiered Pricing (Capped at Max 60% Profit Over Supplier Cost)
+app.post('/api/admin/suppliers/cj/products/bulk-import', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const body = req.body || {};
+    const requestedMaxProfit = Number(body.maxProfitPercent);
+    const maxProfitPercent = Number.isFinite(requestedMaxProfit)
+      ? Math.min(60, Math.max(0, requestedMaxProfit))
+      : 60;
+    const countryCode = body.countryCode ? String(body.countryCode).trim().toUpperCase() : undefined;
+    const keyword = body.keyword ? String(body.keyword).trim() : '';
+    const page = Math.max(1, Number(body.page) || 1);
+    const size = Math.max(1, Math.min(50, Number(body.size) || 20));
+
+    let targetPids: string[] = Array.isArray(body.pids)
+      ? Array.from(new Set<string>(body.pids.map((p: any) => String(p || '').trim()).filter(Boolean))).slice(0, 50)
+      : [];
+
+    if (targetPids.length === 0) {
+      const searchResult = await cjService.searchProducts({
+        keyword,
+        page,
+        size,
+        countryCode,
+      });
+      targetPids = searchResult.products.map((p) => p.pid).filter(Boolean);
+    }
+
+    if (targetPids.length === 0) {
+      return res.status(400).json({
+        error: 'No CJ products were found to bulk import. Try a search keyword or select Global warehouses.',
+      });
+    }
+
+    const fx = await fetchLiveExchangeRate();
+    let importedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const items: Array<{
+      cjPid: string;
+      productId: string;
+      title: string;
+      created: boolean;
+      appliedProfitPercent: number;
+      supplierCostCents: number;
+      retailPriceCents: number;
+      retailNgn: number;
+      stockQuantity: number;
+      variantCount: number;
+    }> = [];
+    const errors: Array<{ cjPid: string; reason: string }> = [];
+
+    for (const pid of targetPids) {
+      try {
+        const detail = await cjService.getProductDetail(pid, {
+          countryCode,
+          includeInventory: true,
+        });
+
+        const category = suggestVanteraCategory(detail.categoryName, detail.productNameEn);
+        const rawVariants = Array.isArray(detail.variants) ? detail.variants : [];
+
+        // Keep in-stock variants when CJ reports stock; fall back to all variants if stock is null/unreported
+        const hasAnyPositiveStock = rawVariants.some((v) => typeof v.stockQuantity === 'number' && v.stockQuantity > 0);
+        const eligibleVariants = hasAnyPositiveStock
+          ? rawVariants.filter((v) => v.stockQuantity === null || v.stockQuantity > 0)
+          : rawVariants;
+
+        const mappedVariants: ProductVariant[] = [];
+        for (let i = 0; i < eligibleVariants.length; i++) {
+          const v = eligibleVariants[i];
+          const vCost =
+            typeof v.supplierPriceCents === 'number' && Number.isFinite(v.supplierPriceCents) && v.supplierPriceCents > 0
+              ? Math.round(v.supplierPriceCents)
+              : typeof detail.supplierPriceCents === 'number' && detail.supplierPriceCents > 0
+              ? Math.round(detail.supplierPriceCents)
+              : null;
+
+          if (!vCost || vCost <= 0) continue;
+
+          const priced = calculateProductDependentPricingCents(vCost, {
+            category,
+            maxProfitPercent,
+          });
+          const stockQty =
+            typeof v.stockQuantity === 'number' && Number.isFinite(v.stockQuantity)
+              ? Math.max(0, Math.round(v.stockQuantity))
+              : 0;
+
+          mappedVariants.push({
+            id: `cjv_${v.vid}`,
+            cjVid: v.vid,
+            sku: String(v.variantSku || ''),
+            name: String(v.label || v.variantNameEn || `Variant ${i + 1}`).trim(),
+            color: v.color,
+            size: v.size,
+            variantKey: v.variantKey,
+            image: v.variantImage,
+            supplierCostCents: vCost,
+            retailPriceCents: priced.retailPriceCents,
+            stockQuantity: stockQty,
+            isAvailable: stockQty > 0,
+          });
+        }
+
+        const baseSupplierCost =
+          mappedVariants.length > 0
+            ? Math.min(...mappedVariants.map((v) => v.supplierCostCents || 0).filter((c) => c > 0))
+            : detail.supplierPriceCents;
+
+        if (!baseSupplierCost || baseSupplierCost <= 0) {
+          skippedCount += 1;
+          errors.push({ cjPid: pid, reason: 'No verified supplier cost returned by CJ.' });
+          continue;
+        }
+
+        const productPricing = calculateProductDependentPricingCents(baseSupplierCost, {
+          category,
+          maxProfitPercent,
+        });
+
+        const totalStock =
+          mappedVariants.length > 0
+            ? mappedVariants.reduce((sum, v) => sum + v.stockQuantity, 0)
+            : Math.max(0, detail.totalInventory ?? 0);
+
+        const retailPriceCents =
+          mappedVariants.length > 0
+            ? Math.min(...mappedVariants.map((v) => v.retailPriceCents))
+            : productPricing.retailPriceCents;
+
+        const saved = db.upsertCjProduct(
+          {
+            cjPid: detail.pid,
+            cjProductSku: detail.productSku || null,
+            cjCategoryName: detail.categoryName || null,
+            title: detail.productNameEn,
+            category,
+            description: detail.description,
+            image: detail.productImage,
+            galleryImages: detail.productImageSet,
+            cjSpecs: detail.specs,
+            retailPriceCents,
+            supplierCostCents: baseSupplierCost,
+            stockQuantity: totalStock,
+            isAvailable: totalStock > 0,
+            variants: mappedVariants,
+            pricingConfig: {
+              mode: 'markup_percent',
+              value: productPricing.markupPercent,
+            },
+            trending: false,
+          },
+          `${AUTHORIZED_CEO_NAME} (One-Click Bulk Import <=${maxProfitPercent}%)`
+        );
+
+        if (saved.created) importedCount += 1;
+        else updatedCount += 1;
+
+        items.push({
+          cjPid: detail.pid,
+          productId: saved.product.id,
+          title: saved.product.title,
+          created: saved.created,
+          appliedProfitPercent: productPricing.markupPercent,
+          supplierCostCents: baseSupplierCost,
+          retailPriceCents: saved.product.retailPriceCents,
+          retailNgn: convertUsdCentsToNgn(saved.product.retailPriceCents, fx.usdToNgnRate),
+          stockQuantity: saved.product.stockQuantity,
+          variantCount: mappedVariants.length,
+        });
+      } catch (itemErr: any) {
+        errors.push({
+          cjPid: pid,
+          reason: itemErr?.message || 'Unable to fetch or import CJ product.',
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      maxProfitPercent,
+      totalRequested: targetPids.length,
+      importedCount,
+      updatedCount,
+      skippedCount,
+      failedCount: errors.length - skippedCount,
+      usdToNgnRate: fx.usdToNgnRate,
+      items,
+      errors,
+    });
+  } catch (err: any) {
+    handleCjRouteError(res, err, 'Failed to bulk import CJ Dropshipping products.');
+  }
+});
+
+// CJ Live Inventory Synchronisation (CEO Only — queries real CJ stock APIs sequentially)
+app.post('/api/admin/suppliers/cj/inventory/sync', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const targetProductId = req.body?.productId ? String(req.body.productId).trim() : null;
+    const cjProducts = db
+      .getProducts()
+      .filter((p) => p.cjPid && (!targetProductId || p.id === targetProductId || p.slug === targetProductId));
+
+    if (targetProductId && cjProducts.length === 0) {
+      return res.status(404).json({ error: 'CJ-imported product not found.' });
+    }
+
+    const results: Array<{
+      productId: string;
+      cjPid: string;
+      title: string;
+      success: boolean;
+      stockQuantity?: number;
+      isAvailable?: boolean;
+      error?: string;
+    }> = [];
+
+    for (const prod of cjProducts) {
+      try {
+        const detail = await cjService.getProductDetail(prod.cjPid!, { includeInventory: true });
+        const variantStocks = new Map<string, number | null>();
+        for (const v of detail.variants) {
+          if (v.vid) {
+            variantStocks.set(v.vid, v.stockQuantity);
+          }
+        }
+        const updated = db.syncCjProductStock(
+          prod.id,
+          {
+            totalInventory: detail.totalInventory,
+            variantStocks,
+            supplierCostCents: detail.supplierPriceCents,
+          },
+          `${AUTHORIZED_CEO_NAME} (CJ Stock Sync)`
+        );
+        results.push({
+          productId: updated.id,
+          cjPid: prod.cjPid!,
+          title: updated.title,
+          success: true,
+          stockQuantity: updated.stockQuantity,
+          isAvailable: updated.isAvailable,
+        });
+      } catch (err: any) {
+        results.push({
+          productId: prod.id,
+          cjPid: prod.cjPid!,
+          title: prod.title,
+          success: false,
+          error: err?.message || 'Stock sync failed',
+        });
+      }
+    }
+
+    res.json({
+      totalChecked: cjProducts.length,
+      syncedCount: results.filter((r) => r.success).length,
+      failedCount: results.filter((r) => !r.success).length,
+      results,
+    });
+  } catch (err: any) {
+    handleCjRouteError(res, err, 'Failed to synchronize CJ inventory.');
   }
 });
 
@@ -2298,12 +3047,40 @@ async function startServer() {
 
   cjService.startAutoRefreshScheduler();
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const httpServer = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[VANTÉRA Engine] Server running on http://0.0.0.0:${PORT}`);
     console.log(`[VANTÉRA Engine] Storefront: http://localhost:${PORT}/`);
     console.log(`[VANTÉRA Engine] CEO Dashboard: http://localhost:${PORT}/admin/dashboard`);
     console.log(`[VANTÉRA Engine] CEO Login: http://localhost:${PORT}/admin/login`);
   });
+
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    console.error('[VANTÉRA Engine] HTTP server error:', err.message);
+    if (err.code === 'EADDRINUSE' || err.code === 'EACCES') {
+      process.exit(1);
+    }
+  });
+
+  const gracefulShutdown = () => {
+    cjService.stopAutoRefreshScheduler();
+    httpServer.close(() => {
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 }
 
-startServer();
+process.on('unhandledRejection', (reason) => {
+  console.error('[VANTÉRA Engine] Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[VANTÉRA Engine] Uncaught exception:', err);
+});
+
+startServer().catch((err) => {
+  console.error('[VANTÉRA Engine] Fatal startup error:', err);
+  process.exit(1);
+});

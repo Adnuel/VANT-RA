@@ -77,6 +77,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
   const [activeUsd, setActiveUsd] = useState<any>(null);
   const [viewBankCurrency, setViewBankCurrency] = useState<'NGN' | 'USD'>('USD');
 
+  // Real CJ Logistics Quote state (only surfaces when cart contains CJ-sourced variants)
+  const [cjQuoteCountry, setCjQuoteCountry] = useState<string>('NG');
+  const [cjQuoteLoading, setCjQuoteLoading] = useState(false);
+  const [cjQuoteData, setCjQuoteData] = useState<{
+    hasCjItems: boolean;
+    options: Array<{
+      logisticName: string;
+      logisticAging: string;
+      totalPostageFeeCents: number;
+      totalPostageFeeNgn: number;
+    }>;
+    error?: string;
+  } | null>(null);
+
   useEffect(() => {
     safeFetchJson<any>('/api/bank-details').then((res) => {
       if (res.ok && res.data) {
@@ -193,6 +207,46 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
     };
   }, [checkoutStep, confirmedOrder?.orderReference, pendingPaymentRef, user?.id]);
 
+  // Fetch authoritative CJ carrier freight quotes when viewing shipping step
+  useEffect(() => {
+    if (!isCartOpen || checkoutStep !== 'shipping' || items.length === 0) return;
+
+    let cancelled = false;
+    setCjQuoteLoading(true);
+    safeFetchJson<any>('/api/shipping/cj-quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        destinationCountryCode: cjQuoteCountry,
+        zip: formData.postalCode || undefined,
+        items: items.map((i) => ({
+          productId: i.product.id,
+          variantId: i.variantId,
+          quantity: i.quantity,
+        })),
+      }),
+    })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.data) {
+          setCjQuoteData({
+            hasCjItems: Boolean(res.data.hasCjItems),
+            options: Array.isArray(res.data.options) ? res.data.options : [],
+            error: res.data.error || (!res.ok ? res.error : undefined),
+          });
+        } else {
+          setCjQuoteData(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCjQuoteLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCartOpen, checkoutStep, cjQuoteCountry, items]);
+
   if (!isCartOpen) return null;
 
   // Coupon discount calculation
@@ -270,6 +324,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
     },
     cartItems: items.map((i) => ({
       productId: i.product.id,
+      variantId: i.variantId,
       quantity: i.quantity,
     })),
     currency,
@@ -540,13 +595,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {items.map(({ product, quantity }) => {
-                    const itemTotalCents = product.retailPriceCents * quantity;
+                  {items.map(({ product, quantity, variantId, variantLabel, unitPriceCents }) => {
+                    const effectiveUnitPrice = unitPriceCents ?? product.retailPriceCents;
+                    const itemTotalCents = effectiveUnitPrice * quantity;
                     const itemTotalNgn = convertUsdCentsToNgn(itemTotalCents, exchangeRate);
+                    const itemKey = variantId ? `${product.id}::${variantId}` : product.id;
 
                     return (
                       <div
-                        key={product.id}
+                        key={itemKey}
                         className="flex items-start gap-4 bg-[#121212] p-4 border border-white/5 rounded-xs"
                       >
                         <div className="h-16 w-16 shrink-0 overflow-hidden bg-[#0a0a0a] p-1.5 border border-white/5 flex items-center justify-center">
@@ -572,13 +629,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                               </span>
                             </div>
                           </div>
+                          {variantLabel && (
+                            <span className="text-[10px] text-[#C8A96A] font-meta block mt-0.5 truncate">
+                              {variantLabel}
+                            </span>
+                          )}
                           <span className="text-[9px] uppercase tracking-[0.2em] text-[#73736E] font-meta block mt-1">{product.category}</span>
 
                           <div className="mt-3 flex items-center justify-between">
                             <div className="flex items-center border border-white/10 rounded-xs bg-[#0B0B0B]">
                               <button
                                 type="button"
-                                onClick={() => updateQuantity(product.id, quantity - 1)}
+                                onClick={() => updateQuantity(product.id, quantity - 1, variantId)}
                                 className="px-2.5 py-0.5 text-xs text-[#888880] hover:text-[#EDEDED]"
                               >
                                 -
@@ -586,7 +648,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                               <span className="px-2 text-xs font-meta text-[#EDEDED]">{quantity}</span>
                               <button
                                 type="button"
-                                onClick={() => updateQuantity(product.id, quantity + 1)}
+                                onClick={() => updateQuantity(product.id, quantity + 1, variantId)}
                                 className="px-2.5 py-0.5 text-xs text-[#888880] hover:text-[#EDEDED]"
                               >
                                 +
@@ -595,7 +657,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
 
                             <button
                               type="button"
-                              onClick={() => removeFromCart(product.id)}
+                              onClick={() => removeFromCart(product.id, variantId)}
                               className="text-[10px] font-meta tracking-wider text-[#A0A09A] hover:text-red-400"
                             >
                               Release
@@ -854,6 +916,52 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     <span className="text-[#888880]">Estimated Delivery:</span>
                     <span className="text-[#D4AF37] font-semibold">{activeStateInfo.deliveryEstimate}</span>
                   </div>
+
+                  {cjQuoteData?.hasCjItems && (
+                    <div className="bg-[#0B0B0B] p-3 border border-white/10 rounded-xs space-y-2 text-[11px] font-meta">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] uppercase tracking-[0.2em] text-[#D4AF37]">
+                          Global Supplier Freight Estimate
+                        </span>
+                        <select
+                          aria-label="CJ freight destination country"
+                          value={cjQuoteCountry}
+                          onChange={(e) => setCjQuoteCountry(e.target.value)}
+                          className="bg-[#141416] border border-white/15 px-2 py-0.5 text-[10px] text-[#EDEDED]"
+                        >
+                          <option value="NG">Nigeria (NG)</option>
+                          <option value="US">United States (US)</option>
+                          <option value="GB">United Kingdom (GB)</option>
+                          <option value="CA">Canada (CA)</option>
+                          <option value="GH">Ghana (GH)</option>
+                        </select>
+                      </div>
+                      {cjQuoteLoading ? (
+                        <p className="text-[10px] text-[#888880]">Checking live carrier schedules...</p>
+                      ) : cjQuoteData.error ? (
+                        <p className="text-[10px] text-[#E57373]">{cjQuoteData.error}</p>
+                      ) : cjQuoteData.options.length > 0 ? (
+                        <div className="space-y-1">
+                          {cjQuoteData.options.slice(0, 3).map((opt) => (
+                            <div key={opt.logisticName} className="flex items-center justify-between gap-2 text-[10px]">
+                              <span className="text-[#EDEDED] truncate">
+                                {opt.logisticName} ({opt.logisticAging})
+                              </span>
+                              <span className="text-[#D4AF37] shrink-0 font-mono">
+                                {currency === 'NGN'
+                                  ? formatNGN(opt.totalPostageFeeNgn)
+                                  : formatUSD(opt.totalPostageFeeCents)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-[#888880]">
+                          No international carrier methods returned for {cjQuoteCountry}.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -3,6 +3,21 @@
  * Slogan: Technology, Elevated.
  */
 
+export interface ProductVariant {
+  id: string;
+  cjVid?: string;
+  sku: string;
+  name: string;
+  color?: string;
+  size?: string;
+  variantKey?: string;
+  image?: string | null;
+  supplierCostCents: number | null;
+  retailPriceCents: number;
+  stockQuantity: number;
+  isAvailable: boolean;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -27,6 +42,18 @@ export interface Product {
   festiveHolidayTag?: string;
   supplierName?: string;
   supplierLink?: string;
+  supplierSource?: 'manual' | 'cjdropshipping';
+  cjPid?: string | null;
+  cjProductSku?: string | null;
+  cjCategoryName?: string | null;
+  cjSpecs?: Array<{ label: string; value: string }>;
+  galleryImages?: string[];
+  variants?: ProductVariant[];
+  cjLastSyncedAt?: string | null;
+  pricingConfig?: {
+    mode: 'markup_percent' | 'margin_percent' | 'fixed_cents';
+    value: number;
+  };
 }
 
 export interface Category {

@@ -5,7 +5,7 @@ import { CurrencyProvider } from './contexts/CurrencyContext.tsx';
 import { CartProvider } from './contexts/CartContext.tsx';
 import { WishlistProvider } from './contexts/WishlistContext.tsx';
 import { useNavigation } from './hooks/useNavigation.ts';
-import { INITIAL_PRODUCTS, Product } from './data/catalog.ts';
+import { Product } from './data/catalog.ts';
 import { safeFetchJson } from './lib/safeFetch.ts';
 
 import { StoreLayout } from './components/StoreLayout.tsx';
@@ -23,15 +23,22 @@ import { OrderConfirmationPage } from './pages/OrderConfirmationPage.tsx';
 function MainRouter() {
   const { route, navigate } = useNavigation();
   const { adminToken } = useAuth();
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  useEffect(() => {
-    safeFetchJson<{ products: Product[] }>('/api/products').then((res) => {
-      if (res.ok && res.data?.products && Array.isArray(res.data.products) && res.data.products.length > 0) {
+  const refreshProducts = React.useCallback(() => {
+    safeFetchJson<{ products: Product[] }>('/api/products', { cache: 'no-store' }).then((res) => {
+      if (res.ok && res.data && Array.isArray(res.data.products)) {
         setProducts(res.data.products);
       }
     });
   }, []);
+
+  useEffect(() => {
+    refreshProducts();
+    const handleCatalogUpdate = () => refreshProducts();
+    window.addEventListener('vantera:catalog-updated', handleCatalogUpdate);
+    return () => window.removeEventListener('vantera:catalog-updated', handleCatalogUpdate);
+  }, [refreshProducts, route.path]);
 
   // Separate interface: CEO Admin Login
   if (route.path === '/admin/login' || route.path === '/ceo/login') {

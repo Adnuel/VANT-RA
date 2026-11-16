@@ -7,6 +7,7 @@
  * customer notifications (order confirmations, payment verifications, tracking, OTP).
  */
 
+import nodemailer from 'nodemailer';
 import { db, NotificationRecord } from './db.ts';
 
 export interface EmailOptions {
@@ -27,44 +28,61 @@ export interface MailerConfig {
   fromName: string;
 }
 
-export const mailerConfig: MailerConfig = {
-  smtpHost: process.env.SMTP_HOST,
-  smtpPort: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined,
-  smtpUser: process.env.SMTP_USER,
-  smtpPass: process.env.SMTP_PASS,
-  fromEmail: process.env.SMTP_FROM || 'orders@vantera.luxury',
-  fromName: 'VANTÉRA Concierge',
-};
+export function getMailerConfig(): MailerConfig {
+  const smtpUser = process.env.SMTP_USER?.trim();
+  const smtpPass = process.env.SMTP_PASS?.trim();
+  const inferredHost =
+    process.env.SMTP_HOST?.trim() ||
+    (smtpUser && smtpUser.toLowerCase().endsWith('@gmail.com') ? 'smtp.gmail.com' : undefined);
+  const parsedPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 465;
+
+  return {
+    smtpHost: inferredHost,
+    smtpPort: Number.isFinite(parsedPort) ? parsedPort : 465,
+    smtpUser,
+    smtpPass,
+    fromEmail: process.env.SMTP_FROM?.trim() || smtpUser || 'orders@vantera.luxury',
+    fromName: 'VANTÉRA Concierge',
+  };
+}
+
+export const mailerConfig: MailerConfig = getMailerConfig();
+
+export function getMailerStatus(): {
+  configured: boolean;
+  provider: 'resend' | 'smtp' | 'none';
+  fromEmail: string;
+} {
+  const cfg = getMailerConfig();
+  if (process.env.RESEND_API_KEY?.trim()) {
+    return { configured: true, provider: 'resend', fromEmail: cfg.fromEmail };
+  }
+  if (cfg.smtpHost && cfg.smtpUser && cfg.smtpPass) {
+    return { configured: true, provider: 'smtp', fromEmail: cfg.fromEmail };
+  }
+  return { configured: false, provider: 'none', fromEmail: cfg.fromEmail };
+}
 
 export async function sendTransactionalEmail(options: EmailOptions): Promise<{
   success: boolean;
   messageId: string;
-  channel: 'smtp' | 'system_queue';
+  channel: 'smtp' | 'resend' | 'system_queue';
+  error?: string;
 }> {
-  const timestamp = new Date().toISOString();
+  const cfg = getMailerConfig();
   const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-  // Record in authoritative notification database table
-  db.addNotification({
-    orderId: options.orderId,
-    recipient: options.to,
-    channel: 'email',
-    event: options.event,
-    message: options.text || options.subject,
-    status: mailerConfig.smtpHost ? 'dispatched' : 'simulated',
-  });
-
-  // If Resend API key is provided, dispatch real transactional email via HTTPS API
-  if (process.env.RESEND_API_KEY) {
+  // 1. Resend API if RESEND_API_KEY is configured
+  if (process.env.RESEND_API_KEY?.trim()) {
     try {
       const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: `${mailerConfig.fromName} <${mailerConfig.fromEmail}>`,
+          from: `${cfg.fromName} <${cfg.fromEmail}>`,
           to: [options.to],
           subject: options.subject,
           html: options.html,
@@ -73,25 +91,79 @@ export async function sendTransactionalEmail(options: EmailOptions): Promise<{
       });
       if (resendRes.ok) {
         const resendData = await resendRes.json();
-        return { success: true, messageId: resendData.id || messageId, channel: 'smtp' };
+        db.addNotification({
+          orderId: options.orderId,
+          recipient: options.to,
+          channel: 'email',
+          event: options.event,
+          message: options.text || options.subject,
+          status: 'dispatched',
+        });
+        return { success: true, messageId: resendData.id || messageId, channel: 'resend' };
       }
+      const errText = await resendRes.text();
+      console.error(`[VANTÉRA MAILER] Resend API error (${resendRes.status}):`, errText);
     } catch (err: any) {
       console.error(`[VANTÉRA MAILER] Resend dispatch failed:`, err.message);
     }
   }
 
-  // If live SMTP credentials are provided, attempt transport delivery log
-  if (mailerConfig.smtpHost && mailerConfig.smtpUser && mailerConfig.smtpPass) {
+  // 2. Real SMTP delivery via nodemailer if SMTP credentials are configured
+  if (cfg.smtpHost && cfg.smtpUser && cfg.smtpPass) {
     try {
-      console.log(`[VANTÉRA MAILER] Dispatched live email to ${options.to} via ${mailerConfig.smtpHost}: "${options.subject}"`);
-      return { success: true, messageId, channel: 'smtp' };
+      const port = cfg.smtpPort || 465;
+      const transporter = nodemailer.createTransport({
+        host: cfg.smtpHost,
+        port,
+        secure: port === 465,
+        auth: {
+          user: cfg.smtpUser,
+          pass: cfg.smtpPass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: `"${cfg.fromName}" <${cfg.fromEmail}>`,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      });
+
+      db.addNotification({
+        orderId: options.orderId,
+        recipient: options.to,
+        channel: 'email',
+        event: options.event,
+        message: options.text || options.subject,
+        status: 'dispatched',
+      });
+      console.log(`[VANTÉRA MAILER] Dispatched live SMTP email to ${options.to} (${info.messageId})`);
+      return { success: true, messageId: info.messageId || messageId, channel: 'smtp' };
     } catch (err: any) {
       console.error(`[VANTÉRA MAILER] SMTP dispatch failed:`, err.message);
+      db.addNotification({
+        orderId: options.orderId,
+        recipient: options.to,
+        channel: 'email',
+        event: options.event,
+        message: `${options.text || options.subject} [SMTP Error: ${err.message}]`,
+        status: 'simulated',
+      });
+      return { success: false, messageId, channel: 'system_queue', error: err.message };
     }
   }
 
-  // Authoritative database queue record
-  console.log(`[VANTÉRA MAILER] Notification recorded for ${options.to}: [${options.event.toUpperCase()}] ${options.subject}`);
+  // 3. No live mail provider configured — record accurately as queued (not dispatched)
+  db.addNotification({
+    orderId: options.orderId,
+    recipient: options.to,
+    channel: 'email',
+    event: options.event,
+    message: options.text || options.subject,
+    status: 'simulated',
+  });
+  console.log(`[VANTÉRA MAILER] No SMTP/Resend credentials configured; queued notification for ${options.to}: [${options.event.toUpperCase()}]`);
   return { success: true, messageId, channel: 'system_queue' };
 }
 

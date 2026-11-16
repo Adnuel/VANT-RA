@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Product } from '../data/catalog.ts';
+import { Product, ProductVariant } from '../data/catalog.ts';
 import { useAuth } from './AuthContext.tsx';
 import { trackEvent, syncCartWithServer, getOrCreateSessionId } from '../lib/tracker.ts';
 import { appNavigate } from '../hooks/useNavigation.ts';
@@ -9,6 +9,17 @@ import { safeFetchJson } from '../lib/safeFetch.ts';
 export interface CartItem {
   product: Product;
   quantity: number;
+  variantId?: string;
+  variantLabel?: string;
+  unitPriceCents?: number;
+}
+
+interface PendingCartProduct {
+  product: Product;
+  quantity: number;
+  variantId?: string;
+  variantLabel?: string;
+  unitPriceCents?: number;
 }
 
 interface CartContextType {
@@ -17,13 +28,13 @@ interface CartContextType {
   subtotalCents: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
-  addToCart: (product: Product, quantity?: number) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  removeFromCart: (productId: string) => void;
+  addToCart: (product: Product, quantity?: number, selectedVariant?: ProductVariant) => void;
+  updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
+  removeFromCart: (productId: string, variantId?: string) => void;
   clearCart: () => void;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  pendingProduct: { product: Product; quantity: number } | null;
+  pendingProduct: PendingCartProduct | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -39,7 +50,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [pendingProduct, setPendingProduct] = useState<{ product: Product; quantity: number } | null>(() => {
+  const [pendingProduct, setPendingProduct] = useState<PendingCartProduct | null>(() => {
     try {
       const saved = localStorage.getItem(PENDING_CART_ITEM_KEY);
       return saved ? JSON.parse(saved) : null;
@@ -89,7 +100,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             },
             body: JSON.stringify({
               items: localItems,
-              subtotalCents: localItems.reduce((s, i) => s + (i.product?.retailPriceCents || 0) * i.quantity, 0),
+              subtotalCents: localItems.reduce(
+                (s, i) => s + (i.unitPriceCents ?? i.product?.retailPriceCents ?? 0) * i.quantity,
+                0
+              ),
             }),
           });
         } else {
@@ -113,7 +127,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
 
     const count = items.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = items.reduce((sum, item) => sum + item.product.retailPriceCents * item.quantity, 0);
+    const subtotal = items.reduce(
+      (sum, item) => sum + (item.unitPriceCents ?? item.product.retailPriceCents) * item.quantity,
+      0
+    );
 
     // Sync to abandonment tracker
     syncCartWithServer(cartSessionId.current, items, count, subtotal);
@@ -134,27 +151,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // When user signs in, if they had a pending product waiting, add it now!
   useEffect(() => {
     if (user && pendingProduct) {
-      const { product, quantity } = pendingProduct;
+      const { product, quantity, variantId, variantLabel, unitPriceCents } = pendingProduct;
       localStorage.removeItem(PENDING_CART_ITEM_KEY);
       setPendingProduct(null);
 
       // Add to cart now that authenticated
       setItems((prev) => {
-        const existingIdx = prev.findIndex((i) => i.product.id === product.id);
+        const existingIdx = prev.findIndex(
+          (i) => i.product.id === product.id && (i.variantId || null) === (variantId || null)
+        );
         if (existingIdx > -1) {
           const copy = [...prev];
-          copy[existingIdx].quantity += quantity;
+          copy[existingIdx] = {
+            ...copy[existingIdx],
+            quantity: copy[existingIdx].quantity + quantity,
+          };
           return copy;
         } else {
-          return [...prev, { product, quantity }];
+          return [...prev, { product, quantity, variantId, variantLabel, unitPriceCents }];
         }
       });
 
       trackEvent('cart_item_added', {
         productId: product.id,
         productTitle: product.title,
+        variantId,
+        variantLabel,
         quantity,
-        retailPriceCents: product.retailPriceCents,
+        retailPriceCents: unitPriceCents ?? product.retailPriceCents,
         resumedAfterLogin: true,
       });
 
@@ -180,17 +204,47 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * STRICT REQUIREMENT:
    * Require every customer to register or log in before they can add products to their shopping cart.
    */
-  const addToCart = (product: Product, quantity = 1) => {
-    const stockLimit = typeof product.stockQuantity === 'number' ? product.stockQuantity : 99;
-    if (!product.isAvailable || stockLimit <= 0) {
+  const addToCart = (product: Product, quantity = 1, selectedVariant?: ProductVariant) => {
+    const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+    const resolvedVariant = selectedVariant
+      ? selectedVariant
+      : hasVariants
+      ? product.variants!.find((v) => v.isAvailable && v.stockQuantity > 0)
+      : undefined;
+
+    if (hasVariants && !resolvedVariant) {
+      return;
+    }
+
+    const effectiveAvailable = resolvedVariant
+      ? product.isAvailable && resolvedVariant.isAvailable && resolvedVariant.stockQuantity > 0
+      : product.isAvailable && product.stockQuantity > 0;
+
+    const stockLimit = resolvedVariant
+      ? resolvedVariant.stockQuantity
+      : typeof product.stockQuantity === 'number'
+      ? product.stockQuantity
+      : 99;
+
+    if (!effectiveAvailable || stockLimit <= 0) {
       return;
     }
 
     const safeQty = Math.max(1, Math.min(quantity, stockLimit));
+    const unitPriceCents = resolvedVariant?.retailPriceCents ?? product.retailPriceCents;
+    const itemSnapshotProduct = resolvedVariant?.image
+      ? { ...product, image: resolvedVariant.image }
+      : product;
 
     if (!user) {
       // Customer is NOT logged in: save pending selection and prompt for registration/login
-      const pending = { product, quantity: safeQty };
+      const pending: PendingCartProduct = {
+        product: itemSnapshotProduct,
+        quantity: safeQty,
+        variantId: resolvedVariant?.id,
+        variantLabel: resolvedVariant?.name,
+        unitPriceCents,
+      };
       setPendingProduct(pending);
       try {
         localStorage.setItem(PENDING_CART_ITEM_KEY, JSON.stringify(pending));
@@ -201,50 +255,87 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Customer is authenticated: proceed with adding while respecting stock cap
     setItems((prev) => {
-      const existingIdx = prev.findIndex((i) => i.product.id === product.id);
+      const existingIdx = prev.findIndex(
+        (i) => i.product.id === product.id && (i.variantId || null) === (resolvedVariant?.id || null)
+      );
       if (existingIdx > -1) {
         const copy = [...prev];
-        copy[existingIdx].quantity = Math.min(stockLimit, copy[existingIdx].quantity + safeQty);
+        copy[existingIdx] = {
+          ...copy[existingIdx],
+          quantity: Math.min(stockLimit, copy[existingIdx].quantity + safeQty),
+        };
         return copy;
       } else {
-        return [...prev, { product, quantity: safeQty }];
+        return [
+          ...prev,
+          {
+            product: itemSnapshotProduct,
+            quantity: safeQty,
+            variantId: resolvedVariant?.id,
+            variantLabel: resolvedVariant?.name,
+            unitPriceCents,
+          },
+        ];
       }
     });
 
     trackEvent('cart_item_added', {
       productId: product.id,
       productTitle: product.title,
+      variantId: resolvedVariant?.id,
+      variantLabel: resolvedVariant?.name,
       quantity: safeQty,
-      retailPriceCents: product.retailPriceCents,
+      retailPriceCents: unitPriceCents,
     });
 
     setIsCartOpen(true);
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number, variantId?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(productId, variantId);
       return;
     }
     setItems((prev) =>
       prev.map((item) => {
-        if (item.product.id !== productId) return item;
-        const maxStock = typeof item.product.stockQuantity === 'number' ? Math.max(1, item.product.stockQuantity) : 99;
+        const matches =
+          item.product.id === productId &&
+          (variantId === undefined || (item.variantId || null) === (variantId || null));
+        if (!matches) return item;
+        const matchedVariant = item.variantId
+          ? item.product.variants?.find((v) => v.id === item.variantId)
+          : undefined;
+        const stockSource = matchedVariant ? matchedVariant.stockQuantity : item.product.stockQuantity;
+        const maxStock = typeof stockSource === 'number' ? Math.max(1, stockSource) : 99;
         return { ...item, quantity: Math.min(quantity, maxStock, 99) };
       })
     );
     trackEvent('cart_quantity_changed', {
       productId,
+      variantId,
       quantity,
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    const item = items.find((i) => i.product.id === productId);
-    setItems((prev) => prev.filter((i) => i.product.id !== productId));
+  const removeFromCart = (productId: string, variantId?: string) => {
+    const item = items.find(
+      (i) =>
+        i.product.id === productId &&
+        (variantId === undefined || (i.variantId || null) === (variantId || null))
+    );
+    setItems((prev) =>
+      prev.filter(
+        (i) =>
+          !(
+            i.product.id === productId &&
+            (variantId === undefined || (i.variantId || null) === (variantId || null))
+          )
+      )
+    );
     if (item) {
       trackEvent('cart_item_removed', {
         productId,
+        variantId,
         productTitle: item.product.title,
       });
     }
@@ -266,7 +357,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotalCents = items.reduce((sum, item) => sum + item.product.retailPriceCents * item.quantity, 0);
+  const subtotalCents = items.reduce(
+    (sum, item) => sum + (item.unitPriceCents ?? item.product.retailPriceCents) * item.quantity,
+    0
+  );
 
   return (
     <CartContext.Provider
@@ -333,8 +427,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-[#121210] truncate">{pendingProduct.product.title}</p>
+                    {pendingProduct.variantLabel && (
+                      <p className="text-[10px] text-[#77746d] truncate">{pendingProduct.variantLabel}</p>
+                    )}
                     <p className="text-[11px] text-[#77746d]">
-                      Qty: {pendingProduct.quantity} • {formatUSD(pendingProduct.product.retailPriceCents * pendingProduct.quantity)}
+                      Qty: {pendingProduct.quantity} •{' '}
+                      {formatUSD((pendingProduct.unitPriceCents ?? pendingProduct.product.retailPriceCents) * pendingProduct.quantity)}
                     </p>
                   </div>
                 </div>

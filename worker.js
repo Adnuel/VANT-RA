@@ -14,48 +14,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-const PRODUCTS_CATALOG = [
-  {
-    id: 'festive-3in1-foldable-magsafe-charger',
-    title: '3-in-1 Foldable MagSafe Station',
-    category: 'charging',
-    retailPriceCents: 3800,
-    referencePriceCents: 6500,
-    image: '/products/charging-phone-stand.jpg',
-    description: 'Aircraft-grade alloy folding wireless dock. Simultaneous 15W high-speed induction for smartphone, watch, and spatial earbuds.',
-    trending: true,
-  },
-  {
-    id: 'clear-protective-phone-case',
-    title: 'Titanium Edge MagSafe Shield',
-    category: 'phone-cases',
-    retailPriceCents: 2400,
-    referencePriceCents: 4200,
-    image: '/products/transparent-magsafe-compatible-case.jpg',
-    description: 'Zirconium ceramic impact armor with integrated neodymium magnetic array and anti-yellowing diamond coat.',
-    trending: true,
-  },
-  {
-    id: 'magnetic-phone-mount',
-    title: 'Precision Orbit Phone Mount',
-    category: 'room-desk',
-    retailPriceCents: 2800,
-    referencePriceCents: 4800,
-    image: '/products/magnetic-phone-mount.jpg',
-    description: 'CNC-machined weighted aluminum desk mount with dual-axis 360° fluid articulation.',
-    trending: false,
-  },
-  {
-    id: 'foldable-laptop-stand',
-    title: 'Sculptural Laptop Riser',
-    category: 'room-desk',
-    retailPriceCents: 3400,
-    referencePriceCents: 5800,
-    image: '/products/foldable-laptop-stand.jpg',
-    description: 'Minimalist heat-dissipating ergonomic riser crafted from anodized brushed space gray alloy.',
-    trending: false,
-  },
-];
+const PRODUCTS_CATALOG = [];
 
 function generateToken(payload) {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));

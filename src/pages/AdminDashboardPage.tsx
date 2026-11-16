@@ -9,6 +9,7 @@ import { LiveActivityPanel } from '../components/LiveActivityPanel.tsx';
 import { InventoryPanel } from '../components/InventoryPanel.tsx';
 import { ShippingZonesPanel } from '../components/ShippingZonesPanel.tsx';
 import { DomainSetupManager } from '../components/DomainSetupManager.tsx';
+import { CjCatalogManager } from '../components/CjCatalogManager.tsx';
 
 interface AdminDashboardPageProps {
   onNavigate: (url: string) => void;
@@ -146,6 +147,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
   } | null>(null);
   const [isLoadingCjStatus, setIsLoadingCjStatus] = useState(false);
   const [isTestingCj, setIsTestingCj] = useState(false);
+  const [syncingCjProductId, setSyncingCjProductId] = useState<string | null>(null);
+  const [isPruningNonCj, setIsPruningNonCj] = useState(false);
 
   // Load all admin data including real analytics & real customer events
   const loadDashboardData = async () => {
@@ -330,6 +333,68 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
       showToast('CJ connection test failed: Connection unavailable.', 'error');
     } finally {
       setIsTestingCj(false);
+    }
+  };
+
+  const handleSyncSingleCjProduct = async (productId: string) => {
+    if (!adminToken) return;
+    setSyncingCjProductId(productId);
+    try {
+      const res = await fetch('/api/admin/suppliers/cj/inventory/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ productId }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        showToast(data?.error || 'CJ stock sync failed.', 'error');
+        return;
+      }
+      const itemResult = data?.results?.[0];
+      if (itemResult && !itemResult.success) {
+        showToast(itemResult.error || 'CJ stock sync failed.', 'error');
+      } else {
+        showToast(
+          `Synced "${itemResult?.title || 'CJ product'}": ${itemResult?.stockQuantity ?? 0} units in stock.`,
+          'success'
+        );
+      }
+      loadDashboardData();
+    } catch {
+      showToast('Network error while syncing CJ inventory.', 'error');
+    } finally {
+      setSyncingCjProductId(null);
+    }
+  };
+
+  const handlePruneNonCjProducts = async () => {
+    if (!adminToken || isPruningNonCj) return;
+    setIsPruningNonCj(true);
+    try {
+      const res = await fetch('/api/admin/products/prune-non-cj', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        showToast(data?.error || 'Failed to remove old non-CJ products.', 'error');
+        return;
+      }
+      showToast(
+        data.removedCount > 0
+          ? `Removed ${data.removedCount} old non-CJ product(s). ${data.remainingCount} CJ product(s) remain.`
+          : `Catalog clean: 0 old non-CJ products found (${data.remainingCount} CJ product(s) active).`,
+        'success'
+      );
+      window.dispatchEvent(new CustomEvent('vantera:catalog-updated'));
+      loadDashboardData();
+    } catch {
+      showToast('Network error while pruning old products.', 'error');
+    } finally {
+      setIsPruningNonCj(false);
     }
   };
 
@@ -1765,34 +1830,47 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
         {/* 4. PRODUCT MANAGEMENT */}
         {activeTab === 'products' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-serif text-2xl text-[#121210]">VANTÉRA Product Catalogue</h2>
                 <p className="text-xs text-[#77746d]">
                   Configure retail prices, verified supplier costs, stock levels, and storefront availability.
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setEditingProduct(null);
-                  setIsAddingProduct(true);
-                  setProductForm({
-                    title: '',
-                    category: 'phone-cases',
-                    retailPrice: '9.99',
-                    supplierCost: '3.50',
-                    stockQuantity: 30,
-                    isAvailable: true,
-                    description: '',
-                    image: '',
-                    supplierName: 'AliExpress Direct',
-                    supplierLink: '',
-                  });
-                }}
-                className="bg-[#121210] text-[#f8f7f4] px-4 py-2 text-xs uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210]"
-              >
-                + Add New Product
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={handlePruneNonCjProducts}
+                  disabled={isPruningNonCj}
+                  className="border border-[#9b1c1c] text-[#9b1c1c] px-4 py-2 text-xs font-mono uppercase tracking-wider hover:bg-[#9b1c1c] hover:text-white transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isPruningNonCj
+                    ? 'Removing Old Products...'
+                    : `Remove Old Non-CJ Products (${products.filter((p) => p.supplierSource !== 'cjdropshipping' && !p.cjPid).length})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProduct(null);
+                    setIsAddingProduct(true);
+                    setProductForm({
+                      title: '',
+                      category: 'phone-cases',
+                      retailPrice: '9.99',
+                      supplierCost: '3.50',
+                      stockQuantity: 30,
+                      isAvailable: true,
+                      description: '',
+                      image: '',
+                      supplierName: 'AliExpress Direct',
+                      supplierLink: '',
+                    });
+                  }}
+                  className="bg-[#121210] text-[#f8f7f4] px-4 py-2 text-xs uppercase tracking-wider hover:bg-[#c4a66b] hover:text-[#121210] cursor-pointer"
+                >
+                  + Add New Product
+                </button>
+              </div>
             </div>
 
             {/* Products Table */}
@@ -1854,7 +1932,17 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                             {p.isAvailable && p.stockQuantity > 0 ? 'Active' : 'Unavailable'}
                           </span>
                         </td>
-                        <td className="p-3 text-right">
+                        <td className="p-3 text-right space-x-3 whitespace-nowrap">
+                          {p.cjPid && (
+                            <button
+                              type="button"
+                              disabled={syncingCjProductId === p.id}
+                              onClick={() => handleSyncSingleCjProduct(p.id)}
+                              className="text-[#856404] font-mono text-[10px] uppercase font-semibold hover:underline disabled:opacity-40 cursor-pointer"
+                            >
+                              {syncingCjProductId === p.id ? 'Syncing...' : 'Sync CJ'}
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               setEditingProduct(p);
@@ -1872,7 +1960,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                                 supplierLink: p.supplierLink || '',
                               });
                             }}
-                            className="text-[#121210] font-semibold hover:underline"
+                            className="text-[#121210] font-semibold hover:underline cursor-pointer"
                           >
                             Edit
                           </button>
@@ -2150,6 +2238,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                 </div>
               )}
             </div>
+
+            {/* CJ Dropshipping Live Product Catalogue Search, Details, Preview & Import */}
+            <CjCatalogManager
+              adminToken={adminToken}
+              existingProducts={products}
+              onCatalogUpdated={loadDashboardData}
+              onShowToast={showToast}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {suppliers.map((sup) => {

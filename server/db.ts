@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { INITIAL_PRODUCTS } from '../src/data/catalog.ts';
-import type { Product } from '../src/data/catalog.ts';
+import type { Product, ProductVariant } from '../src/data/catalog.ts';
 import { calculateRealAnalytics } from '../src/lib/analyticsLogic.ts';
 import type { AnalyticsTimeRange } from '../src/lib/analyticsLogic.ts';
 import { CURATED_PRODUCT_IMAGES } from './curatedImages.ts';
@@ -49,6 +49,9 @@ export interface OrderItem {
   totalCents: number;
   supplierCostCents: number | null;
   image?: string | null;
+  variantId?: string;
+  variantLabel?: string;
+  cjVid?: string;
 }
 
 export interface Order {
@@ -440,20 +443,7 @@ function loadDatabase(): DatabaseSchema {
           };
         }
 
-        // Merge newly added catalog products (e.g. Festive Season Bestsellers) into database
-        let newProductsAdded = 0;
-        for (const initP of INITIAL_PRODUCTS) {
-          const exists = dbCache.products.some((p) => p.id === initP.id);
-          if (!exists) {
-            dbCache.products.unshift(initP);
-            newProductsAdded++;
-          }
-        }
-        if (newProductsAdded > 0) {
-          dbCache.imageAudit.totalProducts = dbCache.products.length;
-          dbCache.imageAudit.withWorkingImages = dbCache.products.filter((p) => p.image).length;
-          saveDatabase(dbCache);
-        }
+        // Preserve existing product catalog without auto-reinjecting legacy seed items
       }
       return dbCache!;
     } catch (err) {
@@ -683,11 +673,28 @@ export const db = {
       throw new Error('This email is reserved for authorized administrator login.');
     }
 
-    if (d.users.some((u) => u.email.toLowerCase() === cleanEmail)) {
+    const existing = d.users.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (existing && existing.isEmailVerified !== false) {
       throw new Error('An account with this email address already exists.');
     }
 
     const { hash, salt } = hashPassword(password);
+    const verificationOtp = crypto.randomInt(100000, 1000000).toString();
+
+    // If customer started registration earlier without verifying OTP yet, refresh their pending account & code
+    if (existing && existing.isEmailVerified === false) {
+      existing.name = name.trim();
+      existing.phone = phone?.trim();
+      existing.passwordHash = hash;
+      existing.salt = salt;
+      existing.emailVerificationCode = verificationOtp;
+      existing.emailVerificationExpiry = Date.now() + 15 * 60 * 1000;
+      existing.updatedAt = new Date().toISOString();
+      this.addAuditLog('Customer', 'REGISTER_PENDING_REFRESH', `Refreshed unverified registration & OTP for ${cleanEmail}`);
+      saveDatabase(d);
+      return existing;
+    }
+
     const newUser: User = {
       id: `usr_${crypto.randomBytes(8).toString('hex')}`,
       email: cleanEmail,
@@ -701,26 +708,19 @@ export const db = {
       updatedAt: new Date().toISOString(),
     };
 
-    const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
     newUser.emailVerificationCode = verificationOtp;
     newUser.emailVerificationExpiry = Date.now() + 15 * 60 * 1000;
     newUser.isEmailVerified = false;
 
     d.users.push(newUser);
-    this.addAuditLog('Customer', 'REGISTER_ACCOUNT', `New customer registered: ${cleanEmail}`);
-    this.addNotification({
-      recipient: cleanEmail,
-      channel: 'email',
-      event: 'account_registered',
-      message: `Welcome to VANTÉRA, ${name}! Your customer account has been created. Your verification code is ${verificationOtp}.`,
-    });
+    this.addAuditLog('Customer', 'REGISTER_ACCOUNT', `New customer pending email verification: ${cleanEmail}`);
     this.addCustomerEvent({
       type: 'customer_registered',
       customerId: newUser.id,
       customerEmail: newUser.email,
       customerName: newUser.name,
-      status: 'success',
-      metadata: { role: 'customer' },
+      status: 'pending',
+      metadata: { role: 'customer', verificationPending: true },
     });
     saveDatabase(d);
     return newUser;
@@ -734,7 +734,7 @@ export const db = {
     const d = loadDatabase();
     const user = d.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
     if (!user) return { success: false, error: 'User account not found' };
-    if (user.isEmailVerified) return { success: true };
+    if (user.isEmailVerified === true) return { success: true };
     if (!user.emailVerificationCode || user.emailVerificationCode !== code.trim()) {
       return { success: false, error: 'Invalid verification code' };
     }
@@ -754,16 +754,13 @@ export const db = {
     const d = loadDatabase();
     const user = d.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
     if (!user) return { success: false, error: 'User account not found' };
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    if (user.isEmailVerified !== false) {
+      return { success: false, error: 'This account is already verified. Please sign in.' };
+    }
+    const code = crypto.randomInt(100000, 1000000).toString();
     user.emailVerificationCode = code;
     user.emailVerificationExpiry = Date.now() + 15 * 60 * 1000;
     user.updatedAt = new Date().toISOString();
-    this.addNotification({
-      recipient: user.email,
-      channel: 'email',
-      event: 'account_registered',
-      message: `Your new VANTÉRA email verification code is: ${code}`,
-    });
     saveDatabase(d);
     return { success: true, code };
   },
@@ -856,6 +853,230 @@ export const db = {
     return newProd;
   },
 
+  upsertCjProduct(
+    input: {
+      cjPid: string;
+      cjProductSku?: string | null;
+      cjCategoryName?: string | null;
+      title: string;
+      category: string;
+      description: string;
+      image: string | null;
+      galleryImages?: string[];
+      cjSpecs?: Array<{ label: string; value: string }>;
+      retailPriceCents: number;
+      supplierCostCents: number | null;
+      stockQuantity: number;
+      isAvailable: boolean;
+      variants?: ProductVariant[];
+      pricingConfig?: {
+        mode: 'markup_percent' | 'margin_percent' | 'fixed_cents';
+        value: number;
+      };
+      trending?: boolean;
+    },
+    actor: string
+  ): { product: Product; created: boolean } {
+    const d = loadDatabase();
+    const cleanPid = String(input.cjPid || '').trim();
+    if (!cleanPid) {
+      throw new Error('CJ Product ID (cjPid) is required.');
+    }
+
+    const existingIdx = d.products.findIndex((p) => p.cjPid === cleanPid);
+    const nowIso = new Date().toISOString();
+
+    const safeVariants: ProductVariant[] = Array.isArray(input.variants)
+      ? input.variants.map((v) => {
+          const stock = Math.max(0, Math.round(Number(v.stockQuantity) || 0));
+          return {
+            ...v,
+            stockQuantity: stock,
+            isAvailable: Boolean(v.isAvailable) && stock > 0,
+            retailPriceCents: Math.max(1, Math.round(Number(v.retailPriceCents) || input.retailPriceCents)),
+          };
+        })
+      : [];
+
+    const totalStock =
+      safeVariants.length > 0
+        ? safeVariants.reduce((sum, v) => sum + v.stockQuantity, 0)
+        : Math.max(0, Math.round(Number(input.stockQuantity) || 0));
+
+    const effectiveAvailable =
+      safeVariants.length > 0
+        ? Boolean(input.isAvailable) && safeVariants.some((v) => v.isAvailable && v.stockQuantity > 0)
+        : Boolean(input.isAvailable) && totalStock > 0;
+
+    const minVariantRetail =
+      safeVariants.length > 0
+        ? Math.min(...safeVariants.map((v) => v.retailPriceCents))
+        : Math.max(1, Math.round(Number(input.retailPriceCents) || 0));
+
+    const variantCosts = safeVariants
+      .map((v) => v.supplierCostCents)
+      .filter((c): c is number => typeof c === 'number' && c >= 0);
+    const effectiveSupplierCost =
+      variantCosts.length > 0 ? Math.min(...variantCosts) : input.supplierCostCents;
+
+    if (existingIdx > -1) {
+      const existing = d.products[existingIdx];
+      const updated: Product = {
+        ...existing,
+        title: input.title.trim() || existing.title,
+        category: input.category || existing.category,
+        description: input.description.trim() || existing.description,
+        image: input.image || existing.image,
+        imageAlt: input.title.trim() || existing.title,
+        imageNeedsReview: false,
+        galleryImages: input.galleryImages?.length ? input.galleryImages : existing.galleryImages,
+        cjSpecs: input.cjSpecs?.length ? input.cjSpecs : existing.cjSpecs,
+        retailPriceCents: minVariantRetail,
+        priceCents: minVariantRetail,
+        supplierCostCents: effectiveSupplierCost,
+        stockQuantity: totalStock,
+        isAvailable: effectiveAvailable,
+        availability: effectiveAvailable ? 'In Stock · Ready to Ship' : 'Out of Stock',
+        variants: safeVariants.length > 0 ? safeVariants : existing.variants,
+        pricingConfig: input.pricingConfig || existing.pricingConfig,
+        supplierSource: 'cjdropshipping',
+        supplierName: 'CJdropshipping Global',
+        cjPid: cleanPid,
+        cjProductSku: input.cjProductSku ?? existing.cjProductSku,
+        cjCategoryName: input.cjCategoryName ?? existing.cjCategoryName,
+        cjLastSyncedAt: nowIso,
+        trending: input.trending ?? existing.trending,
+      };
+      d.products[existingIdx] = updated;
+      this.addAuditLog(actor, 'CJ_PRODUCT_UPDATED', `Updated CJ product ${updated.title} (PID: ${cleanPid}, stock: ${totalStock})`);
+      saveDatabase(d);
+      return { product: updated, created: false };
+    }
+
+    const baseSlug =
+      input.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60) || `cj-${cleanPid.toLowerCase().slice(0, 12)}`;
+
+    let slug = baseSlug;
+    let suffix = 2;
+    while (d.products.some((p) => p.slug === slug || p.id === slug)) {
+      slug = `${baseSlug}-${suffix++}`;
+    }
+
+    const newProduct: Product = {
+      id: slug,
+      slug,
+      title: input.title.trim(),
+      category: input.category || 'room-desk',
+      retailPriceCents: minVariantRetail,
+      priceCents: minVariantRetail,
+      supplierCostCents: effectiveSupplierCost,
+      stockQuantity: totalStock,
+      isAvailable: effectiveAvailable,
+      availability: effectiveAvailable ? 'In Stock · Ready to Ship' : 'Out of Stock',
+      description: input.description.trim() || input.title.trim(),
+      image: input.image || null,
+      imageAlt: input.title.trim(),
+      imageNeedsReview: !input.image,
+      sourceTitle: input.title.trim(),
+      referencePriceCents: null,
+      priceBasis: 'cj-live-sync',
+      sourceDescription: true,
+      trending: Boolean(input.trending),
+      supplierName: 'CJdropshipping Global',
+      supplierSource: 'cjdropshipping',
+      cjPid: cleanPid,
+      cjProductSku: input.cjProductSku || null,
+      cjCategoryName: input.cjCategoryName || null,
+      cjSpecs: input.cjSpecs || [],
+      galleryImages: input.galleryImages || (input.image ? [input.image] : []),
+      variants: safeVariants,
+      pricingConfig: input.pricingConfig,
+      cjLastSyncedAt: nowIso,
+    };
+
+    d.products.unshift(newProduct);
+    d.imageAudit = this.getImageAudit();
+    this.addAuditLog(actor, 'CJ_PRODUCT_IMPORTED', `Imported CJ product ${newProduct.title} (PID: ${cleanPid}, stock: ${totalStock})`);
+    saveDatabase(d);
+    return { product: newProduct, created: true };
+  },
+
+  syncCjProductStock(
+    productId: string,
+    payload: {
+      totalInventory: number | null;
+      variantStocks?: Map<string, number | null> | Record<string, number | null>;
+      supplierCostCents?: number | null;
+    },
+    actor: string
+  ): Product {
+    const d = loadDatabase();
+    const idx = d.products.findIndex((p) => p.id === productId || p.slug === productId);
+    if (idx === -1) throw new Error('Product not found');
+
+    const product = d.products[idx];
+    const nowIso = new Date().toISOString();
+
+    const getVariantStock = (vid?: string): number | null | undefined => {
+      if (!vid || !payload.variantStocks) return undefined;
+      if (payload.variantStocks instanceof Map) {
+        return payload.variantStocks.get(vid);
+      }
+      return payload.variantStocks[vid];
+    };
+
+    let nextTotalStock = product.stockQuantity;
+
+    if (Array.isArray(product.variants) && product.variants.length > 0) {
+      let hasAnyVariantStockUpdate = false;
+      product.variants = product.variants.map((v) => {
+        const synced = getVariantStock(v.cjVid);
+        if (typeof synced === 'number' && Number.isFinite(synced)) {
+          hasAnyVariantStockUpdate = true;
+          const cleanQty = Math.max(0, Math.round(synced));
+          return {
+            ...v,
+            stockQuantity: cleanQty,
+            isAvailable: cleanQty > 0,
+          };
+        }
+        return v;
+      });
+
+      if (hasAnyVariantStockUpdate) {
+        nextTotalStock = product.variants.reduce((sum, v) => sum + Math.max(0, v.stockQuantity), 0);
+      } else if (typeof payload.totalInventory === 'number' && Number.isFinite(payload.totalInventory)) {
+        nextTotalStock = Math.max(0, Math.round(payload.totalInventory));
+        if (nextTotalStock === 0) {
+          product.variants = product.variants.map((v) => ({
+            ...v,
+            stockQuantity: 0,
+            isAvailable: false,
+          }));
+        }
+      }
+    } else if (typeof payload.totalInventory === 'number' && Number.isFinite(payload.totalInventory)) {
+      nextTotalStock = Math.max(0, Math.round(payload.totalInventory));
+    }
+
+    product.stockQuantity = nextTotalStock;
+    product.isAvailable = nextTotalStock > 0;
+    product.availability = nextTotalStock > 0 ? 'In Stock · Ready to Ship' : 'Out of Stock';
+    if (typeof payload.supplierCostCents === 'number' && payload.supplierCostCents >= 0) {
+      product.supplierCostCents = payload.supplierCostCents;
+    }
+    product.cjLastSyncedAt = nowIso;
+
+    d.products[idx] = product;
+    this.addAuditLog(actor, 'CJ_INVENTORY_SYNC', `Synced CJ stock for ${product.title}: ${nextTotalStock} units`);
+    saveDatabase(d);
+    return product;
+  },
+
   // Orders
   getOrders(): Order[] {
     const d = loadDatabase();
@@ -895,8 +1116,8 @@ export const db = {
     customerName: string;
     customerPhone: string;
     shippingAddress: Order['shippingAddress'];
-    cartItems?: Array<{ productId: string; quantity: number }>;
-    items?: Array<{ productId?: string; id?: string; title?: string; quantity: number; unitPriceCents?: number; totalCents?: number }>;
+    cartItems?: Array<{ productId: string; variantId?: string; quantity: number }>;
+    items?: Array<{ productId?: string; id?: string; variantId?: string; title?: string; quantity: number; unitPriceCents?: number; totalCents?: number }>;
     currency?: 'USD' | 'NGN';
     shippingFeeCents?: number;
     estimatedTransitTime?: string;
@@ -923,44 +1144,88 @@ export const db = {
       throw new Error('Order items list cannot be empty');
     }
 
-    // 1. Stock check & validation: Prevent overselling
+    // 1. Stock check & validation: Prevent overselling (including variant-level stock)
     for (const item of rawItems) {
       const pid = item.productId || (item as any).id;
       const product = productsMap.get(pid);
       if (!product) throw new Error(`Product ${pid} not found`);
       if (!product.isAvailable) throw new Error(`Product ${product.title} is not available`);
-      if (typeof product.stockQuantity === 'number' && product.stockQuantity < item.quantity) {
+
+      const qty = Math.max(1, Math.min(99, item.quantity));
+      const requestedVariantId = (item as any).variantId;
+      const matchedVariant =
+        requestedVariantId && Array.isArray(product.variants)
+          ? product.variants.find((v) => v.id === requestedVariantId || v.cjVid === requestedVariantId)
+          : undefined;
+
+      if (requestedVariantId && Array.isArray(product.variants) && product.variants.length > 0 && !matchedVariant) {
+        throw new Error(`Selected variant is no longer available for ${product.title}.`);
+      }
+
+      if (matchedVariant) {
+        if (!matchedVariant.isAvailable || matchedVariant.stockQuantity <= 0) {
+          throw new Error(`${product.title} (${matchedVariant.name}) is currently out of stock.`);
+        }
+        if (matchedVariant.stockQuantity < qty) {
+          throw new Error(`Insufficient stock for ${product.title} (${matchedVariant.name}). Only ${matchedVariant.stockQuantity} remaining.`);
+        }
+      } else if (typeof product.stockQuantity === 'number' && product.stockQuantity < qty) {
         throw new Error(`Insufficient stock for ${product.title}. Only ${product.stockQuantity} remaining.`);
       }
 
-      const qty = Math.max(1, Math.min(99, item.quantity));
-      const unitPrice = typeof (item as any).unitPriceCents === 'number' ? (item as any).unitPriceCents : product.retailPriceCents;
+      const unitPrice =
+        typeof (item as any).unitPriceCents === 'number'
+          ? (item as any).unitPriceCents
+          : matchedVariant
+          ? matchedVariant.retailPriceCents
+          : product.retailPriceCents;
       const lineTotal = unitPrice * qty;
 
       computedItems.push({
         productId: product.id,
         slug: product.slug,
-        title: (item as any).title || product.title,
+        title: (item as any).title || (matchedVariant ? `${product.title} (${matchedVariant.name})` : product.title),
         unitPriceCents: unitPrice,
         quantity: qty,
         totalCents: lineTotal,
-        supplierCostCents: product.supplierCostCents,
-        image: product.image,
+        supplierCostCents: matchedVariant?.supplierCostCents ?? product.supplierCostCents,
+        image: matchedVariant?.image || product.image,
+        variantId: matchedVariant?.id,
+        variantLabel: matchedVariant?.name,
+        cjVid: matchedVariant?.cjVid,
       });
 
       subtotal += lineTotal;
     }
 
-    // 2. Decrement stock atomically in catalog
+    // 2. Decrement stock atomically in catalog (variant-aware)
     for (const item of rawItems) {
       const pid = item.productId || (item as any).id;
       const product = productsMap.get(pid);
-      if (product && typeof product.stockQuantity === 'number') {
-        product.stockQuantity = Math.max(0, product.stockQuantity - item.quantity);
-        if (product.stockQuantity === 0) {
-          product.isAvailable = false;
-          product.availability = 'Out of Stock';
+      if (!product) continue;
+
+      const qty = Math.max(1, Math.min(99, item.quantity));
+      const requestedVariantId = (item as any).variantId;
+      const matchedVariant =
+        requestedVariantId && Array.isArray(product.variants)
+          ? product.variants.find((v) => v.id === requestedVariantId || v.cjVid === requestedVariantId)
+          : undefined;
+
+      if (matchedVariant) {
+        matchedVariant.stockQuantity = Math.max(0, matchedVariant.stockQuantity - qty);
+        if (matchedVariant.stockQuantity === 0) {
+          matchedVariant.isAvailable = false;
         }
+        if (Array.isArray(product.variants) && product.variants.length > 0) {
+          product.stockQuantity = product.variants.reduce((sum, v) => sum + Math.max(0, v.stockQuantity), 0);
+        }
+      } else if (typeof product.stockQuantity === 'number') {
+        product.stockQuantity = Math.max(0, product.stockQuantity - qty);
+      }
+
+      if (product.stockQuantity === 0) {
+        product.isAvailable = false;
+        product.availability = 'Out of Stock';
       }
     }
 
@@ -1676,8 +1941,19 @@ export const db = {
       const productsMap = new Map(d.products.map((p) => [p.id, p]));
       for (const item of order.items) {
         const product = productsMap.get(item.productId);
-        if (product && typeof product.stockQuantity === 'number') {
-          product.stockQuantity += item.quantity;
+        if (product) {
+          if (item.variantId && Array.isArray(product.variants)) {
+            const variant = product.variants.find((v) => v.id === item.variantId);
+            if (variant) {
+              variant.stockQuantity += item.quantity;
+              if (variant.stockQuantity > 0) variant.isAvailable = true;
+              product.stockQuantity = product.variants.reduce((sum, v) => sum + Math.max(0, v.stockQuantity), 0);
+            } else if (typeof product.stockQuantity === 'number') {
+              product.stockQuantity += item.quantity;
+            }
+          } else if (typeof product.stockQuantity === 'number') {
+            product.stockQuantity += item.quantity;
+          }
           if (product.stockQuantity > 0) {
             product.isAvailable = true;
             product.availability = 'In Stock';
@@ -2487,6 +2763,27 @@ export const db = {
     d.reviews.unshift(review);
     saveDatabase(d);
     return review;
+  },
+
+  removeNonCjProducts(actor = 'System'): { removedCount: number; remainingCount: number } {
+    const d = loadDatabase();
+    const before = d.products.length;
+    d.products = d.products.filter((p) => p.supplierSource === 'cjdropshipping' || Boolean(p.cjPid));
+    const removedCount = before - d.products.length;
+    if (d.imageAudit) {
+      d.imageAudit.totalProducts = d.products.length;
+      d.imageAudit.withWorkingImages = d.products.filter((p) => p.image).length;
+      d.imageAudit.missingImages = d.products.filter((p) => !p.image).length;
+      d.imageAudit.awaitingReview = d.products.filter((p) => p.imageNeedsReview).length;
+      d.imageAudit.lastScannedAt = new Date().toISOString();
+    }
+    this.addAuditLog(
+      actor,
+      'PRUNE_NON_CJ_PRODUCTS',
+      `Removed ${removedCount} non-CJ product(s); ${d.products.length} CJ product(s) remain.`
+    );
+    saveDatabase(d);
+    return { removedCount, remainingCount: d.products.length };
   },
 };
 

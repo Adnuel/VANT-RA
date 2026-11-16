@@ -16,8 +16,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
   const { formatAmount } = useCurrency();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
+  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+  const firstAvailableVariant = hasVariants
+    ? product.variants!.find((v) => v.isAvailable && v.stockQuantity > 0)
+    : undefined;
   const isOutOfStock =
-    !product.isAvailable || product.stockQuantity === 0 || product.availability === 'out_of_stock';
+    !product.isAvailable ||
+    product.stockQuantity <= 0 ||
+    product.availability === 'out_of_stock' ||
+    (hasVariants && !firstAvailableVariant);
   const isReservedPhone = product.category === 'phones';
   const isLowStock = !isOutOfStock && product.stockQuantity > 0 && product.stockQuantity <= 5;
   const saved = isInWishlist(product.id);
@@ -35,7 +42,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onNavigate, o
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isReservedPhone || isOutOfStock) return;
-    addToCart(product, 1);
+    addToCart(product, 1, firstAvailableVariant);
   };
 
   const handleWishlistClick = (e: React.MouseEvent) => {

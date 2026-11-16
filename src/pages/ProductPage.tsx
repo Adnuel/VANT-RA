@@ -19,6 +19,8 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
 
   const [quantity, setQuantity] = useState(1);
   const [selectedFinish, setSelectedFinish] = useState('Obsidian Noir');
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
   const [addedNotice, setAddedNotice] = useState(false);
   const [activeView, setActiveView] = useState<'studio' | 'detail' | 'angle'>('studio');
   const [isZoomOpen, setIsZoomOpen] = useState(false);
@@ -34,12 +36,21 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
     setActiveView('studio');
     setIsZoomOpen(false);
     if (product) {
+      const firstAvail =
+        product.variants && product.variants.length > 0
+          ? product.variants.find((v) => v.isAvailable && v.stockQuantity > 0) || product.variants[0]
+          : null;
+      setSelectedVariantId(firstAvail?.id || null);
+      setSelectedGalleryImage(firstAvail?.image || product.image || null);
       trackEvent('product_viewed', {
         productId: product.id,
         productTitle: product.title,
         category: product.category,
-        retailPriceCents: product.retailPriceCents,
+        retailPriceCents: firstAvail?.retailPriceCents ?? product.retailPriceCents,
       });
+    } else {
+      setSelectedVariantId(null);
+      setSelectedGalleryImage(null);
     }
   }, [product?.id]);
 
@@ -62,8 +73,19 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
     );
   }
 
+  const productVariants = Array.isArray(product.variants) && product.variants.length > 0 ? product.variants : null;
+  const activeVariant = productVariants
+    ? productVariants.find((v) => v.id === selectedVariantId) || productVariants[0]
+    : null;
+
+  const effectiveStock = activeVariant ? activeVariant.stockQuantity : product.stockQuantity;
+  const effectivePriceCents = activeVariant ? activeVariant.retailPriceCents : product.retailPriceCents;
+  const displayImage = selectedGalleryImage || activeVariant?.image || product.image;
   const isOutOfStock =
-    !product.isAvailable || product.stockQuantity === 0 || product.availability === 'out_of_stock';
+    !product.isAvailable ||
+    effectiveStock <= 0 ||
+    product.availability === 'out_of_stock' ||
+    (activeVariant ? !activeVariant.isAvailable : false);
   const isReservedPhone = product.category === 'phones';
   const saved = isInWishlist(product.id);
   const related = products
@@ -72,7 +94,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
 
   const handleAddToCart = () => {
     if (isReservedPhone || isOutOfStock) return;
-    addToCart(product, quantity);
+    addToCart(product, quantity, activeVariant || undefined);
     setAddedNotice(true);
     setTimeout(() => setAddedNotice(false), 3500);
   };
@@ -143,9 +165,9 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
         {/* Left: Uniform Studio Viewer & Multi-Angle Framing Strip */}
         <div className="lg:col-span-7 space-y-4">
           <div className="relative bg-[#141416] border border-white/8 aspect-square w-full flex items-center justify-center p-8 sm:p-14 rounded-xs overflow-hidden group">
-            {product.image ? (
+            {displayImage ? (
               <img
-                src={product.image}
+                src={displayImage}
                 alt={product.imageAlt || product.title}
                 onClick={() => setIsZoomOpen(true)}
                 className={`max-h-full max-w-full cursor-zoom-in transition-transform duration-500 ease-out ${currentView.imgClass} ${
@@ -170,32 +192,60 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             </button>
           </div>
 
-          {/* Uniform Framing Strip */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {views.map((view) => (
-              <button
-                key={view.id}
-                type="button"
-                onClick={() => setActiveView(view.id)}
-                className={`bg-[#141416] border rounded-xs overflow-hidden p-3 flex flex-col items-center gap-2 transition-colors cursor-pointer ${
-                  activeView === view.id
-                    ? 'border-[#C8A96A]'
-                    : 'border-white/8 hover:border-white/25'
-                }`}
-              >
-                <div className="aspect-square w-full max-h-20 bg-[#0B0B0C] flex items-center justify-center overflow-hidden p-2">
+          {/* Uniform Framing Strip or Product Gallery */}
+          {Array.isArray(product.galleryImages) && product.galleryImages.length > 1 ? (
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
+              {product.galleryImages.slice(0, 6).map((imgUrl, idx) => (
+                <button
+                  key={`${imgUrl}-${idx}`}
+                  type="button"
+                  onClick={() => {
+                    setActiveView('studio');
+                    setSelectedGalleryImage(imgUrl);
+                  }}
+                  aria-label={`View gallery photo ${idx + 1}`}
+                  className={`bg-[#141416] border rounded-xs overflow-hidden p-2 aspect-square flex items-center justify-center transition-colors cursor-pointer ${
+                    displayImage === imgUrl
+                      ? 'border-[#C8A96A]'
+                      : 'border-white/8 hover:border-white/25'
+                  }`}
+                >
                   <img
-                    src={product.image || '/products/charging-phone-stand.jpg'}
-                    alt={`${product.title} — ${view.label}`}
-                    className={`h-full w-full ${view.imgClass}`}
+                    src={imgUrl}
+                    alt={`${product.title} — View ${idx + 1}`}
+                    className="h-full w-full object-contain"
+                    referrerPolicy="no-referrer"
                   />
-                </div>
-                <span className="text-[10px] uppercase tracking-[0.16em] text-[#A8A297]">
-                  {view.label}
-                </span>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              {views.map((view) => (
+                <button
+                  key={view.id}
+                  type="button"
+                  onClick={() => setActiveView(view.id)}
+                  className={`bg-[#141416] border rounded-xs overflow-hidden p-3 flex flex-col items-center gap-2 transition-colors cursor-pointer ${
+                    activeView === view.id
+                      ? 'border-[#C8A96A]'
+                      : 'border-white/8 hover:border-white/25'
+                  }`}
+                >
+                  <div className="aspect-square w-full max-h-20 bg-[#0B0B0C] flex items-center justify-center overflow-hidden p-2">
+                    <img
+                      src={displayImage || '/products/charging-phone-stand.jpg'}
+                      alt={`${product.title} — ${view.label}`}
+                      className={`h-full w-full ${view.imgClass}`}
+                    />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-[#A8A297]">
+                    {view.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Calm Purchase & Accordion Details Column */}
@@ -207,8 +257,8 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                 <span className={isOutOfStock ? 'text-[#E57373]' : 'text-[#C8A96A]'}>
                   {isOutOfStock
                     ? 'Out of stock'
-                    : product.stockQuantity <= 5
-                    ? `Only ${product.stockQuantity} left`
+                    : effectiveStock <= 5
+                    ? `Only ${effectiveStock} left`
                     : 'In stock'}
                 </span>
               </div>
@@ -245,9 +295,9 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
 
               <div className="flex items-baseline gap-3 pt-2">
                 <span className="text-2xl sm:text-3xl font-medium text-[#C8A96A] tabular-nums">
-                  {formatAmount(product.retailPriceCents)}
+                  {formatAmount(effectivePriceCents)}
                 </span>
-                {product.referencePriceCents && product.referencePriceCents > product.retailPriceCents && (
+                {product.referencePriceCents && product.referencePriceCents > effectivePriceCents && (
                   <span className="text-sm text-[#A8A297] line-through tabular-nums">
                     {formatAmount(product.referencePriceCents)}
                   </span>
@@ -260,37 +310,75 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
 
             <p className="text-sm text-[#A8A297] leading-relaxed">{product.description}</p>
 
-            {/* Finish Swatches */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.16em]">
-                <span className="text-[#A8A297]">Finish</span>
-                <span className="text-[#F5F1E8]">{selectedFinish}</span>
+            {/* Real Variants or Finish Swatches */}
+            {productVariants ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.16em]">
+                  <span className="text-[#A8A297]">Edition / Variant</span>
+                  <span className="text-[#F5F1E8]">{activeVariant?.name}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {productVariants.map((variant) => {
+                    const variantSelected = activeVariant?.id === variant.id;
+                    const variantOutOfStock = !variant.isAvailable || variant.stockQuantity <= 0;
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVariantId(variant.id);
+                          setQuantity(1);
+                          if (variant.image) {
+                            setSelectedGalleryImage(variant.image);
+                          }
+                        }}
+                        className={`px-3 py-2 text-[11px] rounded-xs border transition-colors cursor-pointer text-left ${
+                          variantSelected
+                            ? 'border-[#C8A96A] bg-[#C8A96A]/10 text-[#F5F1E8]'
+                            : 'border-white/12 bg-[#0B0B0C] text-[#A8A297] hover:border-white/30 hover:text-[#F5F1E8]'
+                        } ${variantOutOfStock ? 'opacity-50' : ''}`}
+                      >
+                        <span className="block font-medium">{variant.name}</span>
+                        <span className="block text-[9px] uppercase tracking-wider text-[#A8A297]">
+                          {variantOutOfStock ? 'Out of stock' : `${variant.stockQuantity} available`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                {finishes.map((f) => (
-                  <button
-                    key={f.name}
-                    type="button"
-                    onClick={() => setSelectedFinish(f.name)}
-                    aria-label={`Select ${f.name}`}
-                    title={f.name}
-                    className={`w-7 h-7 rounded-full border transition-all cursor-pointer ${
-                      selectedFinish === f.name
-                        ? 'border-[#C8A96A] ring-2 ring-[#C8A96A]/40 ring-offset-2 ring-offset-[#141416]'
-                        : 'border-white/15 opacity-75 hover:opacity-100'
-                    }`}
-                    style={{ backgroundColor: f.hex }}
-                  />
-                ))}
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.16em]">
+                  <span className="text-[#A8A297]">Finish</span>
+                  <span className="text-[#F5F1E8]">{selectedFinish}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {finishes.map((f) => (
+                    <button
+                      key={f.name}
+                      type="button"
+                      onClick={() => setSelectedFinish(f.name)}
+                      aria-label={`Select ${f.name}`}
+                      title={f.name}
+                      className={`w-7 h-7 rounded-full border transition-all cursor-pointer ${
+                        selectedFinish === f.name
+                          ? 'border-[#C8A96A] ring-2 ring-[#C8A96A]/40 ring-offset-2 ring-offset-[#141416]'
+                          : 'border-white/15 opacity-75 hover:opacity-100'
+                      }`}
+                      style={{ backgroundColor: f.hex }}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Primary Cart Action or Out of Stock State */}
             {!isReservedPhone && !isOutOfStock ? (
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] uppercase tracking-[0.16em] text-[#A8A297]">
-                    Quantity ({product.stockQuantity} in stock)
+                    Quantity ({effectiveStock} in stock)
                   </span>
                   <div className="inline-flex items-center border border-white/12 rounded-xs bg-[#0B0B0C]">
                     <button
@@ -304,8 +392,8 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                     <span className="px-4 text-sm font-medium text-[#F5F1E8] tabular-nums">{quantity}</span>
                     <button
                       type="button"
-                      disabled={quantity >= product.stockQuantity}
-                      onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))}
+                      disabled={quantity >= effectiveStock}
+                      onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
                       className="px-3.5 py-2 text-sm text-[#A8A297] hover:text-[#F5F1E8] disabled:opacity-40 cursor-pointer"
                       aria-label="Increase quantity"
                     >
@@ -319,7 +407,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                   onClick={handleAddToCart}
                   className="w-full gold-gradient-bg py-4 px-6 text-[11px] uppercase tracking-[0.22em] font-semibold rounded-xs cursor-pointer"
                 >
-                  Add to Cart · {formatAmount(product.retailPriceCents * quantity)}
+                  Add to Cart · {formatAmount(effectivePriceCents * quantity)}
                 </button>
 
                 {addedNotice && (
@@ -399,10 +487,22 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                       <span className="text-[#A8A297]">Category</span>
                       <span className="text-[#F5F1E8] capitalize">{product.category.replace('-', ' ')}</span>
                     </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-[#A8A297]">Compatibility</span>
-                      <span className="text-[#F5F1E8]">iOS, Android, macOS, Windows</span>
-                    </div>
+                    {activeVariant?.sku && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[#A8A297]">SKU</span>
+                        <span className="text-[#F5F1E8] font-mono">{activeVariant.sku}</span>
+                      </div>
+                    )}
+                    {Array.isArray(product.cjSpecs) &&
+                      product.cjSpecs
+                        .filter((s) => !s.label.toLowerCase().includes('cj product id'))
+                        .slice(0, 6)
+                        .map((spec) => (
+                          <div key={spec.label} className="flex justify-between gap-4">
+                            <span className="text-[#A8A297]">{spec.label}</span>
+                            <span className="text-[#F5F1E8] text-right">{spec.value}</span>
+                          </div>
+                        ))}
                     <div className="flex justify-between gap-4">
                       <span className="text-[#A8A297]">Settlement</span>
                       <span className="text-[#F5F1E8]">Card (NGN / USD) & Bank Transfer</span>
@@ -477,7 +577,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
       )}
 
       {/* Clean Interactive Image Zoom Lightbox */}
-      {isZoomOpen && product.image && (
+      {isZoomOpen && displayImage && (
         <div
           role="dialog"
           aria-modal="true"
@@ -494,7 +594,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             ✕
           </button>
           <img
-            src={product.image}
+            src={displayImage}
             alt={product.imageAlt || product.title}
             onClick={(e) => e.stopPropagation()}
             className="max-h-[85vh] max-w-[90vw] object-contain cursor-default"

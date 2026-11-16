@@ -19,18 +19,37 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
   const { addToCart, setIsCartOpen } = useCart();
   const { currency, formatAmount } = useCurrency();
   const [selectedFinish, setSelectedFinish] = useState<string>('Obsidian Noir');
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [addedNotice, setAddedNotice] = useState<boolean>(false);
 
   useEffect(() => {
     setQuantity(1);
     setAddedNotice(false);
+    if (product?.variants && product.variants.length > 0) {
+      const firstAvail =
+        product.variants.find((v) => v.isAvailable && v.stockQuantity > 0) || product.variants[0];
+      setSelectedVariantId(firstAvail?.id || null);
+    } else {
+      setSelectedVariantId(null);
+    }
   }, [product?.id]);
 
   if (!isOpen || !product) return null;
 
+  const productVariants = Array.isArray(product.variants) && product.variants.length > 0 ? product.variants : null;
+  const activeVariant = productVariants
+    ? productVariants.find((v) => v.id === selectedVariantId) || productVariants[0]
+    : null;
+  const effectiveStock = activeVariant ? activeVariant.stockQuantity : product.stockQuantity;
+  const effectivePriceCents = activeVariant ? activeVariant.retailPriceCents : product.retailPriceCents;
+  const displayImage = activeVariant?.image || product.image || '/products/charging-phone-stand.jpg';
+
   const isOutOfStock =
-    !product.isAvailable || product.stockQuantity === 0 || product.availability === 'out_of_stock';
+    !product.isAvailable ||
+    effectiveStock <= 0 ||
+    product.availability === 'out_of_stock' ||
+    (activeVariant ? !activeVariant.isAvailable : false);
   const isReservedPhone = product.category === 'phones';
 
   const finishes = [
@@ -42,7 +61,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
 
   const handleAddToCart = () => {
     if (isOutOfStock || isReservedPhone) return;
-    addToCart(product, quantity);
+    addToCart(product, quantity, activeVariant || undefined);
     setAddedNotice(true);
     setTimeout(() => {
       setAddedNotice(false);
@@ -63,35 +82,59 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
         <div className="md:w-1/2 bg-[#0B0B0C] p-8 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-white/8">
           <div className="w-full flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[#A8A297]">
             <span>VANTÉRA</span>
-            <span className="text-[#C8A96A] font-medium">{selectedFinish}</span>
+            <span className="text-[#C8A96A] font-medium truncate max-w-[160px]">
+              {activeVariant ? activeVariant.name : selectedFinish}
+            </span>
           </div>
 
           <div className="relative my-6 aspect-square w-full max-w-[260px] flex items-center justify-center">
             <img
-              src={product.image || '/products/charging-phone-stand.jpg'}
+              src={displayImage}
               alt={product.imageAlt || product.title}
               className="max-h-full max-w-full object-contain"
               referrerPolicy="no-referrer"
             />
           </div>
 
-          <div className="w-full pt-4 border-t border-white/8 flex items-center justify-center gap-3">
-            {finishes.map((f) => (
-              <button
-                key={f.name}
-                type="button"
-                onClick={() => setSelectedFinish(f.name)}
-                aria-label={`Select ${f.name}`}
-                title={f.name}
-                className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${
-                  selectedFinish === f.name
-                    ? 'border-[#C8A96A] scale-115 ring-2 ring-[#C8A96A]/40 ring-offset-2 ring-offset-[#0B0B0C]'
-                    : 'border-white/20 opacity-70 hover:opacity-100'
-                }`}
-                style={{ backgroundColor: f.hex }}
-              />
-            ))}
-          </div>
+          {productVariants ? (
+            <div className="w-full pt-4 border-t border-white/8 flex flex-wrap items-center justify-center gap-2">
+              {productVariants.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedVariantId(v.id);
+                    setQuantity(1);
+                  }}
+                  className={`px-2.5 py-1 text-[10px] rounded-xs border cursor-pointer transition-colors ${
+                    activeVariant?.id === v.id
+                      ? 'border-[#C8A96A] text-[#F5F1E8] bg-[#C8A96A]/10'
+                      : 'border-white/15 text-[#A8A297] hover:text-[#F5F1E8]'
+                  } ${!v.isAvailable || v.stockQuantity <= 0 ? 'opacity-45' : ''}`}
+                >
+                  {v.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="w-full pt-4 border-t border-white/8 flex items-center justify-center gap-3">
+              {finishes.map((f) => (
+                <button
+                  key={f.name}
+                  type="button"
+                  onClick={() => setSelectedFinish(f.name)}
+                  aria-label={`Select ${f.name}`}
+                  title={f.name}
+                  className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${
+                    selectedFinish === f.name
+                      ? 'border-[#C8A96A] scale-115 ring-2 ring-[#C8A96A]/40 ring-offset-2 ring-offset-[#0B0B0C]'
+                      : 'border-white/20 opacity-70 hover:opacity-100'
+                  }`}
+                  style={{ backgroundColor: f.hex }}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Specs & Purchase Module */}
@@ -122,7 +165,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
               <div className="flex justify-between">
                 <span className="text-[#A8A297] uppercase tracking-[0.12em] text-[10px]">Availability</span>
                 <span className={isOutOfStock ? 'text-[#E57373]' : 'text-[#F5F1E8]'}>
-                  {isOutOfStock ? 'Out of stock' : `${product.stockQuantity} units ready`}
+                  {isOutOfStock ? 'Out of stock' : `${effectiveStock} units ready`}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -137,7 +180,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
                   Price ({currency})
                 </span>
                 <div className="text-2xl font-medium text-[#C8A96A] tabular-nums mt-0.5">
-                  {formatAmount(product.retailPriceCents * quantity)}
+                  {formatAmount(effectivePriceCents * quantity)}
                 </div>
               </div>
 
@@ -154,8 +197,8 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
                   <span className="px-3 py-1.5 text-sm font-medium tabular-nums">{quantity}</span>
                   <button
                     type="button"
-                    disabled={quantity >= product.stockQuantity}
-                    onClick={() => setQuantity(Math.min(product.stockQuantity, quantity + 1))}
+                    disabled={quantity >= effectiveStock}
+                    onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
                     aria-label="Increase quantity"
                     className="px-3 py-1.5 text-sm text-[#A8A297] hover:text-[#F5F1E8] disabled:opacity-40 cursor-pointer"
                   >
@@ -175,7 +218,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
               >
                 {addedNotice
                   ? 'Added to Bag'
-                  : `Add to Cart · ${formatAmount(product.retailPriceCents * quantity)}`}
+                  : `Add to Cart · ${formatAmount(effectivePriceCents * quantity)}`}
               </button>
             ) : (
               <button

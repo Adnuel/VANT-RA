@@ -160,8 +160,13 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     }
 
     try {
-      // 1. Try server endpoint first
-      const result = await safeFetchJson<{ token?: string; user?: any; error?: string }>('/api/auth/login', {
+      const result = await safeFetchJson<{
+        token?: string;
+        user?: any;
+        error?: string;
+        requiresVerification?: boolean;
+        email?: string;
+      }>('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: cleanEmail, password }),
@@ -177,25 +182,23 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         return;
       }
 
-      // If server explicitly returned a business error (e.g. 401/429 with message)
-      if ((result.status === 401 || result.status === 429) && result.data?.error) {
-        if (result.status === 401) {
-          const fallback = clientAuthFallback.login(cleanEmail, password);
-          if (fallback.success && fallback.token && fallback.user) {
-            loginCustomer(fallback.token, fallback.user as any);
-            setSuccessMessage('Logged in successfully');
-            if (returnToCart) {
-              setIsCartOpen(true);
-              onNavigate('/');
-            }
-            return;
-          }
-        }
+      if (result.status === 403 && result.data?.requiresVerification) {
+        setVerifyEmailAddress(result.data.email || cleanEmail.toLowerCase());
+        setVerificationCode('');
+        setAuthMode('verify');
+        setErrorMessage(
+          result.data.error ||
+            'Please enter the 6-digit verification code sent to your email to confirm your new account.'
+        );
+        return;
+      }
+
+      if ((result.status === 401 || result.status === 429 || result.status === 400) && result.data?.error) {
         setErrorMessage(result.data.error);
         return;
       }
 
-      // 2. Client fallback for static hosting / offline / 404 / 405
+      // Offline / static hosting fallback ONLY if backend route is unavailable (404/405/network)
       const fallback = clientAuthFallback.login(cleanEmail, password);
       if (fallback.success && fallback.token && fallback.user) {
         loginCustomer(fallback.token, fallback.user as any);
@@ -209,23 +212,13 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
       setErrorMessage(fallback.error || 'Invalid email or password. Please verify your credentials.');
     } catch {
-      const fallback = clientAuthFallback.login(cleanEmail, password);
-      if (fallback.success && fallback.token && fallback.user) {
-        loginCustomer(fallback.token, fallback.user as any);
-        setSuccessMessage('Logged in successfully');
-        if (returnToCart) {
-          setIsCartOpen(true);
-          onNavigate('/');
-        }
-        return;
-      }
-      setErrorMessage('Invalid email or password. Please verify your credentials.');
+      setErrorMessage('Unable to sign in right now. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle Open Account / Register
+  // Handle Open Account / Register (requires 6-digit email verification code before activation)
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -238,6 +231,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
     if (!cleanName || !cleanEmail || !password) {
       setErrorMessage('Please fill in your name, email, and password.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setErrorMessage('Please enter a valid email address.');
       setIsSubmitting(false);
       return;
     }
@@ -264,8 +263,15 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     }
 
     try {
-      // 1. Send registration to server API with Nigerian fields
-      const result = await safeFetchJson<{ token?: string; user?: any; error?: string }>('/api/auth/register', {
+      const result = await safeFetchJson<{
+        requiresVerification?: boolean;
+        email?: string;
+        emailSent?: boolean;
+        message?: string;
+        token?: string;
+        user?: any;
+        error?: string;
+      }>('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -279,48 +285,32 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         }),
       });
 
-      if (result.ok && result.data?.token && result.data?.user) {
-        clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
-        loginCustomer(result.data.token, result.data.user);
-        setVerifyEmailAddress(cleanEmail);
+      if (result.ok && result.data?.requiresVerification) {
+        setVerifyEmailAddress(result.data.email || cleanEmail);
+        setVerificationCode('');
         setAuthMode('verify');
-        setSuccessMessage('Account created! A 6-digit verification code has been dispatched to your email.');
+        if (result.data.emailSent === false) {
+          setErrorMessage(
+            result.data.message ||
+              'Email delivery (SMTP / Resend API) is not configured on the server yet, so the verification email could not reach your inbox.'
+          );
+        } else {
+          setSuccessMessage(
+            result.data.message ||
+              `A 6-digit verification code has been sent to ${cleanEmail}. Enter it below to confirm your account.`
+          );
+        }
         return;
       }
 
-      // If server returned a business error (e.g. email exists)
-      if (result.data?.error && result.status === 400) {
+      if (result.data?.error) {
         setErrorMessage(result.data.error);
         return;
       }
 
-      // 2. Resilient Client Fallback (on 404, 405, 500 or static hosting)
-      const fallback = clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
-      if (fallback.success && fallback.token && fallback.user) {
-        loginCustomer(fallback.token, fallback.user as any);
-        if (returnToCart) {
-          setIsCartOpen(true);
-          onNavigate('/');
-          return;
-        }
-        setSuccessMessage('Your VANTÉRA client account has been opened successfully! Welcome.');
-        return;
-      }
-
-      setErrorMessage(fallback.error || 'An account with this email already exists. Please sign in.');
+      setErrorMessage(result.error || 'Unable to register account right now. Please try again.');
     } catch {
-      const fallback = clientAuthFallback.register(cleanName, cleanEmail, password, cleanPhone);
-      if (fallback.success && fallback.token && fallback.user) {
-        loginCustomer(fallback.token, fallback.user as any);
-        if (returnToCart) {
-          setIsCartOpen(true);
-          onNavigate('/');
-          return;
-        }
-        setSuccessMessage('Your VANTÉRA client account has been opened successfully! Welcome.');
-        return;
-      }
-      setErrorMessage(fallback.error || 'Unable to open account. Please verify your details.');
+      setErrorMessage('Unable to register account right now. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -332,24 +322,38 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     if (!verificationCode.trim()) return;
     setIsSubmitting(true);
     setErrorMessage('');
+    setSuccessMessage('');
     try {
-      const res = await safeFetchJson<{ success?: boolean; message?: string; error?: string; user?: any }>('/api/auth/verify-email', {
+      const res = await safeFetchJson<{
+        success?: boolean;
+        message?: string;
+        error?: string;
+        token?: string;
+        user?: any;
+      }>('/api/auth/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: verifyEmailAddress || user?.email || email, code: verificationCode.trim() }),
+        body: JSON.stringify({
+          email: verifyEmailAddress || user?.email || email,
+          code: verificationCode.trim(),
+        }),
       });
       if (res.ok && res.data?.success) {
-        setSuccessMessage('✓ Email address verified successfully!');
         setVerificationCode('');
-        if (user) {
+        if (res.data.token && res.data.user) {
+          loginCustomer(res.data.token, res.data.user);
+        } else if (user) {
           updateUser({ ...user, isEmailVerified: true, emailVerified: true });
         }
+        setSuccessMessage('✓ Email verified and new account confirmed!');
         if (returnToCart) {
           setIsCartOpen(true);
           onNavigate('/');
           return;
         }
-        setAuthMode('login');
+        if (!res.data.token) {
+          setAuthMode('login');
+        }
       } else {
         setErrorMessage(res.data?.error || 'Invalid verification code. Please check your inbox or spam folder.');
       }
@@ -366,13 +370,25 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     setErrorMessage('');
     setSuccessMessage('');
     try {
-      const res = await safeFetchJson<{ success?: boolean; message?: string }>('/api/auth/resend-verification', {
+      const res = await safeFetchJson<{
+        success?: boolean;
+        emailSent?: boolean;
+        message?: string;
+        error?: string;
+      }>('/api/auth/resend-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: targetEmail }),
       });
-      if (res.ok) {
-        setSuccessMessage('✓ A fresh 6-digit verification code has been dispatched to your email.');
+      if (res.ok && res.data?.success) {
+        if (res.data.emailSent === false) {
+          setErrorMessage(
+            res.data.message ||
+              'Code regenerated, but server email delivery (SMTP / Resend API) is not configured yet.'
+          );
+        } else {
+          setSuccessMessage(res.data.message || '✓ A fresh 6-digit verification code has been sent to your email.');
+        }
         setResendCooldown(60);
         const timer = setInterval(() => {
           setResendCooldown((prev) => {
@@ -383,6 +399,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
             return prev - 1;
           });
         }, 1000);
+      } else {
+        setErrorMessage(res.data?.error || 'Unable to resend verification code right now.');
       }
     } catch {
       setErrorMessage('Unable to resend verification code right now.');
@@ -715,11 +733,13 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
             <h1 className="font-editorial text-2xl font-medium text-[#F5F1E8] break-words">
               {authMode === 'login' && 'Sign In to VANTÉRA'}
               {authMode === 'register' && 'Open Client Account'}
+              {authMode === 'verify' && 'Confirm Your Email'}
               {authMode === 'forgot' && 'Reset Password'}
             </h1>
             <p className="text-xs text-[#A8A297] break-words">
               {authMode === 'login' && 'Access saved Nigerian shipping addresses and track your orders.'}
-              {authMode === 'register' && 'Create your client account for seamless checkout and tracking.'}
+              {authMode === 'register' && 'Enter your details to receive a 6-digit email confirmation code.'}
+              {authMode === 'verify' && 'Enter the 6-digit verification code sent to your email to confirm your new account.'}
               {authMode === 'forgot' && 'Enter your email to receive recovery instructions.'}
             </p>
           </div>
@@ -1011,20 +1031,22 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                   ✉
                 </div>
                 <h3 className="font-editorial text-lg text-[#F8F7F4] font-bold">
-                  Verify Your Email Address
+                  Enter Confirmation Code
                 </h3>
                 <p className="text-xs text-[#8E8B82] leading-relaxed">
-                  A 6-digit confirmation security code was dispatched to{' '}
-                  <strong className="text-[#D4AF37]">{verifyEmailAddress || email}</strong>. Enter it below to activate verified client privileges.
+                  We dispatched a 6-digit confirmation code to{' '}
+                  <strong className="text-[#D4AF37]">{verifyEmailAddress || email}</strong>. Type it below to confirm your new account.
                 </p>
               </div>
 
               <div>
                 <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1 text-center">
-                  6-Digit Verification Code
+                  6-Digit Email Verification Code
                 </label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   required
                   maxLength={6}
                   value={verificationCode}
@@ -1039,19 +1061,28 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                 disabled={isSubmitting || verificationCode.length < 6}
                 className="w-full gold-gradient-bg text-[#0B0B0B] py-3 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 disabled:opacity-50 cursor-pointer"
               >
-                {isSubmitting ? 'Verifying...' : 'Verify Email & Enter Vault'}
+                {isSubmitting ? 'Confirming...' : 'Confirm Code & Activate Account'}
               </button>
 
-              <div className="text-center pt-2">
+              <div className="flex items-center justify-between pt-2 text-[11px] text-[#8E8B82]">
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0}
+                  onClick={handleResendVerification}
+                  className="text-[#D4AF37] hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
-                    setAuthMode('login');
+                    setAuthMode('register');
                     setErrorMessage('');
+                    setSuccessMessage('');
                   }}
-                  className="text-[11px] text-[#8E8B82] hover:text-[#D4AF37] underline"
+                  className="hover:text-[#D4AF37] underline cursor-pointer"
                 >
-                  Skip for now and continue to account
+                  Change email
                 </button>
               </div>
             </form>
