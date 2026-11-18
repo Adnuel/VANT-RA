@@ -2104,7 +2104,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onNaviga
                   required
                   value={couponForm.code}
                   onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g. LAGOSVIP10"
+                  placeholder="e.g. VANTERAVIP10"
                   className="w-full border border-[#e7e4de] p-2 font-mono uppercase"
                 />
               </div>

@@ -495,7 +495,7 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
 
             <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
               <a
-                href={`https://wa.me/2349132793670?text=${encodeURIComponent(
+                href={`https://wa.me/2347015285932?text=${encodeURIComponent(
                   `Hello CEO Adnuel, I have initiated bank transfer for VANTÉRA order ${orderStatus.orderReference}. Amount: ${displayMoney(orderStatus.totalCents, orderStatus)}.`
                 )}`}
                 target="_blank"

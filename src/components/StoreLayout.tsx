@@ -428,7 +428,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   VANTÉRA
                 </span>
                 <p className="text-sm text-[#C7C0B4] max-w-sm leading-relaxed font-light">
-                  Refined smartphone protection, wireless charging architecture, and everyday desk hardware dispatched from Lagos worldwide.
+                  Refined smartphone protection, wireless charging architecture, and everyday desk hardware shipped worldwide.
                 </p>
               </div>
 
@@ -579,18 +579,18 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                 <div>
                   WhatsApp Concierge:{' '}
                   <a
-                    href="https://wa.me/2349132793670"
+                    href="https://wa.me/2347015285932"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#B89B5E] hover:underline"
                   >
-                    +234 913 279 3670
+                    07015285932
                   </a>
                 </div>
                 <div>
                   Email:{' '}
-                  <a href="mailto:emmanueladarikwu@gmail.com" className="hover:text-[#F7F3EC]">
-                    emmanueladarikwu@gmail.com
+                  <a href="mailto:vanteratechnologyelevated@gmail.com" className="hover:text-[#F7F3EC]">
+                    vanteratechnologyelevated@gmail.com
                   </a>
                 </div>
                 <div className="flex items-center gap-5 pt-1 text-[11px] uppercase tracking-[0.16em]">
@@ -604,7 +604,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                     <ArrowUpRight className="w-3 h-3" strokeWidth={1.5} />
                   </a>
                   <a
-                    href="https://wa.me/2349132793670"
+                    href="https://wa.me/2347015285932"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[#C7C0B4] hover:text-[#B89B5E]"

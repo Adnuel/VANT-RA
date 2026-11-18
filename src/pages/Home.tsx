@@ -87,24 +87,51 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
   const [reviewError, setReviewError] = useState('');
 
   // Passive GPU parallax on hero & lifestyle bands (zero React re-renders, disabled under reduced motion)
-  const heroImgRef = useRef<HTMLImageElement | null>(null);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const bandSectionRef = useRef<HTMLElement | null>(null);
   const bandImgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
+    const video = heroVideoRef.current;
     const prefersReduced =
       typeof window !== 'undefined' &&
       window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+
+    let cleanupVideoListeners: (() => void) | undefined;
+    if (video) {
+      video.defaultMuted = true;
+      video.muted = true;
+      video.playsInline = true;
+      if (prefersReduced) {
+        video.pause();
+      } else {
+        const attemptPlay = () => {
+          video.play().catch(() => {});
+        };
+        attemptPlay();
+        video.addEventListener('loadeddata', attemptPlay);
+        video.addEventListener('canplay', attemptPlay);
+        cleanupVideoListeners = () => {
+          video.removeEventListener('loadeddata', attemptPlay);
+          video.removeEventListener('canplay', attemptPlay);
+        };
+      }
+    }
+
+    if (prefersReduced) {
+      return () => {
+        cleanupVideoListeners?.();
+      };
+    }
 
     let rafId = 0;
     const updateParallax = () => {
       rafId = 0;
       const scrollY = window.scrollY;
-      if (heroImgRef.current && scrollY < window.innerHeight * 1.2) {
+      if (heroVideoRef.current && scrollY < window.innerHeight * 1.2) {
         const offset = Math.round(scrollY * 0.16);
-        heroImgRef.current.style.transform = `translate3d(0, ${offset}px, 0) scale(1.06)`;
+        heroVideoRef.current.style.transform = `translate3d(0, ${offset}px, 0) scale(1.06)`;
       }
       if (bandSectionRef.current && bandImgRef.current) {
         const rect = bandSectionRef.current.getBoundingClientRect();
@@ -126,6 +153,7 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
     updateParallax();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
+      cleanupVideoListeners?.();
       window.removeEventListener('scroll', onScroll);
       if (rafId) window.cancelAnimationFrame(rafId);
     };
@@ -194,22 +222,26 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
   return (
     <div className="bg-[#F7F3EC] text-[#111111]">
       {/* 1. Cinematic Edge-to-Edge Hero */}
-      <section className="relative min-h-[82vh] sm:min-h-[88vh] w-full flex items-end overflow-hidden bg-[#1B1B1B]">
-        <img
-          ref={heroImgRef}
-          src={heroShowcaseWebp}
-          alt="Brushed champagne-titanium MagSafe stand and matte black earbuds on dark basalt and warm travertine stone"
+      <section className="relative min-h-[70vh] sm:min-h-[88vh] w-full flex items-end overflow-hidden bg-[#1B1B1B]">
+        <video
+          ref={heroVideoRef}
+          src="/assets/aistudio/hero-showcase-faststart.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster={heroShowcaseWebp}
+          aria-label="VANTÉRA flagship tech showcase film"
           className="absolute inset-0 w-full h-full object-cover object-center will-change-transform scale-105"
-          loading="eager"
-          decoding="async"
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/45 to-[#111111]/15"
+          className="absolute inset-0 bg-gradient-to-t from-[#111111]/95 via-[#111111]/60 to-[#111111]/25"
         />
         <div
           aria-hidden="true"
-          className="hidden lg:block absolute inset-0 bg-gradient-to-r from-[#111111]/85 via-[#111111]/35 to-transparent"
+          className="hidden lg:block absolute inset-0 bg-gradient-to-r from-[#111111]/88 via-[#111111]/40 to-transparent"
         />
 
         <div className="relative z-10 max-w-7xl mx-auto w-full px-5 sm:px-8 lg:px-12 pb-14 sm:pb-24 pt-24">
@@ -218,7 +250,7 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
               className="hero-line-reveal text-[11px] font-medium uppercase tracking-[0.28em] text-[#B89B5E]"
               style={{ animationDelay: '60ms' }}
             >
-              VANTÉRA · Lagos & Worldwide
+              VANTÉRA · Worldwide
             </p>
             <h1
               className="font-editorial font-medium text-[#F7F3EC] leading-[1.06] tracking-tight"
@@ -618,9 +650,9 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
             </div>
             <div className="space-y-2">
               <p className="text-[10px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold">Fulfillment</p>
-              <h3 className="font-editorial text-xl text-[#111111]">Nationwide & Global Dispatch</h3>
+              <h3 className="font-editorial text-xl text-[#111111]">Worldwide Dispatch</h3>
               <p className="text-sm text-[#5C574E] font-light leading-relaxed">
-                1–2 business days in Lagos, state-calculated delivery nationwide, complimentary above ₦75,000 ($50).
+                Tracked delivery worldwide with destination-calculated regional shipping, complimentary domestically above ₦75,000 ($50).
               </p>
             </div>
             <div className="space-y-2">

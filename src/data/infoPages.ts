@@ -27,7 +27,7 @@ export const INFO_PAGES: Record<string, InfoPageData> = {
       },
       {
         heading: 'Leadership & Accountability',
-        body: 'Founded and personally overseen by CEO Adnuel (emmanueladarikwu@gmail.com | +234 913 279 3670), VANTÉRA operates with direct executive oversight across online gateway settlements, bank transfers, and regional fulfillment.',
+        body: 'Founded and personally overseen by CEO Adnuel (vanteratechnologyelevated@gmail.com | 07015285932), VANTÉRA operates with direct executive oversight across online gateway settlements, bank transfers, and regional fulfillment.',
       },
     ],
   },
@@ -39,7 +39,7 @@ export const INFO_PAGES: Record<string, InfoPageData> = {
     sections: [
       {
         heading: 'Customer Concierge & Orders',
-        body: 'Email: emmanueladarikwu@gmail.com\nWhatsApp: +234 913 279 3670\nHours: Monday – Saturday, 8:00 AM – 8:00 PM (WAT)',
+        body: 'Email: vanteratechnologyelevated@gmail.com\nWhatsApp: 07015285932\nHours: Monday – Saturday, 8:00 AM – 8:00 PM (WAT)',
       },
       {
         heading: 'Headquarters & Leadership',
@@ -47,7 +47,7 @@ export const INFO_PAGES: Record<string, InfoPageData> = {
       },
       {
         heading: 'Order & Payment Verification',
-        body: 'Card payments confirm automatically via server-verified payment gateway webhooks. Direct bank transfers (e.g., VAN-2026-XXXX) stay awaiting payment until reconciled by our team; you can also share your receipt on WhatsApp (+234 913 279 3670) for faster dispatch.',
+        body: 'Card payments confirm automatically via server-verified payment gateway webhooks. Direct bank transfers (e.g., VAN-2026-XXXX) stay awaiting payment until reconciled by our team; you can also share your receipt on WhatsApp (07015285932) for faster dispatch.',
       },
     ],
   },
@@ -69,8 +69,8 @@ export const INFO_PAGES: Record<string, InfoPageData> = {
         body: 'Visitors in Nigeria automatically see prices in Naira (₦), while international visitors see US Dollars ($). You can switch between NGN and USD anytime in the navigation bar, and totals remain consistent across product pages, your bag, checkout, and email receipts.',
       },
       {
-        heading: 'How much is delivery across Nigerian states?',
-        body: 'Delivery fees are calculated dynamically by destination state before payment—starting from ₦2,500 within Lagos, ₦3,500–₦4,500 across Abuja (FCT) and neighbouring zones, and up to ₦6,500 for distant regions. Orders over ₦75,000 ($50) qualify for complimentary domestic delivery.',
+        heading: 'How is worldwide and regional delivery calculated?',
+        body: 'Delivery fees are calculated dynamically by the destination you enter before payment—starting from ₦2,500 across domestic zones and scaling by region, with international express delivery available worldwide. Orders over ₦75,000 ($50) qualify for complimentary domestic delivery.',
       },
       {
         heading: 'How do I track an order or request a return?',
@@ -88,8 +88,8 @@ export const INFO_PAGES: Record<string, InfoPageData> = {
         body: 'Orders paid via our online gateway begin processing immediately upon webhook confirmation. Bank transfer orders enter processing once settled and confirmed. Most in-stock items ship within 24 business hours.',
       },
       {
-        heading: 'Nigerian State Delivery Fees & Transit Times',
-        body: 'Lagos State: ₦2,500 (1–2 business days).\nAbuja FCT, Ogun, Oyo, Ogun/Southwest corridors: ₦3,500–₦4,500 (2–3 business days).\nRivers, Enugu, Kano, Kaduna & Regional States: ₦4,500–₦6,500 (3–5 business days).\nOrders of ₦75,000 ($50) or more receive complimentary standard domestic shipping.',
+        heading: 'Worldwide & Regional Delivery Fees',
+        body: 'Regional domestic delivery ranges from ₦2,500–₦6,500 (1–5 business days based on your selected destination state).\nOrders of ₦75,000 ($50) or more receive complimentary standard domestic shipping.\nWorldwide international courier delivery is calculated dynamically at checkout.',
       },
       {
         heading: 'International Delivery & Tracking',
@@ -108,7 +108,7 @@ export const INFO_PAGES: Record<string, InfoPageData> = {
       },
       {
         heading: 'Damaged, Faulty, or Incorrect Items',
-        body: 'If an item arrives damaged or exhibits a manufacturing fault, report it via your Account portal or contact emmanueladarikwu@gmail.com / WhatsApp (+234 913 279 3670) within 48 hours of delivery for a full replacement or refund at zero extra cost.',
+        body: 'If an item arrives damaged or exhibits a manufacturing fault, report it via your Account portal or contact vanteratechnologyelevated@gmail.com / WhatsApp (07015285932) within 48 hours of delivery for a full replacement or refund at zero extra cost.',
       },
       {
         heading: 'Refunds & Processing',
@@ -150,7 +150,7 @@ export const INFO_PAGES: Record<string, InfoPageData> = {
       },
       {
         heading: 'Governing Law & Disputes',
-        body: 'Purchases and services are governed under the laws of the Federal Republic of Nigeria, with direct resolution through our executive customer care desk (emmanueladarikwu@gmail.com).',
+        body: 'Purchases and services are governed under the laws of the Federal Republic of Nigeria, with direct resolution through our executive customer care desk (vanteratechnologyelevated@gmail.com).',
       },
     ],
   },

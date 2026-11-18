@@ -50,9 +50,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
   const [couponMessage, setCouponMessage] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
-  // Nigerian Logistics State
-  const [selectedState, setSelectedState] = useState<string>('Lagos');
-  const [selectedLga, setSelectedLga] = useState<string>('Ikeja');
+  // Destination State Selection
+  const [selectedState, setSelectedState] = useState<string>('');
+  const [selectedLga, setSelectedLga] = useState<string>('');
   const [phoneValidation, setPhoneValidation] = useState<{ valid: boolean; formatted: string; error?: string }>({
     valid: true,
     formatted: '',
@@ -65,9 +65,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
     customerPhone: user?.phone || '',
     streetAddress: '',
     apartment: '',
-    city: 'Ikeja',
-    state: 'Lagos',
-    postalCode: '100001',
+    city: '',
+    state: '',
+    postalCode: '',
     country: 'Nigeria',
     notes: '',
     paymentReference: '',
@@ -80,8 +80,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
     sortCode: '058-152062',
     instructions:
       'Transfer the exact order total using your unique Order Reference as the transaction narration. Once sent, enter your payment reference below to notify CEO Adnuel for instant verification.',
-    whatsapp: '+234 913 279 3670',
-    email: 'emmanueladarikwu@gmail.com',
+    whatsapp: '07015285932',
+    email: 'vanteratechnologyelevated@gmail.com',
   });
 
   const [activeNgn, setActiveNgn] = useState<any>(null);
@@ -128,8 +128,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
           const list = res.ok && res.data?.addresses ? res.data.addresses : [];
           const def = list.find((a) => a.isDefault) || list[0];
           if (def) {
-            setSelectedState(def.state || 'Lagos');
-            setSelectedLga(def.city || 'Ikeja');
+            setSelectedState(def.state || '');
+            setSelectedLga(def.city || '');
             setFormData((prev) => ({
               ...prev,
               customerName: prev.customerName || def.fullName || user.name,
@@ -138,7 +138,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
               apartment: prev.apartment || def.apartment || '',
               state: def.state || prev.state,
               city: def.city || prev.city,
-              postalCode: def.postalCode || prev.postalCode || '100001',
+              postalCode: def.postalCode || prev.postalCode || '',
             }));
           }
         });
@@ -842,7 +842,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         setPhoneValidation(check);
                         setFormData({ ...formData, customerPhone: val });
                       }}
-                      placeholder="+234 913 279 3670"
+                      placeholder="0701 234 5678"
                       className={`w-full bg-[#F7F3EC] border px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:outline-hidden rounded-xs tabular-nums ${
                         formData.customerPhone && !phoneValidation.valid
                           ? 'border-[#8E3A3A]/60 focus:border-[#8E3A3A]'
@@ -873,17 +873,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     </label>
                     <select
                       id="checkout-state"
+                      required
                       value={formData.state || selectedState}
                       onChange={(e) => {
                         const newState = e.target.value;
                         setSelectedState(newState);
-                        const lgas = getLgasForState(newState);
+                        const lgas = newState ? getLgasForState(newState) : [];
                         const defaultLga = lgas[0] || '';
                         setSelectedLga(defaultLga);
                         setFormData({ ...formData, state: newState, city: defaultLga });
                       }}
                       className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     >
+                      <option value="" className="bg-[#FAF7F2] text-[#5C574E]">
+                        Select destination state...
+                      </option>
                       {NIGERIAN_STATES.map((s) => (
                         <option key={s.state} value={s.state} className="bg-[#FAF7F2] text-[#111111]">
                           {s.state} — {currency === 'NGN' ? formatNGN(s.feeNgn) : formatUSD(s.feeUsdCents)} ({s.deliveryEstimate})
@@ -899,6 +903,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                       </label>
                       <select
                         id="checkout-city"
+                        required
                         value={formData.city || selectedLga}
                         onChange={(e) => {
                           setSelectedLga(e.target.value);
@@ -906,7 +911,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         }}
                         className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                       >
-                        {getLgasForState(formData.state || selectedState).map((city) => (
+                        {!(formData.state || selectedState) && (
+                          <option value="" className="bg-[#FAF7F2] text-[#5C574E]">
+                            Select city / LGA...
+                          </option>
+                        )}
+                        {((formData.state || selectedState) ? getLgasForState(formData.state || selectedState) : []).map((city) => (
                           <option key={city} value={city} className="bg-[#FAF7F2] text-[#111111]">
                             {city}
                           </option>
@@ -923,7 +933,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         type="text"
                         value={formData.postalCode}
                         onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                        placeholder="100001"
+                        placeholder="Postal code"
                         className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] tabular-nums placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                       />
                     </div>
@@ -939,7 +949,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                       required
                       value={formData.streetAddress}
                       onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
-                      placeholder="e.g. Plot 14 Admiralty Way, Lekki Phase 1"
+                      placeholder="House number and street name"
                       className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
@@ -1461,7 +1471,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
               {/* Direct WhatsApp link to CEO */}
               <div className="text-center pt-1">
                 <a
-                  href={`https://wa.me/2349132793670?text=${encodeURIComponent(
+                  href={`https://wa.me/2347015285932?text=${encodeURIComponent(
                     `Hello CEO Adnuel, regarding VANTÉRA order ${confirmedOrder.orderReference} (${
                       confirmedOrder.currency === 'NGN'
                         ? formatNGN(
@@ -1478,7 +1488,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                   className="inline-flex items-center gap-2 text-xs text-[#7A6230] hover:underline"
                 >
                   <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
-                  <span>Direct WhatsApp with CEO Adnuel (+234 913 279 3670)</span>
+                  <span>Direct WhatsApp with CEO Adnuel (07015285932)</span>
                 </a>
               </div>
             </div>

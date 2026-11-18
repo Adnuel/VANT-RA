@@ -433,8 +433,8 @@
     "accountNumber": "1033269410",
     "sortCode": "058-152062",
     "instructions": "Transfer the exact order total using your unique Order Reference (e.g. VAN-2026-XXXX) as the transaction narration. Once sent, click \"I Have Transferred\" to notify CEO Adnuel for instant verification.",
-    "whatsapp": "+234 913 279 3670",
-    "email": "emmanueladarikwu@gmail.com"
+    "whatsapp": "07015285932",
+    "email": "vanteratechnologyelevated@gmail.com"
   },
   "suppliers": [
     {
@@ -470,6 +470,55 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "log_1795014506360_4sb9",
+      "timestamp": "2026-11-18T15:08:26.360Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795014402043_u3d2",
+      "timestamp": "2026-11-18T15:06:42.043Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795014131445_4n26",
+      "timestamp": "2026-11-18T15:02:11.445Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795014067045_ky1q",
+      "timestamp": "2026-11-18T15:01:07.045Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795013910128_n1ry",
+      "timestamp": "2026-11-18T14:58:30.128Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795010722634_i7g4",
+      "timestamp": "2026-11-18T14:05:22.634Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795009857757_90ru",
+      "timestamp": "2026-11-18T13:50:57.757Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
     {
       "id": "log_1795008609312_3l1r",
       "timestamp": "2026-11-18T13:30:09.312Z",
@@ -2474,7 +2523,7 @@
     "ngnExchangeRate": 1352.74,
     "enableNgn": true,
     "enableUsd": true,
-    "lastUpdated": "2026-11-18T13:30:09.312Z",
+    "lastUpdated": "2026-11-18T15:08:26.360Z",
     "isManualOverride": false,
     "manualOverrideBy": null,
     "manualOverrideReason": null,

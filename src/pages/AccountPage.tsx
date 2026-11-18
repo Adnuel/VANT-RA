@@ -33,9 +33,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [returnToCart, setReturnToCart] = useState(false);
 
-  // Nigerian Registration Fields
-  const [regState, setRegState] = useState('Lagos');
-  const [regLga, setRegLga] = useState('Ikeja');
+  // Customer Registration Location Fields
+  const [regState, setRegState] = useState('');
+  const [regLga, setRegLga] = useState('');
   const [regAddress, setRegAddress] = useState('');
 
   // Email verification state
@@ -96,9 +96,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     phone: '',
     streetAddress: '',
     apartment: '',
-    city: 'Ikeja',
-    state: 'Lagos',
-    postalCode: '100001',
+    city: '',
+    state: '',
+    postalCode: '',
     country: 'Nigeria',
     isDefault: true,
   });
@@ -640,9 +640,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         phone: '',
         streetAddress: '',
         apartment: '',
-        city: 'Ikeja',
-        state: 'Lagos',
-        postalCode: '100001',
+        city: '',
+        state: '',
+        postalCode: '',
         country: 'Nigeria',
         isDefault: false,
       });
@@ -926,9 +926,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     }}
                     className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   >
+                    <option value="" className="bg-[#FAF7F2] text-[#5C574E]">
+                      Select state / location...
+                    </option>
                     {NIGERIAN_STATES.map((s) => (
                       <option key={s.state} value={s.state} className="bg-[#FAF7F2] text-[#111111]">
-                        {s.state} ({s.zone === 'lagos' ? 'Lagos Zone' : s.deliveryEstimate})
+                        {s.state} ({s.deliveryEstimate})
                       </option>
                     ))}
                   </select>
@@ -945,7 +948,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                       onChange={(e) => setRegLga(e.target.value)}
                       className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     >
-                      {getLgasForState(regState).map((city) => (
+                      {!regState && (
+                        <option value="" className="bg-[#FAF7F2] text-[#5C574E]">
+                          Select city / LGA...
+                        </option>
+                      )}
+                      {(regState ? getLgasForState(regState) : []).map((city) => (
                         <option key={city} value={city} className="bg-[#FAF7F2] text-[#111111]">
                           {city}
                         </option>
@@ -961,7 +969,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                       type="text"
                       value={regAddress}
                       onChange={(e) => setRegAddress(e.target.value)}
-                      placeholder="e.g. 14 Admiralty Way"
+                      placeholder="Street address"
                       className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
@@ -1518,7 +1526,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                             </button>
 
                             <a
-                              href={`https://wa.me/2349132793670?text=${encodeURIComponent(
+                              href={`https://wa.me/2347015285932?text=${encodeURIComponent(
                                 `Hello CEO Adnuel, checking on order ${order.orderReference}.`
                               )}`}
                               target="_blank"
@@ -1680,14 +1688,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                         Nigerian State / FCT
                       </label>
                       <select
+                        required
                         value={newAddress.state}
                         onChange={(e) => {
                           const s = e.target.value;
-                          const lgas = getLgasForState(s);
+                          const lgas = s ? getLgasForState(s) : [];
                           setNewAddress({ ...newAddress, state: s, city: lgas[0] || '' });
                         }}
                         className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2 text-xs text-[#111111] rounded-xs"
                       >
+                        <option value="" className="bg-[#FAF7F2] text-[#5C574E]">
+                          Select state...
+                        </option>
                         {NIGERIAN_STATES.map((s) => (
                           <option key={s.state} value={s.state} className="bg-[#FAF7F2] text-[#111111]">
                             {s.state}
@@ -1698,11 +1710,17 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     <div>
                       <label className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">LGA / City</label>
                       <select
+                        required
                         value={newAddress.city}
                         onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
                         className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2 text-xs text-[#111111] rounded-xs"
                       >
-                        {getLgasForState(newAddress.state || 'Lagos').map((city) => (
+                        {!newAddress.state && (
+                          <option value="" className="bg-[#FAF7F2] text-[#5C574E]">
+                            Select city / LGA...
+                          </option>
+                        )}
+                        {(newAddress.state ? getLgasForState(newAddress.state) : []).map((city) => (
                           <option key={city} value={city} className="bg-[#FAF7F2] text-[#111111]">
                             {city}
                           </option>

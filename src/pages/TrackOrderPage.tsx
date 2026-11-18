@@ -365,7 +365,7 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
               Need receipt assistance or immediate status confirmation?
             </div>
             <a
-              href={`https://wa.me/2349132793670?text=${encodeURIComponent(
+              href={`https://wa.me/2347015285932?text=${encodeURIComponent(
                 `Hello CEO Adnuel, I am inquiring about order ${orderData.orderReference}.`
               )}`}
               target="_blank"

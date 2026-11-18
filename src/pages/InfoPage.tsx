@@ -75,16 +75,16 @@ export const InfoPage: React.FC<InfoPageProps> = ({ pageKey, onNavigate }) => {
               Reach CEO Adnuel directly for order inquiries, dispatch tracking, or bank transfer confirmation.
             </p>
             <a
-              href="https://wa.me/2349132793670"
+              href="https://wa.me/2347015285932"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 w-full gold-gradient-bg px-5 py-3 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs"
             >
               <MessageCircle className="w-4 h-4" strokeWidth={1.5} />
-              <span>WhatsApp (+234 913 279 3670)</span>
+              <span>WhatsApp (07015285932)</span>
             </a>
             <p className="text-xs text-[#5C574E] pt-1">
-              Email: emmanueladarikwu@gmail.com
+              Email: vanteratechnologyelevated@gmail.com
             </p>
           </div>
 

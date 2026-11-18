@@ -480,7 +480,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({
                   This batch has sold out. Contact CEO Adnuel on WhatsApp for restock scheduling.
                 </p>
                 <a
-                  href={`https://wa.me/2349132793670?text=${encodeURIComponent(
+                  href={`https://wa.me/2347015285932?text=${encodeURIComponent(
                     `Hello CEO Adnuel, when will ${product.title} be back in stock?`
                   )}`}
                   target="_blank"
@@ -492,7 +492,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({
               </div>
             ) : (
               <div className="p-4 bg-[#F7F3EC] border border-[#111111]/12 text-xs text-[#7A6230] rounded-xs">
-                Available via private WhatsApp allocation (+234 913 279 3670).
+                Available via private WhatsApp allocation (07015285932).
               </div>
             )}
 
@@ -571,7 +571,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({
                   className="w-full py-4 flex items-center justify-between text-left cursor-pointer"
                 >
                   <span className="text-[11px] uppercase tracking-[0.18em] text-[#111111] font-medium">
-                    Delivery & State Transit
+                    Worldwide Delivery & Transit
                   </span>
                   <span className="text-[#7A6230]">
                     {openAccordion === 'delivery' ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
@@ -579,7 +579,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({
                 </button>
                 {openAccordion === 'delivery' && (
                   <p className="pb-4 text-xs text-[#5C574E] leading-relaxed">
-                    Lagos delivery arrives in 1–2 business days (₦2,500). Other Nigerian states take 2–5 business days (₦3,500–₦5,000), and orders over ₦75,000 ($50) qualify for complimentary domestic shipping.
+                    Tracked courier delivery worldwide, with regional transit arriving within 1–5 business days based on your chosen destination and complimentary domestic shipping on orders over ₦75,000 ($50).
                   </p>
                 )}
               </div>
