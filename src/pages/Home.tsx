@@ -128,11 +128,6 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
     let rafId = 0;
     const updateParallax = () => {
       rafId = 0;
-      const scrollY = window.scrollY;
-      if (heroVideoRef.current && scrollY < window.innerHeight * 1.2) {
-        const offset = Math.round(scrollY * 0.16);
-        heroVideoRef.current.style.transform = `translate3d(0, ${offset}px, 0) scale(1.06)`;
-      }
       if (bandSectionRef.current && bandImgRef.current) {
         const rect = bandSectionRef.current.getBoundingClientRect();
         const vh = window.innerHeight;
@@ -221,31 +216,33 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
 
   return (
     <div className="bg-[#F7F3EC] text-[#111111]">
-      {/* 1. Cinematic Edge-to-Edge Hero */}
-      <section className="relative min-h-[70vh] sm:min-h-[88vh] w-full flex items-end overflow-hidden bg-[#1B1B1B]">
-        <video
-          ref={heroVideoRef}
-          src="/assets/aistudio/hero-showcase-faststart.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster={heroShowcaseWebp}
-          aria-label="VANTÉRA flagship tech showcase film"
-          className="absolute inset-0 w-full h-full object-cover object-center will-change-transform scale-105"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-t from-[#111111]/95 via-[#111111]/60 to-[#111111]/25"
-        />
-        <div
-          aria-hidden="true"
-          className="hidden lg:block absolute inset-0 bg-gradient-to-r from-[#111111]/88 via-[#111111]/40 to-transparent"
-        />
+      {/* 1. Cinematic Hero — exact 1920:1004 framing so 100% of the video and copy stay in view */}
+      <section className="relative w-full bg-[#0B0B0B] overflow-hidden">
+        <div className="relative w-full aspect-[1920/1004] lg:max-h-[calc(100svh-68px)] bg-[#0B0B0B] overflow-hidden">
+          <video
+            ref={heroVideoRef}
+            src="/assets/aistudio/hero-showcase-faststart.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            poster={heroShowcaseWebp}
+            aria-label="VANTÉRA flagship tech showcase film"
+            className="absolute inset-0 w-full h-full object-contain object-center"
+          />
+          <div
+            aria-hidden="true"
+            className="hidden lg:block pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0B]/92 via-[#0B0B0B]/35 to-transparent"
+          />
+          <div
+            aria-hidden="true"
+            className="hidden lg:block pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0B0B]/85 via-[#0B0B0B]/35 to-transparent"
+          />
+        </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto w-full px-5 sm:px-8 lg:px-12 pb-14 sm:pb-24 pt-24">
-          <div className="max-w-3xl space-y-5">
+        <div className="relative lg:absolute lg:inset-x-0 lg:bottom-0 z-10 max-w-7xl mx-auto w-full px-5 sm:px-8 lg:px-12 pt-6 pb-10 sm:pt-8 sm:pb-12 lg:pt-8 lg:pb-12 xl:pb-16">
+          <div className="max-w-xl lg:max-w-2xl space-y-3 sm:space-y-4">
             <p
               className="hero-line-reveal text-[11px] font-medium uppercase tracking-[0.28em] text-[#B89B5E]"
               style={{ animationDelay: '60ms' }}
@@ -254,7 +251,7 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
             </p>
             <h1
               className="font-editorial font-medium text-[#F7F3EC] leading-[1.06] tracking-tight"
-              style={{ fontSize: 'clamp(2.25rem, 4.6vw, 4.15rem)' }}
+              style={{ fontSize: 'clamp(1.9rem, 3.8vw, 3.85rem)' }}
             >
               <span className="hero-line-reveal block sm:whitespace-nowrap" style={{ animationDelay: '160ms' }}>
                 Precision objects for
@@ -269,7 +266,7 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
             >
               Architectural charging stations and refined desk hardware calibrated for quiet reliability.
             </p>
-            <div className="hero-line-reveal pt-2" style={{ animationDelay: '520ms' }}>
+            <div className="hero-line-reveal pt-1 sm:pt-2" style={{ animationDelay: '520ms' }}>
               <button
                 type="button"
                 onClick={() => onNavigate('/shop')}

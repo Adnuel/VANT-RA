@@ -471,6 +471,13 @@
   ],
   "auditLogs": [
     {
+      "id": "log_1795015058129_o48h",
+      "timestamp": "2026-11-18T15:17:38.129Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
       "id": "log_1795014506360_4sb9",
       "timestamp": "2026-11-18T15:08:26.360Z",
       "actor": "SYSTEM_FX_CRON",
@@ -2523,7 +2530,7 @@
     "ngnExchangeRate": 1352.74,
     "enableNgn": true,
     "enableUsd": true,
-    "lastUpdated": "2026-11-18T15:08:26.360Z",
+    "lastUpdated": "2026-11-18T15:17:38.129Z",
     "isManualOverride": false,
     "manualOverrideBy": null,
     "manualOverrideReason": null,
