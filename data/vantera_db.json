@@ -471,6 +471,27 @@
   ],
   "auditLogs": [
     {
+      "id": "log_1795008609312_3l1r",
+      "timestamp": "2026-11-18T13:30:09.312Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795008406340_n0g7",
+      "timestamp": "2026-11-18T13:26:46.340Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795008095911_7jk2",
+      "timestamp": "2026-11-18T13:21:35.911Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
       "id": "log_1794821057315_dsze",
       "timestamp": "2026-11-16T09:24:17.315Z",
       "actor": "SYSTEM_FX_CRON",
@@ -1264,6 +1285,84 @@
   ],
   "events": [
     {
+      "id": "evt_1795008713755_1b6fcb41",
+      "type": "product_viewed",
+      "timestamp": "2026-11-18T13:31:53.755Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1795008712401_5eyg6090",
+      "status": "success",
+      "metadata": {
+        "productId": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+        "productTitle": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+        "category": "room-desk",
+        "retailPriceCents": 313
+      }
+    },
+    {
+      "id": "evt_1795008682328_97827045",
+      "type": "product_viewed",
+      "timestamp": "2026-11-18T13:31:22.328Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1795008666656_1kl6mck7",
+      "status": "success",
+      "metadata": {
+        "productId": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+        "productTitle": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+        "category": "room-desk",
+        "retailPriceCents": 313
+      }
+    },
+    {
+      "id": "evt_1795008682301_e586b828",
+      "type": "product_viewed",
+      "timestamp": "2026-11-18T13:31:22.301Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1795008666656_1kl6mck7",
+      "status": "success",
+      "metadata": {
+        "productId": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+        "productTitle": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+        "category": "room-desk"
+      }
+    },
+    {
+      "id": "evt_1795008623484_c049f97e",
+      "type": "product_viewed",
+      "timestamp": "2026-11-18T13:30:23.484Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1795008608826_bjdqkwnd",
+      "status": "success",
+      "metadata": {
+        "productId": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+        "productTitle": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+        "category": "room-desk",
+        "retailPriceCents": 313
+      }
+    },
+    {
+      "id": "evt_1795008623469_e3a7911f",
+      "type": "product_viewed",
+      "timestamp": "2026-11-18T13:30:23.469Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1795008608826_bjdqkwnd",
+      "status": "success",
+      "metadata": {
+        "productId": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+        "productTitle": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+        "category": "room-desk"
+      }
+    },
+    {
       "id": "evt_1794820262051_b4bb47ea",
       "type": "refund_confirmed",
       "timestamp": "2026-11-16T09:11:02.051Z",
@@ -2013,6 +2112,27 @@
   ],
   "visitorSessions": [
     {
+      "sessionId": "ses_1795008712401_5eyg6090",
+      "firstSeen": "2026-11-18T13:31:53.752Z",
+      "lastActive": "2026-11-18T13:31:53.754Z",
+      "authenticatedUserId": null,
+      "pageViews": 2
+    },
+    {
+      "sessionId": "ses_1795008666656_1kl6mck7",
+      "firstSeen": "2026-11-18T13:31:22.296Z",
+      "lastActive": "2026-11-18T13:31:22.326Z",
+      "authenticatedUserId": null,
+      "pageViews": 4
+    },
+    {
+      "sessionId": "ses_1795008608826_bjdqkwnd",
+      "firstSeen": "2026-11-18T13:30:23.466Z",
+      "lastActive": "2026-11-18T13:30:23.482Z",
+      "authenticatedUserId": null,
+      "pageViews": 4
+    },
+    {
       "sessionId": "ses_1794819377475_frh15af1",
       "firstSeen": "2026-11-16T08:56:23.018Z",
       "lastActive": "2026-11-16T08:56:23.020Z",
@@ -2351,10 +2471,10 @@
   ],
   "currencySettings": {
     "defaultCurrency": "USD",
-    "ngnExchangeRate": 1352.11,
+    "ngnExchangeRate": 1352.74,
     "enableNgn": true,
     "enableUsd": true,
-    "lastUpdated": "2026-11-16T09:24:17.315Z",
+    "lastUpdated": "2026-11-18T13:30:09.312Z",
     "isManualOverride": false,
     "manualOverrideBy": null,
     "manualOverrideReason": null,

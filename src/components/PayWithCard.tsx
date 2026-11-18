@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Lock } from 'lucide-react';
 import { formatPrice } from '../lib/commerceLogic.ts';
 import { safeFetchJson } from '../lib/safeFetch.ts';
 
@@ -171,55 +172,60 @@ export const PayWithCard: React.FC<PayWithCardProps> = ({
   return (
     <div className="space-y-3">
       {errorMessage && (
-        <div className="border border-red-500/30 bg-red-950/40 p-2.5 text-xs text-red-300 rounded-xs">
+        <div className="border border-[#8E3A3A]/30 bg-[#8E3A3A]/8 p-3 text-xs text-[#8E3A3A] rounded-xs">
           {errorMessage}
         </div>
       )}
 
-      <div className="border border-white/10 bg-[#0E0E0E] p-3.5 space-y-2.5 rounded-xs">
-        <div className="flex items-center justify-between">
+      <div className="border border-[#111111]/12 bg-[#F7F3EC] p-4 space-y-3 rounded-xs">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="font-editorial text-sm font-semibold text-[#F5F5F0]">Pay with Card / Wavy</span>
+            <span className="font-editorial text-sm font-medium text-[#111111]">Pay with Card / Wavy</span>
             {isTestMode ? (
-              <span className="bg-[#181818] text-[#A0A09A] text-[9px] px-1.5 py-0.5 font-mono uppercase rounded-xs border border-white/10">
+              <span className="bg-[#EFEAE0] text-[#5C574E] text-[9px] px-2 py-0.5 uppercase tracking-[0.14em] rounded-xs border border-[#111111]/10">
                 Test Mode
               </span>
             ) : (
-              <span className="bg-[#0F2E22] text-[#48BB78] text-[9px] px-1.5 py-0.5 font-mono uppercase font-bold rounded-xs border border-[#34A853]/30">
-                WAVY LIVE
+              <span className="bg-[#FAF7F2] text-[#7A6230] text-[9px] px-2 py-0.5 uppercase tracking-[0.14em] font-semibold rounded-xs border border-[#B89B5E]/40">
+                Wavy Live
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 text-xs">
-            <span title="Visa" className="px-1.5 py-0.5 bg-[#181818] border border-white/10 font-mono text-[9px] font-bold text-[#EDEDED]">
+          <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-[0.12em]">
+            <span title="Visa" className="px-1.5 py-0.5 bg-[#FAF7F2] border border-[#111111]/12 text-[#111111] rounded-xs">
               VISA
             </span>
-            <span title="Mastercard" className="px-1.5 py-0.5 bg-[#181818] border border-white/10 font-mono text-[9px] font-bold text-[#D4AF37]">
+            <span title="Mastercard" className="px-1.5 py-0.5 bg-[#FAF7F2] border border-[#111111]/12 text-[#7A6230] rounded-xs">
               MC
             </span>
-            <span title="Verve" className="px-1.5 py-0.5 bg-[#181818] border border-white/10 font-mono text-[9px] font-bold text-[#48BB78]">
+            <span title="Verve" className="px-1.5 py-0.5 bg-[#FAF7F2] border border-[#111111]/12 text-[#111111] rounded-xs">
               VERVE
             </span>
           </div>
         </div>
 
-        <p className="text-[11px] text-[#8E8B82] leading-relaxed">
-          Pay securely in <strong className="text-[#EDEDED]">{currency === 'NGN' ? 'Nigerian Naira (₦)' : 'US Dollar ($)'}</strong> via Wavy. Orders are automatically marked paid upon live gateway confirmation.
+        <p className="text-[11px] text-[#5C574E] leading-relaxed">
+          Pay securely in <strong className="text-[#111111] font-medium">{currency === 'NGN' ? 'Nigerian Naira (₦)' : 'US Dollar ($)'}</strong> via Wavy. Orders confirm automatically upon gateway settlement.
         </p>
 
         <button
           type="button"
           disabled={disabled || isLoading}
           onClick={handlePay}
-          className="w-full bg-[#1e7e34] hover:bg-[#155724] text-white py-3 text-xs uppercase tracking-widest font-semibold transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer rounded-xs"
+          className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer rounded-xs"
         >
           {isLoading ? (
-            <span className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              <span>Connecting to Wavy Gateway...</span>
+            <span className="flex flex-col items-center gap-1.5 w-full">
+              <span className="text-[11px]">Connecting to Wavy Gateway...</span>
+              <span className="w-28 h-0.5 bg-[#111111]/15 overflow-hidden rounded-full block">
+                <span className="block h-full w-1/2 bg-[#111111] vantera-loader-bar" />
+              </span>
             </span>
           ) : (
-            <span>🔒 Pay {formattedAmount} via Wavy</span>
+            <span className="inline-flex items-center gap-2 tabular-nums">
+              <Lock className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>Pay {formattedAmount} via Wavy</span>
+            </span>
           )}
         </button>
       </div>

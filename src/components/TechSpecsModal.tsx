@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { X, Check } from 'lucide-react';
 import { Product, CATEGORIES } from '../data/catalog.ts';
 import { mapLegacyCategoryToCurated } from '../lib/curatedCjCatalog.ts';
 import { useCart } from '../contexts/CartContext.tsx';
@@ -57,10 +58,10 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
   const categoryLabel = categoryObj?.label || product.category.replace(/-/g, ' ');
 
   const finishes = [
-    { name: 'Obsidian Noir', hex: '#141416' },
-    { name: 'Champagne Gold', hex: '#C8A96A' },
-    { name: 'Slate Gray', hex: '#4B5563' },
-    { name: 'Brushed Silver', hex: '#E5E7EB' },
+    { name: 'Obsidian Noir', hex: '#1B1B1B' },
+    { name: 'Champagne Gold', hex: '#B89B5E' },
+    { name: 'Warm Stone', hex: '#A69F94' },
+    { name: 'Brushed Silver', hex: '#D8D4CC' },
   ];
 
   const handleAddToCart = () => {
@@ -79,14 +80,14 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="tech-specs-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
+      className="vantera-overlay-fade fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/65 backdrop-blur-md p-4 font-meta"
     >
-      <div className="bg-[#141416] text-[#F5F1E8] w-full max-w-3xl border border-white/10 rounded-xs overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
+      <div className="bg-[#F7F3EC] text-[#111111] w-full max-w-3xl border border-[#111111]/15 rounded-xs overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
         {/* Left Studio Image Stage */}
-        <div className="md:w-1/2 bg-[#0B0B0C] p-8 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-white/8">
-          <div className="w-full flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[#A8A297]">
+        <div className="md:w-1/2 bg-[#EFEAE0] p-8 flex flex-col items-center justify-between border-b md:border-b-0 md:border-r border-[#111111]/10">
+          <div className="w-full flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[#5C574E]">
             <span>VANTÉRA</span>
-            <span className="text-[#C8A96A] font-medium truncate max-w-[160px]">
+            <span className="text-[#7A6230] font-medium truncate max-w-[160px]">
               {activeVariant ? activeVariant.name : selectedFinish}
             </span>
           </div>
@@ -101,7 +102,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
           </div>
 
           {productVariants ? (
-            <div className="w-full pt-4 border-t border-white/8 flex flex-wrap items-center justify-center gap-2">
+            <div className="w-full pt-4 border-t border-[#111111]/10 flex flex-wrap items-center justify-center gap-2">
               {productVariants.map((v) => (
                 <button
                   key={v.id}
@@ -110,10 +111,10 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
                     setSelectedVariantId(v.id);
                     setQuantity(1);
                   }}
-                  className={`px-2.5 py-1 text-[10px] rounded-xs border cursor-pointer transition-colors ${
+                  className={`px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] rounded-xs border cursor-pointer transition-colors ${
                     activeVariant?.id === v.id
-                      ? 'border-[#C8A96A] text-[#F5F1E8] bg-[#C8A96A]/10'
-                      : 'border-white/15 text-[#A8A297] hover:text-[#F5F1E8]'
+                      ? 'border-[#B89B5E] text-[#111111] bg-[#B89B5E]/20 font-semibold'
+                      : 'border-[#111111]/15 text-[#5C574E] hover:text-[#111111]'
                   } ${!v.isAvailable || v.stockQuantity <= 0 ? 'opacity-45' : ''}`}
                 >
                   {v.name}
@@ -121,7 +122,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
               ))}
             </div>
           ) : (
-            <div className="w-full pt-4 border-t border-white/8 flex items-center justify-center gap-3">
+            <div className="w-full pt-4 border-t border-[#111111]/10 flex items-center justify-center gap-3">
               {finishes.map((f) => (
                 <button
                   key={f.name}
@@ -131,8 +132,8 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
                   title={f.name}
                   className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${
                     selectedFinish === f.name
-                      ? 'border-[#C8A96A] scale-115 ring-2 ring-[#C8A96A]/40 ring-offset-2 ring-offset-[#0B0B0C]'
-                      : 'border-white/20 opacity-70 hover:opacity-100'
+                      ? 'border-[#B89B5E] scale-115 ring-2 ring-[#B89B5E]/40 ring-offset-2 ring-offset-[#EFEAE0]'
+                      : 'border-[#111111]/20 opacity-80 hover:opacity-100'
                   }`}
                   style={{ backgroundColor: f.hex }}
                 />
@@ -142,69 +143,69 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
         </div>
 
         {/* Right Specs & Purchase Module */}
-        <div className="md:w-1/2 p-6 sm:p-8 overflow-y-auto flex flex-col justify-between space-y-6">
+        <div className="md:w-1/2 p-6 sm:p-8 overflow-y-auto flex flex-col justify-between space-y-6 bg-[#FAF7F2]">
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-[#C8A96A]">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#7A6230] font-medium">
                   {categoryLabel}
                 </p>
-                <h2 id="tech-specs-title" className="font-editorial text-2xl font-medium text-[#F5F1E8] mt-1">
+                <h2 id="tech-specs-title" className="font-editorial text-2xl font-medium text-[#111111] mt-1">
                   {product.title}
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="text-[#A8A297] hover:text-[#F5F1E8] p-1.5 cursor-pointer"
+                className="text-[#5C574E] hover:text-[#111111] min-w-[40px] min-h-[40px] inline-flex items-center justify-center cursor-pointer"
                 aria-label="Close dialog"
               >
-                ✕
+                <X className="w-4 h-4" strokeWidth={1.5} />
               </button>
             </div>
 
-            <p className="text-sm text-[#A8A297] leading-relaxed">{product.description}</p>
+            <p className="text-sm text-[#5C574E] leading-relaxed">{product.description}</p>
 
-            <div className="border-y border-white/8 py-3.5 space-y-2 text-xs">
+            <div className="border-y border-[#111111]/10 py-3.5 space-y-2 text-xs">
               <div className="flex justify-between">
-                <span className="text-[#A8A297] uppercase tracking-[0.12em] text-[10px]">Availability</span>
-                <span className={isOutOfStock ? 'text-[#E57373]' : 'text-[#F5F1E8]'}>
+                <span className="text-[#5C574E] uppercase tracking-[0.14em] text-[10px]">Availability</span>
+                <span className={isOutOfStock ? 'text-[#8E3A3A] font-medium' : 'text-[#111111] font-medium'}>
                   {isOutOfStock ? 'Out of stock' : effectiveStock <= 5 ? 'Low stock' : 'In stock'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#A8A297] uppercase tracking-[0.12em] text-[10px]">Warranty</span>
-                <span className="text-[#F5F1E8]">12-Month Hardware Assurance</span>
+                <span className="text-[#5C574E] uppercase tracking-[0.14em] text-[10px]">Warranty</span>
+                <span className="text-[#111111]">12-Month Hardware Assurance</span>
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-1">
               <div>
-                <span className="text-[10px] uppercase tracking-[0.18em] text-[#A8A297] block">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-[#5C574E] block">
                   Price ({currency})
                 </span>
-                <div className="text-2xl font-medium text-[#C8A96A] tabular-nums mt-0.5">
+                <div className="text-2xl font-medium text-[#111111] tabular-nums mt-0.5">
                   {formatAmount(effectivePriceCents * quantity)}
                 </div>
               </div>
 
               {!isOutOfStock && !isReservedPhone && (
-                <div className="flex items-center border border-white/12 bg-[#0B0B0C] rounded-xs">
+                <div className="flex items-center border border-[#111111]/15 bg-[#F7F3EC] rounded-xs">
                   <button
                     type="button"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     aria-label="Decrease quantity"
-                    className="px-3 py-1.5 text-sm text-[#A8A297] hover:text-[#F5F1E8] cursor-pointer"
+                    className="px-3 py-1.5 text-sm text-[#5C574E] hover:text-[#111111] cursor-pointer"
                   >
                     −
                   </button>
-                  <span className="px-3 py-1.5 text-sm font-medium tabular-nums">{quantity}</span>
+                  <span className="px-3 py-1.5 text-sm font-medium tabular-nums text-[#111111]">{quantity}</span>
                   <button
                     type="button"
                     disabled={quantity >= effectiveStock}
                     onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
                     aria-label="Increase quantity"
-                    className="px-3 py-1.5 text-sm text-[#A8A297] hover:text-[#F5F1E8] disabled:opacity-40 cursor-pointer"
+                    className="px-3 py-1.5 text-sm text-[#5C574E] hover:text-[#111111] disabled:opacity-40 cursor-pointer"
                   >
                     +
                   </button>
@@ -218,11 +219,16 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer"
+                className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer inline-flex items-center justify-center gap-2"
               >
-                {addedNotice
-                  ? 'Added to Bag'
-                  : `Add to Cart · ${formatAmount(effectivePriceCents * quantity)}`}
+                {addedNotice ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" strokeWidth={2} />
+                    <span>Added to Bag</span>
+                  </>
+                ) : (
+                  <span>Add to Cart · {formatAmount(effectivePriceCents * quantity)}</span>
+                )}
               </button>
             ) : (
               <button
@@ -231,7 +237,7 @@ export const TechSpecsModal: React.FC<TechSpecsModalProps> = ({
                   onClose();
                   onNavigate(`/product/${product.slug}`);
                 }}
-                className="w-full border border-white/15 text-[#F5F1E8] py-3 px-4 text-[11px] uppercase tracking-[0.2em] rounded-xs cursor-pointer hover:border-[#C8A96A]"
+                className="w-full border border-[#111111]/20 text-[#111111] py-3 px-4 text-[11px] uppercase tracking-[0.2em] rounded-xs cursor-pointer hover:border-[#B89B5E]"
               >
                 View Product Details
               </button>

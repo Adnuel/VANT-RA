@@ -1,4 +1,5 @@
 import React from 'react';
+import { MessageCircle } from 'lucide-react';
 import { INFO_PAGES, InfoPageData } from '../data/infoPages.ts';
 
 interface InfoPageProps {
@@ -12,9 +13,9 @@ export const InfoPage: React.FC<InfoPageProps> = ({ pageKey, onNavigate }) => {
 
   if (!data) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-28 text-center space-y-6">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-[#C8A96A]">Error 404</p>
-        <h1 className="font-editorial text-3xl text-[#F5F1E8]">Page Not Found</h1>
+      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-28 text-center space-y-6 text-[#111111]">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold">Error 404</p>
+        <h1 className="font-editorial text-3xl sm:text-4xl text-[#111111]">Page Not Found</h1>
         <button
           type="button"
           onClick={() => onNavigate('/')}
@@ -27,34 +28,34 @@ export const InfoPage: React.FC<InfoPageProps> = ({ pageKey, onNavigate }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-8 lg:px-12 py-14 lg:py-24 space-y-14">
+    <div className="max-w-4xl mx-auto px-4 sm:px-8 lg:px-12 py-14 lg:py-24 space-y-14 text-[#111111]">
       {/* Masthead */}
-      <div className="border-b border-white/8 pb-10 space-y-4">
-        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#C8A96A]">
+      <div className="border-b border-[#111111]/10 pb-10 space-y-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#7A6230]">
           {data.eyebrow}
         </p>
-        <h1 className="font-editorial text-3xl sm:text-5xl font-medium text-[#F5F1E8] leading-tight text-balance">
+        <h1 className="font-editorial text-3xl sm:text-5xl font-medium text-[#111111] leading-tight text-balance">
           {data.title}
         </h1>
-        <p className="text-base text-[#A8A297] leading-relaxed max-w-2xl">
+        <p className="text-base text-[#5C574E] leading-relaxed max-w-2xl">
           {data.intro}
         </p>
       </div>
 
       {/* Editorial Sections */}
-      <div className="divide-y divide-white/8">
+      <div className="divide-y divide-[#111111]/10">
         {data.sections.map((section, idx) => (
           <div key={idx} className={`grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 ${idx > 0 ? 'py-9' : 'pb-9'}`}>
             <div className="md:col-span-4 space-y-1.5">
-              <span className="text-[11px] uppercase tracking-[0.2em] text-[#C8A96A] block tabular-nums">
+              <span className="text-[11px] uppercase tracking-[0.2em] text-[#7A6230] font-semibold block tabular-nums">
                 0{idx + 1}
               </span>
-              <h2 className="font-editorial text-xl font-medium text-[#F5F1E8]">
+              <h2 className="font-editorial text-xl font-medium text-[#111111]">
                 {section.heading}
               </h2>
             </div>
             <div className="md:col-span-8">
-              <div className="text-sm sm:text-base text-[#A8A297] leading-relaxed whitespace-pre-line">
+              <div className="text-sm sm:text-base text-[#5C574E] leading-relaxed whitespace-pre-line">
                 {section.body}
               </div>
             </div>
@@ -64,34 +65,35 @@ export const InfoPage: React.FC<InfoPageProps> = ({ pageKey, onNavigate }) => {
 
       {/* Direct Concierge & Contact Inquiry Form */}
       {cleanKey === 'contact' && (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pt-10 border-t border-white/8">
-          <div className="md:col-span-5 bg-[#141416] border border-white/8 p-6 sm:p-8 rounded-xs space-y-4 self-start">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#C8A96A]">Concierge</p>
-            <h3 className="font-editorial text-2xl font-medium text-[#F5F1E8]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pt-10 border-t border-[#111111]/10">
+          <div className="md:col-span-5 bg-[#FAF7F2] border border-[#111111]/10 p-6 sm:p-8 rounded-xs space-y-4 self-start">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold">Concierge</p>
+            <h3 className="font-editorial text-2xl font-medium text-[#111111]">
               Direct Support
             </h3>
-            <p className="text-sm text-[#A8A297] leading-relaxed">
+            <p className="text-sm text-[#5C574E] leading-relaxed">
               Reach CEO Adnuel directly for order inquiries, dispatch tracking, or bank transfer confirmation.
             </p>
             <a
               href="https://wa.me/2349132793670"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center w-full gold-gradient-bg px-5 py-3 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs"
+              className="inline-flex items-center justify-center gap-2 w-full gold-gradient-bg px-5 py-3 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs"
             >
-              WhatsApp (+234 913 279 3670) ↗
+              <MessageCircle className="w-4 h-4" strokeWidth={1.5} />
+              <span>WhatsApp (+234 913 279 3670)</span>
             </a>
-            <p className="text-xs text-[#A8A297] pt-1">
+            <p className="text-xs text-[#5C574E] pt-1">
               Email: emmanueladarikwu@gmail.com
             </p>
           </div>
 
-          <div className="md:col-span-7 bg-[#141416] border border-white/8 p-6 sm:p-8 rounded-xs space-y-5">
+          <div className="md:col-span-7 bg-[#FAF7F2] border border-[#111111]/10 p-6 sm:p-8 rounded-xs space-y-5">
             <div>
-              <h3 className="font-editorial text-2xl font-medium text-[#F5F1E8]">
+              <h3 className="font-editorial text-2xl font-medium text-[#111111]">
                 Send an Inquiry
               </h3>
-              <p className="text-sm text-[#A8A297] mt-1">
+              <p className="text-sm text-[#5C574E] mt-1">
                 Messages are logged directly to our support desk.
               </p>
             </div>
@@ -142,19 +144,19 @@ const ContactForm: React.FC = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 text-sm">
       {status === 'success' && (
-        <div className="p-3.5 bg-[#0F2E22] border border-[#2E9B6B]/40 text-[#F5F1E8] text-xs rounded-xs">
+        <div className="p-3.5 bg-[#F7F3EC] border border-[#B89B5E] text-[#111111] text-xs rounded-xs">
           Your message has been sent. We will reply shortly.
         </div>
       )}
       {status === 'error' && (
-        <div className="p-3.5 bg-[#221212] border border-[#D9534F]/40 text-[#E57373] text-xs rounded-xs">
+        <div className="p-3.5 bg-[#8E3A3A]/8 border border-[#8E3A3A]/30 text-[#8E3A3A] text-xs rounded-xs">
           Please check that your name, email, and message are filled out correctly.
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="contact-name" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+          <label htmlFor="contact-name" className="block text-[10px] uppercase tracking-[0.18em] text-[#5C574E] mb-1.5">
             Full Name *
           </label>
           <input
@@ -163,12 +165,12 @@ const ContactForm: React.FC = () => {
             required
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+            className="w-full bg-[#F7F3EC] border border-[#111111]/15 p-3 text-sm text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
             placeholder="Adaora Okafor"
           />
         </div>
         <div>
-          <label htmlFor="contact-email" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+          <label htmlFor="contact-email" className="block text-[10px] uppercase tracking-[0.18em] text-[#5C574E] mb-1.5">
             Email Address *
           </label>
           <input
@@ -177,7 +179,7 @@ const ContactForm: React.FC = () => {
             required
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+            className="w-full bg-[#F7F3EC] border border-[#111111]/15 p-3 text-sm text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
             placeholder="you@example.com"
           />
         </div>
@@ -185,7 +187,7 @@ const ContactForm: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="contact-subject" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+          <label htmlFor="contact-subject" className="block text-[10px] uppercase tracking-[0.18em] text-[#5C574E] mb-1.5">
             Subject
           </label>
           <input
@@ -193,11 +195,11 @@ const ContactForm: React.FC = () => {
             type="text"
             value={form.subject}
             onChange={(e) => setForm({ ...form, subject: e.target.value })}
-            className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+            className="w-full bg-[#F7F3EC] border border-[#111111]/15 p-3 text-sm text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
           />
         </div>
         <div>
-          <label htmlFor="contact-phone" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+          <label htmlFor="contact-phone" className="block text-[10px] uppercase tracking-[0.18em] text-[#5C574E] mb-1.5">
             Phone / WhatsApp
           </label>
           <input
@@ -205,14 +207,14 @@ const ContactForm: React.FC = () => {
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+            className="w-full bg-[#F7F3EC] border border-[#111111]/15 p-3 text-sm text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs tabular-nums"
             placeholder="+234..."
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="contact-message" className="block text-[10px] uppercase tracking-[0.18em] text-[#A8A297] mb-1.5">
+        <label htmlFor="contact-message" className="block text-[10px] uppercase tracking-[0.18em] text-[#5C574E] mb-1.5">
           Message *
         </label>
         <textarea
@@ -221,7 +223,7 @@ const ContactForm: React.FC = () => {
           rows={4}
           value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })}
-          className="w-full bg-[#0B0B0C] border border-white/12 p-3 text-sm text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+          className="w-full bg-[#F7F3EC] border border-[#111111]/15 p-3 text-sm text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
           placeholder="How can we help?"
         />
       </div>

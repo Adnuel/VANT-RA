@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 import { Product, CATEGORIES } from '../data/catalog.ts';
 import { mapLegacyCategoryToCurated } from '../lib/curatedCjCatalog.ts';
-import { ProductCard } from '../components/ProductCard.tsx';
+import { ProductCard, ProductCardSkeleton } from '../components/ProductCard.tsx';
 import { TechSpecsModal } from '../components/TechSpecsModal.tsx';
+import { FadeInSection } from '../components/FadeInSection.tsx';
 import { trackEvent } from '../lib/tracker.ts';
 
 interface ShopPageProps {
   products: Product[];
+  isLoading?: boolean;
   activeCategory?: string;
   initialFilter?: string;
   initialSearchQuery?: string;
@@ -15,6 +18,7 @@ interface ShopPageProps {
 
 export const ShopPage: React.FC<ShopPageProps> = ({
   products,
+  isLoading = false,
   activeCategory,
   initialFilter = 'all',
   initialSearchQuery = '',
@@ -118,16 +122,16 @@ export const ShopPage: React.FC<ShopPageProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-14 lg:py-20 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-12 lg:py-20 space-y-12 text-[#111111]">
       {/* Page Masthead */}
-      <div className="border-b border-white/8 pb-10 space-y-3">
-        <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[#C8A96A]">
-          {selectedCategory === 'all' ? 'VANTÉRA Catalog' : selectedCategory.replace('-', ' ')}
+      <div className="border-b border-[#111111]/10 pb-10 space-y-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#7A6230]">
+          {selectedCategory === 'all' ? 'VANTÉRA Catalog' : selectedCategory.replace(/-/g, ' ')}
         </p>
-        <h1 className="font-editorial text-3xl sm:text-5xl font-medium text-[#F5F1E8] text-balance">
+        <h1 className="font-editorial text-3xl sm:text-5xl font-medium text-[#111111] text-balance">
           {getPageHeading()}
         </h1>
-        <p className="text-sm sm:text-base text-[#A8A297] max-w-2xl leading-relaxed">
+        <p className="text-sm sm:text-base text-[#5C574E] font-light max-w-2xl leading-relaxed">
           {currentCategoryObj?.description ||
             'Premium tech accessories, smart home technology, laptop & workspace gear, lifestyle gadgets, and everyday carry essentials.'}
         </p>
@@ -135,7 +139,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
 
       {/* Category Filter Tabs & Search/Sort Toolbar */}
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex overflow-x-auto sm:flex-wrap items-center gap-2 pb-1">
           <button
             type="button"
             onClick={() => {
@@ -143,10 +147,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               setSelectedCategory('all');
               onNavigate('/shop');
             }}
-            className={`px-4 py-2 text-[11px] uppercase tracking-[0.18em] rounded-xs transition-colors cursor-pointer whitespace-nowrap ${
+            className={`shrink-0 px-4 py-2 min-h-[40px] text-[11px] uppercase tracking-[0.16em] rounded-xs transition-colors cursor-pointer whitespace-nowrap ${
               activeFilter === 'all' && selectedCategory === 'all'
-                ? 'bg-[#C8A96A] text-[#0B0B0C] font-semibold'
-                : 'bg-[#141416] border border-white/10 text-[#A8A297] hover:text-[#F5F1E8]'
+                ? 'bg-[#111111] text-[#F7F3EC] font-medium'
+                : 'bg-[#FAF7F2] border border-[#111111]/12 text-[#5C574E] hover:border-[#B89B5E] hover:text-[#111111]'
             }`}
           >
             All Collections
@@ -163,10 +167,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
                   setSelectedCategory(cat.id);
                   onNavigate(`/category/${cat.id}`);
                 }}
-                className={`px-4 py-2 text-[11px] uppercase tracking-[0.18em] rounded-xs transition-colors cursor-pointer whitespace-nowrap ${
+                className={`shrink-0 px-4 py-2 min-h-[40px] text-[11px] uppercase tracking-[0.16em] rounded-xs transition-colors cursor-pointer whitespace-nowrap ${
                   isSelected
-                    ? 'bg-[#C8A96A] text-[#0B0B0C] font-semibold'
-                    : 'bg-[#141416] border border-white/10 text-[#A8A297] hover:text-[#F5F1E8]'
+                    ? 'bg-[#111111] text-[#F7F3EC] font-medium'
+                    : 'bg-[#FAF7F2] border border-[#111111]/12 text-[#5C574E] hover:border-[#B89B5E] hover:text-[#111111]'
                 }`}
               >
                 {cat.label}
@@ -186,29 +190,29 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search pieces by name or category..."
-              className="w-full bg-[#141416] border border-white/12 px-4 py-2.5 text-sm text-[#F5F1E8] placeholder-[#A8A297]/60 focus:border-[#C8A96A] focus:outline-hidden rounded-xs transition-colors"
+              className="w-full bg-[#FAF7F2] border border-[#111111]/15 px-4 py-2.5 text-sm text-[#111111] placeholder-[#5C574E]/60 focus:border-[#B89B5E] focus:outline-hidden rounded-xs transition-colors pr-10"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 text-sm text-[#A8A297] hover:text-[#F5F1E8] cursor-pointer"
+                className="absolute right-3 top-2.5 text-[#5C574E] hover:text-[#111111] cursor-pointer"
                 aria-label="Clear search"
               >
-                ✕
+                <X className="w-4 h-4" strokeWidth={1.5} />
               </button>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between md:justify-end gap-4">
+          <div className="flex flex-wrap items-center justify-between md:justify-end gap-3">
             <button
               type="button"
               onClick={() => setInStockOnly(!inStockOnly)}
               aria-pressed={inStockOnly}
-              className={`px-3.5 py-2 text-[11px] uppercase tracking-[0.16em] border rounded-xs transition-colors cursor-pointer whitespace-nowrap ${
+              className={`px-4 py-2.5 min-h-[42px] text-[11px] uppercase tracking-[0.16em] border rounded-xs transition-colors cursor-pointer whitespace-nowrap ${
                 inStockOnly
-                  ? 'border-[#C8A96A] text-[#C8A96A] bg-[#C8A96A]/10'
-                  : 'border-white/10 text-[#A8A297] bg-[#141416] hover:text-[#F5F1E8]'
+                  ? 'border-[#B89B5E] text-[#111111] bg-[#B89B5E]/20 font-semibold'
+                  : 'border-[#111111]/15 text-[#5C574E] bg-[#FAF7F2] hover:text-[#111111]'
               }`}
             >
               In Stock Only
@@ -218,7 +222,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
               aria-label="Sort products"
-              className="bg-[#141416] border border-white/12 px-4 py-2.5 text-xs uppercase tracking-[0.14em] text-[#F5F1E8] focus:border-[#C8A96A] focus:outline-hidden cursor-pointer rounded-xs"
+              className="bg-[#FAF7F2] border border-[#111111]/15 px-4 py-2.5 min-h-[42px] text-xs uppercase tracking-[0.14em] text-[#111111] focus:border-[#B89B5E] focus:outline-hidden cursor-pointer rounded-xs"
             >
               <option value="featured">Featured Order</option>
               <option value="price-asc">Price: Low to High</option>
@@ -230,12 +234,18 @@ export const ShopPage: React.FC<ShopPageProps> = ({
       </div>
 
       {/* Product Grid */}
-      {sortedProducts.length === 0 ? (
-        <div className="border border-white/8 bg-[#141416] p-16 text-center space-y-5 rounded-xs">
-          <h3 className="text-2xl font-editorial font-medium text-[#F5F1E8]">
+      {isLoading && products.length === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <ProductCardSkeleton key={idx} />
+          ))}
+        </div>
+      ) : sortedProducts.length === 0 ? (
+        <div className="border border-[#111111]/10 bg-[#FAF7F2] p-14 text-center space-y-5 rounded-xs">
+          <h3 className="text-2xl font-editorial font-medium text-[#111111]">
             No pieces matched your selection
           </h3>
-          <p className="text-sm text-[#A8A297] max-w-md mx-auto">
+          <p className="text-sm text-[#5C574E] max-w-md mx-auto font-light">
             Try clearing your search terms or adjusting the category filters above.
           </p>
           <button
@@ -254,13 +264,14 @@ export const ShopPage: React.FC<ShopPageProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {sortedProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onNavigate={onNavigate}
-              onQuickView={(p) => setSelectedQuickViewProduct(p)}
-            />
+          {sortedProducts.map((product, idx) => (
+            <FadeInSection key={product.id} delayMs={Math.min(idx * 60, 280)}>
+              <ProductCard
+                product={product}
+                onNavigate={onNavigate}
+                onQuickView={(p) => setSelectedQuickViewProduct(p)}
+              />
+            </FadeInSection>
           ))}
         </div>
       )}

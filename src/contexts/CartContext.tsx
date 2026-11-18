@@ -6,6 +6,9 @@ import { appNavigate } from '../hooks/useNavigation.ts';
 import { formatUSD } from '../lib/commerceLogic.ts';
 import { safeFetchJson } from '../lib/safeFetch.ts';
 
+import type { CheckoutStep } from '../lib/storefrontHelpers.ts';
+import { X } from 'lucide-react';
+
 export interface CartItem {
   product: Product;
   quantity: number;
@@ -28,6 +31,9 @@ interface CartContextType {
   subtotalCents: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  checkoutStep: CheckoutStep;
+  setCheckoutStep: React.Dispatch<React.SetStateAction<CheckoutStep>>;
+  cartBounceKey: number;
   addToCart: (product: Product, quantity?: number, selectedVariant?: ProductVariant) => void;
   updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
   removeFromCart: (productId: string, variantId?: string) => void;
@@ -49,6 +55,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user, token } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('cart');
+  const [cartBounceKey, setCartBounceKey] = useState(0);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<PendingCartProduct | null>(() => {
     try {
@@ -182,6 +190,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resumedAfterLogin: true,
       });
 
+      setCartBounceKey((k) => k + 1);
       setIsCartOpen(true);
     }
   }, [user]);
@@ -288,6 +297,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       retailPriceCents: unitPriceCents,
     });
 
+    setCartBounceKey((k) => k + 1);
+    setCheckoutStep('cart');
     setIsCartOpen(true);
   };
 
@@ -370,6 +381,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subtotalCents,
         isCartOpen,
         setIsCartOpen,
+        checkoutStep,
+        setCheckoutStep,
+        cartBounceKey,
         addToCart,
         updateQuantity,
         removeFromCart,
@@ -387,65 +401,64 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role="dialog"
           aria-modal="true"
           aria-labelledby="auth-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#121210]/70 p-4 backdrop-blur-xs animate-fadeIn"
+          className="vantera-overlay-fade fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/65 p-4 backdrop-blur-md"
         >
-          <div className="relative w-full max-w-md bg-white border border-[#121210] p-6 sm:p-8 shadow-2xl text-left">
+          <div className="relative w-full max-w-md bg-[#F7F3EC] border border-[#111111]/15 p-7 sm:p-9 text-left text-[#111111] font-meta rounded-xs">
             <button
+              type="button"
               onClick={() => setIsAuthModalOpen(false)}
-              className="absolute top-4 right-4 text-[#77746d] hover:text-[#121210] p-1.5 transition-colors cursor-pointer rounded-xs"
+              className="absolute top-4 right-4 text-[#5C574E] hover:text-[#111111] min-w-[40px] min-h-[40px] inline-flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Close modal"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="w-4 h-4" strokeWidth={1.5} />
             </button>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="font-serif text-lg font-bold tracking-widest text-[#121210]">VANTÉRA</span>
-                <span className="text-[10px] uppercase font-mono tracking-wider bg-[#fff8e6] text-[#856404] px-2 py-0.5 border border-[#ffeeba]">
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <span className="font-editorial text-lg font-medium tracking-[0.22em] text-[#111111]">VANTÉRA</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[#7A6230] border-l border-[#111111]/15 pl-3">
                   Client Access
                 </span>
               </div>
 
-              <h2 id="auth-modal-title" className="font-serif text-xl sm:text-2xl text-[#121210] font-normal leading-tight">
-                Account Required to Add Products
+              <h2 id="auth-modal-title" className="font-editorial text-2xl sm:text-3xl text-[#111111] font-medium leading-tight">
+                Sign in to reserve this piece
               </h2>
 
-              <p className="text-xs text-[#77746d] leading-relaxed">
-                VANTÉRA curates high-end tech objects with limited reservation allocations. Please create an account or sign in to reserve items in your shopping bag.
+              <p className="text-xs sm:text-sm text-[#5C574E] leading-relaxed">
+                VANTÉRA maintains verified client accounts for every order. Please sign in or create an account to keep items saved in your shopping bag.
               </p>
 
               {pendingProduct && (
-                <div className="flex items-center gap-3 p-3 bg-[#fdfdfc] border border-[#e7e4de] text-xs">
+                <div className="flex items-center gap-3.5 p-3.5 bg-[#FAF7F2] border border-[#111111]/10 text-xs">
                   {pendingProduct.product.image && (
                     <img
                       src={pendingProduct.product.image}
                       alt={pendingProduct.product.title}
-                      className="w-10 h-10 object-cover border border-[#e7e4de]"
+                      className="w-12 h-12 object-cover bg-[#EFEAE0] shrink-0"
                     />
                   )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[#121210] truncate">{pendingProduct.product.title}</p>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <p className="font-editorial text-sm font-medium text-[#111111] truncate">{pendingProduct.product.title}</p>
                     {pendingProduct.variantLabel && (
-                      <p className="text-[10px] text-[#77746d] truncate">{pendingProduct.variantLabel}</p>
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#7A6230] truncate">{pendingProduct.variantLabel}</p>
                     )}
-                    <p className="text-[11px] text-[#77746d]">
-                      Qty: {pendingProduct.quantity} •{' '}
+                    <p className="text-[11px] text-[#5C574E] tabular-nums">
+                      Qty: {pendingProduct.quantity} ·{' '}
                       {formatUSD((pendingProduct.unitPriceCents ?? pendingProduct.product.retailPriceCents) * pendingProduct.quantity)}
                     </p>
                   </div>
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col gap-2.5">
+              <div className="pt-1 flex flex-col gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
                     setIsAuthModalOpen(false);
                     appNavigate('/account?mode=register&returnTo=cart');
                   }}
-                  className="w-full bg-[#121210] hover:bg-[#252521] text-white py-3 text-xs uppercase font-mono tracking-wider transition-colors cursor-pointer text-center"
+                  className="w-full gold-gradient-bg py-3.5 text-[11px] uppercase tracking-[0.2em] font-semibold transition-colors cursor-pointer text-center rounded-xs"
                 >
                   Create Client Account →
                 </button>
@@ -456,14 +469,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setIsAuthModalOpen(false);
                     appNavigate('/account?mode=login&returnTo=cart');
                   }}
-                  className="w-full border border-[#121210] text-[#121210] hover:bg-[#f5f5f4] py-2.5 text-xs uppercase font-mono tracking-wider transition-colors cursor-pointer text-center"
+                  className="w-full border border-[#111111]/20 text-[#111111] hover:border-[#B89B5E] py-3 text-[11px] uppercase tracking-[0.2em] font-medium transition-colors cursor-pointer text-center rounded-xs"
                 >
                   Sign In to Existing Account
                 </button>
               </div>
 
-              <p className="text-[10px] text-center text-[#a9a69f]">
-                Your selection will be held while you sign in.
+              <p className="text-[11px] text-center text-[#5C574E]">
+                Your selected item will be placed directly into your bag once signed in.
               </p>
             </div>
           </div>

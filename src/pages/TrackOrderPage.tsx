@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { MessageCircle } from 'lucide-react';
 import { formatUSD, formatNGN, convertUsdCentsToNgn } from '../lib/commerceLogic.ts';
 import { safeFetchJson } from '../lib/safeFetch.ts';
 import { useAuth } from '../contexts/AuthContext.tsx';
@@ -125,21 +126,21 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
   const isCancelled = orderData?.fulfilmentStatus === 'cancelled';
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-12 lg:py-16 space-y-8 font-meta">
-      <div className="text-center space-y-2.5">
-        <span className="text-[11px] uppercase tracking-[0.24em] text-[#C8A96A] block">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-12 lg:py-20 space-y-8 font-meta text-[#111111]">
+      <div className="text-center space-y-3">
+        <span className="text-[11px] uppercase tracking-[0.24em] text-[#7A6230] font-semibold block">
           Transparent Fulfillment
         </span>
-        <h1 className="font-editorial text-3xl sm:text-4xl font-medium text-[#F5F1E8] leading-snug">
-          Track Your Order
+        <h1 className="font-editorial text-3xl sm:text-5xl font-medium text-[#111111] leading-tight">
+          Track Your <em className="italic font-normal">Order</em>
         </h1>
-        <p className="text-xs sm:text-sm text-[#A8A297] leading-relaxed">
-          Enter your order reference (e.g. <strong className="font-mono text-[#C8A96A]">VAN-2026-XXXX</strong>) to view live payment confirmation and dispatch status.
+        <p className="text-xs sm:text-sm text-[#5C574E] leading-relaxed max-w-lg mx-auto">
+          Enter your order reference (e.g. <strong className="font-semibold text-[#111111] tabular-nums">VAN-2026-XXXX</strong>) to view live payment confirmation and dispatch status.
         </p>
       </div>
 
       {/* Tracking Search Bar */}
-      <div className="border border-white/10 bg-[#141416] p-5 sm:p-6 rounded-xs space-y-3">
+      <div className="border border-[#111111]/12 bg-[#FAF7F2] p-5 sm:p-7 rounded-xs space-y-3">
         <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
@@ -148,7 +149,7 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
             value={reference}
             onChange={(e) => setReference(e.target.value)}
             placeholder="e.g. VAN-2026-8492"
-            className="flex-1 bg-[#0B0B0C] border border-white/12 px-4 py-3 text-xs font-mono uppercase text-[#F5F1E8] placeholder-[#A8A297]/50 focus:border-[#C8A96A] focus:outline-hidden rounded-xs"
+            className="flex-1 bg-[#F7F3EC] border border-[#111111]/15 px-4 py-3 text-xs uppercase tracking-[0.12em] tabular-nums text-[#111111] placeholder-[#5C574E]/60 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
           />
           <button
             type="submit"
@@ -160,7 +161,7 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
         </form>
 
         {errorMessage && (
-          <div className="p-3 bg-[#221212] border border-red-500/30 text-red-300 text-xs rounded-xs">
+          <div className="p-3 bg-[#8E3A3A]/8 border border-[#8E3A3A]/30 text-[#8E3A3A] text-xs rounded-xs">
             {errorMessage}
           </div>
         )}
@@ -168,29 +169,29 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
 
       {/* Live Payment State Banner when confirming or failed */}
       {isConfirmingGateway && (
-        <div className="border border-[#C8A96A]/40 bg-[#141416] p-6 rounded-xs space-y-3">
-          <div className="w-full h-0.5 bg-white/10 overflow-hidden rounded-full">
-            <div className="h-full w-1/2 bg-[#C8A96A] vantera-loader-bar" />
+        <div className="border border-[#B89B5E]/40 bg-[#FAF7F2] p-6 sm:p-8 rounded-xs space-y-4">
+          <div className="w-full h-0.5 bg-[#111111]/10 overflow-hidden rounded-full">
+            <div className="h-full w-1/2 bg-[#B89B5E] vantera-loader-bar" />
           </div>
           <div className="space-y-1">
-            <h2 className="font-editorial text-lg font-medium text-[#F5F1E8]">
+            <h2 className="font-editorial text-xl font-medium text-[#111111]">
               Confirming your payment...
             </h2>
-            <p className="text-xs text-[#A8A297]">
-              Checking gateway webhook status automatically. This updates as soon as payment settles.
+            <p className="text-xs text-[#5C574E] leading-relaxed">
+              Checking gateway confirmation automatically. This updates the moment settlement completes.
             </p>
           </div>
         </div>
       )}
 
       {isFailed && (
-        <div className="border border-red-500/30 bg-red-950/20 p-5 rounded-xs space-y-3">
+        <div className="border border-[#8E3A3A]/30 bg-[#FAF7F2] p-6 rounded-xs space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-red-400">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8E3A3A]">
               Payment Failed / Cancelled
             </span>
           </div>
-          <p className="text-xs text-[#A9A69F]">
+          <p className="text-xs text-[#5C574E] leading-relaxed">
             The payment was declined or cancelled before settlement. Your saved items in your shopping bag remain intact.
           </p>
           <button
@@ -199,7 +200,7 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
               setIsCartOpen(true);
               onNavigate('/');
             }}
-            className="gold-gradient-bg text-[#0B0B0B] px-4 py-2 text-[11px] font-meta font-bold uppercase tracking-wider rounded-xs cursor-pointer"
+            className="gold-gradient-bg px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] rounded-xs cursor-pointer"
           >
             Return to Bag & Try Again
           </button>
@@ -208,23 +209,25 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
 
       {/* Order Results */}
       {orderData && (
-        <div className="border border-white/10 bg-[#121212] p-6 space-y-6 rounded-xs shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-white/5 pb-4">
-            <div>
-              <span className="text-[9px] uppercase tracking-wider font-meta text-[#D4AF37] block">
-                {isPaid ? '✦ PAYMENT SUCCESSFUL' : 'ORDER STATUS'}
+        <div className="border border-[#111111]/12 bg-[#FAF7F2] p-6 sm:p-8 space-y-7 rounded-xs">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-[#111111]/10 pb-5">
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#7A6230] font-semibold block">
+                {isPaid ? 'Payment Verified' : 'Order Status'}
               </span>
-              <h2 className="font-mono text-lg font-bold text-[#F8F7F4] break-all">{orderData.orderReference}</h2>
-              <span className="text-[11px] text-[#8E8B82] block">
+              <h2 className="text-xl font-editorial font-medium text-[#111111] tabular-nums break-all">
+                {orderData.orderReference}
+              </h2>
+              <span className="text-xs text-[#5C574E] block">
                 Placed {new Date(orderData.createdAt).toLocaleDateString()} · Payment:{' '}
                 <span className="uppercase">{orderData.paymentMethod?.replace('_', ' ')}</span>
               </span>
             </div>
             <div className="sm:text-right">
-              <span className="text-lg font-editorial font-bold text-[#D4AF37] block">
+              <span className="text-xl font-editorial font-medium text-[#111111] tabular-nums block">
                 {formatMoney(orderData.totalCents)}
               </span>
-              <span className="text-[10px] text-[#8E8B82] block">
+              <span className="text-[11px] text-[#5C574E] tabular-nums block">
                 {orderData.itemCount} item{orderData.itemCount === 1 ? '' : 's'} · {orderData.currency || 'USD'}
               </span>
             </div>
@@ -232,33 +235,33 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
 
           {/* Fulfillment Timeline */}
           <div className="space-y-4">
-            <h3 className="font-editorial text-sm font-semibold text-[#F8F7F4]">Fulfillment Milestones</h3>
-            <div className="relative pl-5 space-y-5 border-l border-white/10 ml-2">
+            <h3 className="font-editorial text-lg font-medium text-[#111111]">Fulfillment Milestones</h3>
+            <div className="relative pl-5 space-y-6 border-l border-[#111111]/15 ml-2">
               <div className="relative">
-                <div className="absolute -left-[25px] top-0.5 w-3 h-3 rounded-full bg-[#D4AF37]" />
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#F8F7F4]">1. Order Created</h4>
-                <p className="text-[10px] text-[#8E8B82] mt-0.5">Order reference generated in the VANTÉRA ledger.</p>
+                <div className="absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full bg-[#B89B5E]" />
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#111111]">1. Order Created</h4>
+                <p className="text-xs text-[#5C574E] mt-0.5">Order reference registered in the VANTÉRA ledger.</p>
               </div>
 
               <div className="relative">
                 <div
-                  className={`absolute -left-[25px] top-0.5 w-3 h-3 rounded-full ${
-                    isPaid ? 'bg-[#34A853]' : isFailed ? 'bg-red-500' : 'bg-[#D4AF37]/40'
+                  className={`absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full ${
+                    isPaid ? 'bg-[#111111]' : isFailed ? 'bg-[#8E3A3A]' : 'bg-[#B89B5E]/40'
                   }`}
                 />
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#F8F7F4]">
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#111111]">
                   2. Payment Settlement
                 </h4>
-                <p className="text-[10px] text-[#8E8B82] mt-0.5">
+                <p className="text-xs text-[#5C574E] mt-0.5">
                   Status:{' '}
-                  <strong className={`uppercase ${isPaid ? 'text-[#34A853]' : isFailed ? 'text-red-400' : 'text-[#D4AF37]'}`}>
+                  <strong className={`uppercase ${isPaid ? 'text-[#111111]' : isFailed ? 'text-[#8E3A3A]' : 'text-[#7A6230]'}`}>
                     {orderData.paymentStatus === 'pending' && orderData.paymentMethod === 'bank_transfer'
                       ? 'Awaiting Bank Transfer Confirmation'
                       : orderData.paymentStatus.replace('_', ' ')}
                   </strong>
                   {orderData.paymentVerifiedAt && (
-                    <span className="text-[10px] text-[#34A853] block">
-                      ✓ Confirmed on {new Date(orderData.paymentVerifiedAt).toLocaleString()}
+                    <span className="text-[11px] text-[#7A6230] block mt-0.5">
+                      Confirmed on {new Date(orderData.paymentVerifiedAt).toLocaleString()}
                     </span>
                   )}
                 </p>
@@ -266,33 +269,33 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
 
               <div className="relative">
                 <div
-                  className={`absolute -left-[25px] top-0.5 w-3 h-3 rounded-full ${
-                    isCancelled ? 'bg-red-500' : isProcessing || isShipped ? 'bg-[#34A853]' : 'bg-white/20'
+                  className={`absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full ${
+                    isCancelled ? 'bg-[#8E3A3A]' : isProcessing || isShipped ? 'bg-[#B89B5E]' : 'bg-[#111111]/20'
                   }`}
                 />
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#F8F7F4]">
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#111111]">
                   3. Processing & Courier Dispatch
                 </h4>
                 {isCancelled ? (
-                  <p className="text-[10px] text-red-400 mt-0.5 uppercase">Order Cancelled</p>
+                  <p className="text-xs text-[#8E3A3A] mt-0.5 uppercase">Order Cancelled</p>
                 ) : orderData.trackingNumber ? (
-                  <div className="mt-0.5 text-[10px] text-[#A9A69F] space-y-0.5">
-                    <p>Carrier: <strong>{orderData.carrier}</strong></p>
-                    <p className="font-mono">Tracking: {orderData.trackingNumber}</p>
+                  <div className="mt-1 text-xs text-[#5C574E] space-y-1">
+                    <p>Carrier: <strong className="text-[#111111]">{orderData.carrier}</strong></p>
+                    <p className="tabular-nums">Tracking: {orderData.trackingNumber}</p>
                     {orderData.trackingUrl && (
                       <a
                         href={orderData.trackingUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#D4AF37] underline block mt-1"
+                        className="text-[#7A6230] border-b border-[#B89B5E] inline-block mt-1 hover:text-[#111111]"
                       >
                         Live Tracking Link →
                       </a>
                     )}
                   </div>
                 ) : (
-                  <p className="text-[10px] text-[#8E8B82] mt-0.5">
-                    Status: <span className="uppercase text-[#EDEDED]">{orderData.fulfilmentStatus}</span> · Est.{' '}
+                  <p className="text-xs text-[#5C574E] mt-0.5">
+                    Status: <span className="uppercase text-[#111111] font-medium">{orderData.fulfilmentStatus}</span> · Est.{' '}
                     {orderData.estimatedTransitTime || '1–4 business days'}
                   </p>
                 )}
@@ -300,12 +303,12 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
 
               <div className="relative">
                 <div
-                  className={`absolute -left-[25px] top-0.5 w-3 h-3 rounded-full ${
-                    isDelivered ? 'bg-[#34A853]' : 'bg-white/20'
+                  className={`absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full ${
+                    isDelivered ? 'bg-[#111111]' : 'bg-[#111111]/20'
                   }`}
                 />
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#F8F7F4]">4. Delivery</h4>
-                <p className="text-[10px] text-[#8E8B82] mt-0.5">
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#111111]">4. Delivery</h4>
+                <p className="text-xs text-[#5C574E] mt-0.5">
                   {isDelivered
                     ? 'Delivered to recipient.'
                     : `Destination: ${[orderData.shippingAddress?.city, orderData.shippingAddress?.state, orderData.shippingAddress?.country].filter(Boolean).join(', ')}`}
@@ -316,49 +319,49 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
 
           {/* Itemized Summary & Fee Breakdown */}
           {orderData.items && orderData.items.length > 0 && (
-            <div className="pt-4 border-t border-white/5 space-y-3">
-              <h3 className="font-editorial text-sm font-semibold text-[#F8F7F4]">Order Items</h3>
+            <div className="pt-5 border-t border-[#111111]/10 space-y-3">
+              <h3 className="font-editorial text-lg font-medium text-[#111111]">Order Items</h3>
               <div className="space-y-2">
                 {orderData.items.map((item: any, idx: number) => (
                   <div key={idx} className="flex items-center justify-between text-xs">
-                    <span className="text-[#EDEDED]">
+                    <span className="text-[#111111]">
                       {item.quantity}x {item.title}
                     </span>
-                    <span className="font-editorial text-[#D4AF37]">{formatMoney(item.totalCents)}</span>
+                    <span className="font-medium text-[#111111] tabular-nums">{formatMoney(item.totalCents)}</span>
                   </div>
                 ))}
               </div>
-              <div className="pt-2 border-t border-white/5 space-y-1 text-[11px] text-[#8E8B82]">
+              <div className="pt-3 border-t border-[#111111]/10 space-y-1.5 text-xs text-[#5C574E]">
                 <div className="flex justify-between">
                   <span>Delivery Fee</span>
-                  <span>
+                  <span className="tabular-nums text-[#111111]">
                     {orderData.shippingFeeCents > 0 ? formatMoney(orderData.shippingFeeCents) : 'Complimentary'}
                   </span>
                 </div>
                 {orderData.discountCents > 0 && (
-                  <div className="flex justify-between text-[#34A853]">
+                  <div className="flex justify-between text-[#7A6230]">
                     <span>Discount</span>
-                    <span>-{formatMoney(orderData.discountCents)}</span>
+                    <span className="tabular-nums">-{formatMoney(orderData.discountCents)}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-[#F8F7F4] pt-1">
+                <div className="flex justify-between font-semibold text-[#111111] pt-2 border-t border-[#111111]/10">
                   <span>Total ({orderData.currency || 'USD'})</span>
-                  <span className="text-[#D4AF37]">{formatMoney(orderData.totalCents)}</span>
+                  <span className="font-editorial text-base tabular-nums">{formatMoney(orderData.totalCents)}</span>
                 </div>
               </div>
             </div>
           )}
 
           {orderData.returnRequested && (
-            <div className="bg-[#181818] border border-amber-500/30 p-3 rounded-xs text-xs text-amber-300">
+            <div className="bg-[#F7F3EC] border border-[#B89B5E]/40 p-3.5 rounded-xs text-xs text-[#7A6230]">
               Return Request Status:{' '}
               <strong className="uppercase">{orderData.returnStatus || 'pending'}</strong>
             </div>
           )}
 
           {/* Help box */}
-          <div className="bg-[#161616] border border-white/5 p-3.5 rounded-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="text-[11px] text-[#8E8B82]">
+          <div className="bg-[#F7F3EC] border border-[#111111]/10 p-4 rounded-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-xs text-[#5C574E]">
               Need receipt assistance or immediate status confirmation?
             </div>
             <a
@@ -367,9 +370,10 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onNavigate, init
               )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#0F2E22] text-[#48BB78] border border-[#34A853]/30 px-3.5 py-2 text-[10px] uppercase font-bold tracking-wider rounded-xs text-center hover:bg-[#153e2f] transition-colors shrink-0"
+              className="gold-gradient-bg px-4 py-2.5 text-[10px] uppercase font-semibold tracking-[0.18em] rounded-xs text-center inline-flex items-center justify-center gap-2 shrink-0"
             >
-              WhatsApp Concierge ↗
+              <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>WhatsApp Concierge</span>
             </a>
           </div>
         </div>

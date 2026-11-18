@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ArrowRight, Mail, MessageCircle, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { useCart } from '../contexts/CartContext.tsx';
 import { formatUSD, formatNGN, convertUsdCentsToNgn } from '../lib/commerceLogic.ts';
@@ -36,7 +37,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
   const [regState, setRegState] = useState('Lagos');
   const [regLga, setRegLga] = useState('Ikeja');
   const [regAddress, setRegAddress] = useState('');
-  const [phoneValidation, setPhoneValidation] = useState<{ valid: boolean; formatted: string; error?: string }>({ valid: true, formatted: '' });
 
   // Email verification state
   const [verificationCode, setVerificationCode] = useState('');
@@ -65,7 +65,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
   const [returnSuccessMessage, setReturnSuccessMessage] = useState('');
   const [returnErrorMessage, setReturnErrorMessage] = useState('');
 
-  // Sync mode with prop or URL search parameters (e.g. /account?mode=register)
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -109,11 +108,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
   const [paymentProofNotes, setPaymentProofNotes] = useState('');
   const [proofOrderRef, setProofOrderRef] = useState<string | null>(null);
 
-  // Load customer orders & addresses if logged in
   useEffect(() => {
     if (!token && !user) return;
 
-    // Load customer's own orders
     if (token) {
       safeFetchJson<{ orders: any[] }>('/api/customer/orders', {
         headers: { Authorization: `Bearer ${token}` },
@@ -121,27 +118,22 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         if (res.ok && res.data?.orders && Array.isArray(res.data.orders)) {
           setOrders(res.data.orders);
         } else if (user) {
-          const localOrders = clientAuthFallback.getOrders(user.id, user.email);
-          setOrders(localOrders);
+          setOrders(clientAuthFallback.getOrders(user.id, user.email));
         }
       });
 
-      // Load customer's addresses
       safeFetchJson<{ addresses: any[] }>('/api/customer/addresses', {
         headers: { Authorization: `Bearer ${token}` },
       }).then((res) => {
         if (res.ok && res.data?.addresses && Array.isArray(res.data.addresses)) {
           setAddresses(res.data.addresses);
         } else if (user) {
-          const localAddrs = clientAuthFallback.getAddresses(user.id);
-          setAddresses(localAddrs);
+          setAddresses(clientAuthFallback.getAddresses(user.id));
         }
       });
     } else if (user) {
-      const localOrders = clientAuthFallback.getOrders(user.id, user.email);
-      setOrders(localOrders);
-      const localAddrs = clientAuthFallback.getAddresses(user.id);
-      setAddresses(localAddrs);
+      setOrders(clientAuthFallback.getOrders(user.id, user.email));
+      setAddresses(clientAuthFallback.getAddresses(user.id));
     }
   }, [token, user]);
 
@@ -174,7 +166,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
       if (result.ok && result.data?.token && result.data?.user) {
         loginCustomer(result.data.token, result.data.user);
-        setSuccessMessage('Logged in successfully');
+        setSuccessMessage('Signed in successfully.');
         if (returnToCart) {
           setIsCartOpen(true);
           onNavigate('/');
@@ -188,7 +180,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         setAuthMode('verify');
         setErrorMessage(
           result.data.error ||
-            'Please enter the 6-digit verification code sent to your email to confirm your new account.'
+            'Please enter the 6-digit verification code sent to your email to confirm your account.'
         );
         return;
       }
@@ -198,11 +190,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         return;
       }
 
-      // Offline / static hosting fallback ONLY if backend route is unavailable (404/405/network)
       const fallback = clientAuthFallback.login(cleanEmail, password);
       if (fallback.success && fallback.token && fallback.user) {
         loginCustomer(fallback.token, fallback.user as any);
-        setSuccessMessage('Logged in successfully');
+        setSuccessMessage('Signed in successfully.');
         if (returnToCart) {
           setIsCartOpen(true);
           onNavigate('/');
@@ -218,7 +209,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     }
   };
 
-  // Handle Open Account / Register (requires 6-digit email verification code before activation)
+  // Handle Open Account / Register
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -257,7 +248,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     }
 
     if (confirmPassword && password !== confirmPassword) {
-      setErrorMessage('Passwords do not match. Please ensure both passwords match.');
+      setErrorMessage('Passwords do not match.');
       setIsSubmitting(false);
       return;
     }
@@ -345,7 +336,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         } else if (user) {
           updateUser({ ...user, isEmailVerified: true, emailVerified: true });
         }
-        setSuccessMessage('✓ Email verified and new account confirmed!');
+        setSuccessMessage('Email verified and account confirmed.');
         if (returnToCart) {
           setIsCartOpen(true);
           onNavigate('/');
@@ -387,7 +378,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
               'Code regenerated, but server email delivery (SMTP / Resend API) is not configured yet.'
           );
         } else {
-          setSuccessMessage(res.data.message || '✓ A fresh 6-digit verification code has been sent to your email.');
+          setSuccessMessage(res.data.message || 'A fresh 6-digit verification code has been sent to your email.');
         }
         setResendCooldown(60);
         const timer = setInterval(() => {
@@ -426,16 +417,19 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     }
     setIsSubmitting(true);
     try {
-      const res = await safeFetchJson<{ success?: boolean; message?: string; error?: string }>('/api/auth/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
+      const res = await safeFetchJson<{ success?: boolean; message?: string; error?: string }>(
+        '/api/auth/change-password',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ currentPassword, newPassword }),
+        }
+      );
       if (res.ok && res.data?.success) {
-        setPasswordChangeSuccess('✓ Password successfully updated.');
+        setPasswordChangeSuccess('Password updated successfully.');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmNewPassword('');
@@ -473,12 +467,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
       );
       if (res.ok && res.data?.success) {
         if (res.data.order) {
-          setOrders((prev) =>
-            prev.map((o) => (o.id === res.data!.order.id ? res.data!.order : o))
-          );
+          setOrders((prev) => prev.map((o) => (o.id === res.data!.order.id ? res.data!.order : o)));
         }
         setReturnSuccessMessage(
-          `✓ Your ${returnType} request for ${returnModalOrder.orderReference} has been logged and sent to CEO Adnuel.`
+          `Your ${returnType} request for ${returnModalOrder.orderReference} has been logged and sent to CEO Adnuel.`
         );
         setReturnModalOrder(null);
         setReturnReason('');
@@ -492,7 +484,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
     }
   };
 
-  // Handle Forgot Password (3 steps: request OTP -> verify code -> reset password)
+  // Handle Forgot Password
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -526,7 +518,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         );
         if (res.ok && res.data?.success && res.data?.resetToken) {
           setResetToken(res.data.resetToken);
-          setSuccessMessage('✓ Security code verified. Enter your new password below.');
+          setSuccessMessage('Security code verified. Enter your new password below.');
           setForgotStep('reset');
         } else {
           setErrorMessage(res.data?.error || 'Invalid or expired security code.');
@@ -549,7 +541,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           }
         );
         if (res.ok && res.data?.success) {
-          setSuccessMessage('✓ Password updated successfully! Please sign in with your new credentials.');
+          setSuccessMessage('Password updated successfully. Please sign in with your new credentials.');
           setForgotStep('request');
           setResetCode('');
           setResetToken('');
@@ -589,12 +581,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
       if (result.ok && result.data?.user) {
         updateUser(result.data.user);
-        setSuccessMessage('Profile updated successfully');
+        setSuccessMessage('Profile updated successfully.');
       } else if (user) {
         const updated = clientAuthFallback.updateProfile(user.id, { name: cleanName, phone: cleanPhone });
         if (updated) {
           updateUser(updated as any);
-          setSuccessMessage('Profile updated successfully');
+          setSuccessMessage('Profile updated successfully.');
         } else {
           setErrorMessage('Profile update could not be saved.');
         }
@@ -706,7 +698,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
       setProofOrderRef(null);
       setPaymentProofNotes('');
 
-      // Reload orders
       if (token) {
         safeFetchJson<{ orders: any[] }>('/api/customer/orders', {
           headers: { Authorization: `Bearer ${token}` },
@@ -722,30 +713,29 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-12 lg:py-16 space-y-8 font-meta">
-      {/* If Not Logged In: Show Authentication Card */}
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-12 lg:py-20 space-y-8 font-meta text-[#111111]">
       {!user ? (
-        <div className="w-full max-w-md mx-auto border border-white/10 bg-[#141416] p-6 sm:p-8 rounded-xs space-y-6">
-          <div className="text-center space-y-2 mb-2">
-            <div className="w-9 h-9 gold-gradient-bg flex items-center justify-center font-editorial text-base font-medium mx-auto rounded-xs">
+        <div className="w-full max-w-md mx-auto border border-[#111111]/12 bg-[#FAF7F2] p-6 sm:p-9 rounded-xs space-y-6">
+          <div className="text-center space-y-2.5">
+            <div className="w-10 h-10 bg-[#111111] text-[#F7F3EC] flex items-center justify-center font-editorial text-lg font-medium mx-auto rounded-xs">
               V
             </div>
-            <h1 className="font-editorial text-2xl font-medium text-[#F5F1E8] break-words">
+            <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#111111] break-words">
               {authMode === 'login' && 'Sign In to VANTÉRA'}
-              {authMode === 'register' && 'Open Client Account'}
+              {authMode === 'register' && 'Create Client Account'}
               {authMode === 'verify' && 'Confirm Your Email'}
               {authMode === 'forgot' && 'Reset Password'}
             </h1>
-            <p className="text-xs text-[#A8A297] break-words">
+            <p className="text-xs text-[#5C574E] leading-relaxed">
               {authMode === 'login' && 'Access saved Nigerian shipping addresses and track your orders.'}
               {authMode === 'register' && 'Enter your details to receive a 6-digit email confirmation code.'}
-              {authMode === 'verify' && 'Enter the 6-digit verification code sent to your email to confirm your new account.'}
-              {authMode === 'forgot' && 'Enter your email to receive recovery instructions.'}
+              {authMode === 'verify' && 'Enter the 6-digit verification code sent to your email to confirm your account.'}
+              {authMode === 'forgot' && 'Enter your registered email to receive recovery instructions.'}
             </p>
           </div>
 
-          {/* Dual Mode Switcher: Sign In vs Open Client Account */}
-          <div className="grid grid-cols-2 p-1 bg-[#181818] border border-white/10 rounded-xs">
+          {/* Dual Mode Switcher */}
+          <div className="grid grid-cols-2 p-1 bg-[#F7F3EC] border border-[#111111]/12 rounded-xs">
             <button
               type="button"
               onClick={() => {
@@ -753,10 +743,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                 setErrorMessage('');
                 setSuccessMessage('');
               }}
-              className={`py-2 text-[11px] font-meta uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer ${
+              className={`py-2.5 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs transition-colors cursor-pointer ${
                 authMode === 'login'
-                  ? 'gold-gradient-bg text-[#0B0B0B]'
-                  : 'text-[#A9A69F] hover:text-[#EDEDED]'
+                  ? 'bg-[#B89B5E] text-[#111111]'
+                  : 'text-[#5C574E] hover:text-[#111111]'
               }`}
             >
               Sign In
@@ -768,48 +758,52 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                 setErrorMessage('');
                 setSuccessMessage('');
               }}
-              className={`py-2 text-[11px] font-meta uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer ${
+              className={`py-2.5 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs transition-colors cursor-pointer ${
                 authMode === 'register'
-                  ? 'gold-gradient-bg text-[#0B0B0B]'
-                  : 'text-[#A9A69F] hover:text-[#EDEDED]'
+                  ? 'bg-[#B89B5E] text-[#111111]'
+                  : 'text-[#5C574E] hover:text-[#111111]'
               }`}
             >
               Open Account
             </button>
           </div>
 
-          {errorMessage && !errorMessage.includes('405') && !errorMessage.includes('No response body') && !errorMessage.includes('JSON') && (
-            <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs break-words">
-              {errorMessage}
-            </div>
-          )}
+          {errorMessage &&
+            !errorMessage.includes('405') &&
+            !errorMessage.includes('No response body') &&
+            !errorMessage.includes('JSON') && (
+              <div className="p-3 bg-[#8E3A3A]/8 border border-[#8E3A3A]/30 text-[#8E3A3A] text-xs rounded-xs break-words">
+                {errorMessage}
+              </div>
+            )}
 
           {successMessage && (
-            <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs break-words">
+            <div className="p-3 bg-[#F7F3EC] border border-[#B89B5E] text-[#111111] text-xs rounded-xs break-words">
               {successMessage}
             </div>
           )}
 
           {authMode === 'login' && (
-            <form onSubmit={handleLogin} className="flex flex-col justify-between min-h-[320px] w-full">
-              <div className="flex-1 space-y-3.5 pb-4">
+            <form onSubmit={handleLogin} className="flex flex-col justify-between min-h-[290px] w-full">
+              <div className="flex-1 space-y-4 pb-4">
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="login-email" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1.5">
                     Email Address
                   </label>
                   <input
+                    id="login-email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="client@example.com"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3.5 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-[10px] font-meta uppercase tracking-wider text-[#A9A69F]">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label htmlFor="login-password" className="text-[10px] uppercase tracking-[0.16em] text-[#5C574E]">
                       Password
                     </label>
                     <button
@@ -818,33 +812,34 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                         setAuthMode('forgot');
                         setErrorMessage('');
                       }}
-                      className="text-[10px] text-[#8E8B82] hover:text-[#D4AF37] hover:underline"
+                      className="text-[10px] text-[#7A6230] hover:underline cursor-pointer"
                     >
                       Forgot password?
                     </button>
                   </div>
                   <input
+                    id="login-password"
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3.5 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
               </div>
 
-              <div className="mt-auto pt-4 border-t border-white/10 space-y-3 w-full">
+              <div className="mt-auto pt-4 border-t border-[#111111]/10 space-y-3 w-full">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs disabled:opacity-50 cursor-pointer inline-flex items-center justify-center gap-2"
                 >
                   <span>{isSubmitting ? 'Signing In...' : 'Sign In'}</span>
-                  <span className="text-sm">→</span>
+                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
 
-                <div className="text-center text-[11px] text-[#8E8B82]">
+                <div className="text-center text-[11px] text-[#5C574E]">
                   New client?{' '}
                   <button
                     type="button"
@@ -853,7 +848,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                       setErrorMessage('');
                       setSuccessMessage('');
                     }}
-                    className="font-medium text-[#D4AF37] underline hover:text-[#E5C158] cursor-pointer"
+                    className="font-medium text-[#7A6230] underline hover:text-[#111111] cursor-pointer"
                   >
                     Open an account now
                   </button>
@@ -863,62 +858,65 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           )}
 
           {authMode === 'register' && (
-            <form onSubmit={handleRegister} className="flex flex-col justify-between min-h-[480px] w-full">
-              {/* Top Form Fields Container (flex-1) */}
+            <form onSubmit={handleRegister} className="flex flex-col justify-between min-h-[460px] w-full">
               <div className="flex-1 space-y-3.5 pb-4">
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="reg-name" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Full Name
                   </label>
                   <input
+                    id="reg-name"
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your Full Name"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="reg-email" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Email Address
                   </label>
                   <input
+                    id="reg-email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="client@example.com"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-meta uppercase tracking-wider text-[#A9A69F]">
+                    <label htmlFor="reg-phone" className="text-[10px] uppercase tracking-[0.16em] text-[#5C574E]">
                       Phone / WhatsApp (+234 format)
                     </label>
                     {phone && (
-                      <span className={`text-[9px] font-mono ${validateNigerianPhone(phone).valid ? 'text-[#10b981]' : 'text-red-400'}`}>
-                        {validateNigerianPhone(phone).valid ? '✓ Valid format' : 'Invalid format'}
+                      <span className={`text-[10px] ${validateNigerianPhone(phone).valid ? 'text-[#7A6230]' : 'text-[#8E3A3A]'}`}>
+                        {validateNigerianPhone(phone).valid ? 'Valid format' : 'Invalid format'}
                       </span>
                     )}
                   </div>
                   <input
+                    id="reg-phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+234 812 345 6789"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] tabular-nums placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="reg-state" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     State / Location (Nigeria)
                   </label>
                   <select
+                    id="reg-state"
                     value={regState}
                     onChange={(e) => {
                       const s = e.target.value;
@@ -926,87 +924,91 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                       const lgas = getLgasForState(s);
                       setRegLga(lgas[0] || '');
                     }}
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   >
                     {NIGERIAN_STATES.map((s) => (
-                      <option key={s.state} value={s.state} className="bg-[#181818] text-[#F8F7F4]">
+                      <option key={s.state} value={s.state} className="bg-[#FAF7F2] text-[#111111]">
                         {s.state} ({s.zone === 'lagos' ? 'Lagos Zone' : s.deliveryEstimate})
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    <label htmlFor="reg-lga" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                       LGA / City
                     </label>
                     <select
+                      id="reg-lga"
                       value={regLga}
                       onChange={(e) => setRegLga(e.target.value)}
-                      className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     >
                       {getLgasForState(regState).map((city) => (
-                        <option key={city} value={city} className="bg-[#181818] text-[#F8F7F4]">
+                        <option key={city} value={city} className="bg-[#FAF7F2] text-[#111111]">
                           {city}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    <label htmlFor="reg-address" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                       Delivery Address
                     </label>
                     <input
+                      id="reg-address"
                       type="text"
                       value={regAddress}
                       onChange={(e) => setRegAddress(e.target.value)}
                       placeholder="e.g. 14 Admiralty Way"
-                      className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="reg-password" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Password (min. 6 characters)
                   </label>
                   <input
+                    id="reg-password"
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create password"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="reg-confirm" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Confirm Password
                   </label>
                   <input
+                    id="reg-confirm"
                     type="password"
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter your password"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
               </div>
 
-              <div className="mt-auto pt-4 border-t border-white/10 space-y-3 w-full">
+              <div className="mt-auto pt-4 border-t border-[#111111]/10 space-y-3 w-full">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full gold-gradient-bg py-3.5 px-4 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs disabled:opacity-50 cursor-pointer inline-flex items-center justify-center gap-2"
                 >
                   <span>{isSubmitting ? 'Creating Account...' : 'Create Account'}</span>
-                  <span className="text-sm">→</span>
+                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
 
-                <div className="text-center text-[11px] text-[#8E8B82]">
+                <div className="text-center text-[11px] text-[#5C574E]">
                   Already have an account?{' '}
                   <button
                     type="button"
@@ -1015,7 +1017,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                       setErrorMessage('');
                       setSuccessMessage('');
                     }}
-                    className="font-medium text-[#D4AF37] underline hover:text-[#E5C158] cursor-pointer"
+                    className="font-medium text-[#7A6230] underline hover:text-[#111111] cursor-pointer"
                   >
                     Sign in here
                   </button>
@@ -1027,23 +1029,24 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           {authMode === 'verify' && (
             <form onSubmit={handleVerifyEmail} className="space-y-4">
               <div className="text-center space-y-2">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] font-editorial text-xl mx-auto">
-                  ✉
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F7F3EC] border border-[#B89B5E]/50 text-[#7A6230] mx-auto">
+                  <Mail className="w-5 h-5" strokeWidth={1.5} />
                 </div>
-                <h3 className="font-editorial text-lg text-[#F8F7F4] font-bold">
+                <h3 className="font-editorial text-xl text-[#111111] font-medium">
                   Enter Confirmation Code
                 </h3>
-                <p className="text-xs text-[#8E8B82] leading-relaxed">
-                  We dispatched a 6-digit confirmation code to{' '}
-                  <strong className="text-[#D4AF37]">{verifyEmailAddress || email}</strong>. Type it below to confirm your new account.
+                <p className="text-xs text-[#5C574E] leading-relaxed">
+                  We sent a 6-digit confirmation code to{' '}
+                  <strong className="text-[#111111]">{verifyEmailAddress || email}</strong>. Type it below to confirm your account.
                 </p>
               </div>
 
               <div>
-                <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1 text-center">
+                <label htmlFor="verify-otp" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1.5 text-center">
                   6-Digit Email Verification Code
                 </label>
                 <input
+                  id="verify-otp"
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
@@ -1052,24 +1055,24 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="123456"
-                  className="w-full text-center tracking-[0.5em] font-mono text-lg bg-[#181818] border border-white/10 px-4 py-3 text-[#D4AF37] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                  className="w-full text-center tracking-[0.45em] tabular-nums text-lg bg-[#F7F3EC] border border-[#111111]/15 px-4 py-3 text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting || verificationCode.length < 6}
-                className="w-full gold-gradient-bg text-[#0B0B0B] py-3 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                className="w-full gold-gradient-bg py-3.5 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? 'Confirming...' : 'Confirm Code & Activate Account'}
               </button>
 
-              <div className="flex items-center justify-between pt-2 text-[11px] text-[#8E8B82]">
+              <div className="flex items-center justify-between pt-2 text-[11px] text-[#5C574E]">
                 <button
                   type="button"
                   disabled={resendCooldown > 0}
                   onClick={handleResendVerification}
-                  className="text-[#D4AF37] hover:underline disabled:opacity-50 cursor-pointer"
+                  className="text-[#7A6230] hover:underline disabled:opacity-50 cursor-pointer"
                 >
                   {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}
                 </button>
@@ -1080,7 +1083,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     setErrorMessage('');
                     setSuccessMessage('');
                   }}
-                  className="hover:text-[#D4AF37] underline cursor-pointer"
+                  className="hover:text-[#111111] underline cursor-pointer"
                 >
                   Change email
                 </button>
@@ -1089,36 +1092,38 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           )}
 
           {authMode === 'forgot' && (
-            <form onSubmit={handleForgot} className="space-y-3.5">
+            <form onSubmit={handleForgot} className="space-y-4">
               {forgotStep === 'request' && (
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="forgot-email" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1.5">
                     Registered Email
                   </label>
                   <input
+                    id="forgot-email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3.5 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
               )}
 
               {forgotStep === 'code' && (
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="forgot-code" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1.5">
                     Enter 6-Digit Security Code
                   </label>
                   <input
+                    id="forgot-code"
                     type="text"
                     required
                     maxLength={6}
                     value={resetCode}
                     onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
                     placeholder="123456"
-                    className="w-full text-center tracking-[0.45em] font-mono text-base bg-[#181818] border border-white/10 px-3 py-2.5 text-[#D4AF37] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full text-center tracking-[0.45em] tabular-nums text-base bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
               )}
@@ -1126,29 +1131,31 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
               {forgotStep === 'reset' && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    <label htmlFor="forgot-new" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                       New Password (min. 8 characters)
                     </label>
                     <input
+                      id="forgot-new"
                       type="password"
                       required
                       value={forgotNewPassword}
                       onChange={(e) => setForgotNewPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3.5 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                    <label htmlFor="forgot-confirm" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                       Confirm New Password
                     </label>
                     <input
+                      id="forgot-confirm"
                       type="password"
                       required
                       value={forgotConfirmPassword}
                       onChange={(e) => setForgotConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3.5 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
                 </div>
@@ -1157,7 +1164,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full gold-gradient-bg text-[#0B0B0B] py-2.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+                className="w-full gold-gradient-bg py-3 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting
                   ? 'Processing...'
@@ -1175,13 +1182,13 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     setForgotStep('request');
                     setErrorMessage('');
                   }}
-                  className="w-full text-center text-[11px] text-[#8E8B82] hover:text-[#D4AF37] cursor-pointer"
+                  className="w-full text-center text-[11px] text-[#5C574E] hover:text-[#7A6230] cursor-pointer"
                 >
                   Request a new code
                 </button>
               )}
 
-              <div className="text-center pt-3 border-t border-white/5 text-[11px] text-[#8E8B82]">
+              <div className="text-center pt-3 border-t border-[#111111]/10 text-[11px] text-[#5C574E]">
                 Remembered your password?{' '}
                 <button
                   type="button"
@@ -1190,7 +1197,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     setForgotStep('request');
                     setErrorMessage('');
                   }}
-                  className="font-medium text-[#D4AF37] underline cursor-pointer"
+                  className="font-medium text-[#7A6230] underline cursor-pointer"
                 >
                   Return to sign in
                 </button>
@@ -1202,19 +1209,20 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
         /* If Logged In: Customer Portal */
         <div className="space-y-6">
           {/* Header */}
-          <div className="border border-white/10 bg-[#141416] p-6 sm:p-8 rounded-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="border border-[#111111]/12 bg-[#FAF7F2] p-6 sm:p-8 rounded-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-[10px] uppercase tracking-[0.22em] text-[#C8A96A] block">
-                Client Account {user.isEmailVerified === false && !user.emailVerified ? '· Email Verification Pending' : '· Verified'}
+              <span className="text-[10px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold block">
+                Client Account{' '}
+                {user.isEmailVerified === false && !user.emailVerified ? '· Verification Pending' : '· Verified'}
               </span>
-              <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#F5F1E8]">
+              <h1 className="font-editorial text-2xl sm:text-4xl font-medium text-[#111111]">
                 Welcome, {user.name}
               </h1>
-              <p className="text-xs text-[#A8A297] font-mono">
+              <p className="text-xs text-[#5C574E] tabular-nums">
                 {user.email} {user.phone ? `· ${user.phone}` : ''}
               </p>
             </div>
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
               {returnToCart && (
                 <button
                   type="button"
@@ -1222,14 +1230,15 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     setIsCartOpen(true);
                     onNavigate('/');
                   }}
-                  className="gold-gradient-bg text-[#0B0B0B] px-4 py-2 text-xs font-meta font-bold uppercase tracking-wider rounded-xs cursor-pointer"
+                  className="gold-gradient-bg px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] rounded-xs cursor-pointer"
                 >
                   Return to Checkout →
                 </button>
               )}
               <button
+                type="button"
                 onClick={logoutCustomer}
-                className="px-4 py-2 text-xs border border-white/10 text-[#EDEDED] hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
+                className="px-4 py-2.5 text-[11px] uppercase tracking-[0.16em] border border-[#111111]/20 bg-[#F7F3EC] text-[#111111] hover:border-[#B89B5E] transition-colors rounded-xs cursor-pointer"
               >
                 Sign Out
               </button>
@@ -1238,16 +1247,19 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
           {/* Email Verification Banner when pending */}
           {user.isEmailVerified === false && !user.emailVerified && (
-            <form onSubmit={handleVerifyEmail} className="border border-[#D4AF37]/40 bg-[#1A160B] p-5 rounded-xs space-y-3">
+            <form
+              onSubmit={handleVerifyEmail}
+              className="border border-[#B89B5E]/50 bg-[#FAF7F2] p-5 sm:p-6 rounded-xs space-y-3"
+            >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <span className="text-[9px] font-mono uppercase tracking-widest text-[#D4AF37] block">
-                    ACTION REQUIRED · SECURITY VERIFICATION
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-[#7A6230] font-semibold block">
+                    Action Required · Security Verification
                   </span>
-                  <h3 className="font-editorial text-base text-[#F8F7F4] font-semibold">
+                  <h3 className="font-editorial text-lg text-[#111111] font-medium">
                     Verify Your Email ({user.email})
                   </h3>
-                  <p className="text-xs text-[#A9A69F] mt-0.5">
+                  <p className="text-xs text-[#5C574E] mt-0.5">
                     Enter the 6-digit code dispatched to your inbox to unlock verified client receipts.
                   </p>
                 </div>
@@ -1255,19 +1267,19 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                   type="button"
                   disabled={resendCooldown > 0}
                   onClick={handleResendVerification}
-                  className="text-[11px] font-meta text-[#D4AF37] underline hover:text-white disabled:opacity-50 cursor-pointer shrink-0"
+                  className="text-[11px] text-[#7A6230] underline hover:text-[#111111] disabled:opacity-50 cursor-pointer shrink-0"
                 >
                   {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
                 </button>
               </div>
 
               {errorMessage && (
-                <div className="p-2.5 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                <div className="p-2.5 bg-[#8E3A3A]/8 border border-[#8E3A3A]/30 text-[#8E3A3A] text-xs rounded-xs">
                   {errorMessage}
                 </div>
               )}
               {successMessage && (
-                <div className="p-2.5 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
+                <div className="p-2.5 bg-[#F7F3EC] border border-[#B89B5E] text-[#111111] text-xs rounded-xs">
                   {successMessage}
                 </div>
               )}
@@ -1280,12 +1292,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="Enter 6-digit OTP"
-                  className="flex-1 bg-[#121212] border border-white/10 px-3.5 py-2 text-sm font-mono tracking-[0.35em] text-[#D4AF37] rounded-xs focus:border-[#D4AF37] focus:outline-hidden"
+                  className="flex-1 bg-[#F7F3EC] border border-[#111111]/15 px-3.5 py-2.5 text-sm tabular-nums tracking-[0.35em] text-[#111111] rounded-xs focus:border-[#B89B5E] focus:outline-hidden"
                 />
                 <button
                   type="submit"
                   disabled={isSubmitting || verificationCode.length < 6}
-                  className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs font-meta font-bold uppercase tracking-wider rounded-xs hover:brightness-110 disabled:opacity-50 cursor-pointer"
+                  className="gold-gradient-bg px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] rounded-xs disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? 'Verifying...' : 'Verify Email'}
                 </button>
@@ -1294,43 +1306,47 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           )}
 
           {/* Navigation Tabs */}
-          <div className="flex border-b border-white/10 gap-6 text-xs">
+          <div className="flex border-b border-[#111111]/12 gap-6 overflow-x-auto text-xs">
             <button
+              type="button"
               onClick={() => setActiveTab('orders')}
-              className={`pb-3 uppercase tracking-wider font-meta font-semibold transition-colors cursor-pointer ${
+              className={`pb-3 uppercase tracking-[0.16em] font-semibold transition-colors cursor-pointer shrink-0 ${
                 activeTab === 'orders'
-                  ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]'
-                  : 'text-[#8E8B82] hover:text-[#EDEDED]'
+                  ? 'border-b-2 border-[#B89B5E] text-[#111111]'
+                  : 'text-[#5C574E] hover:text-[#111111]'
               }`}
             >
               My Orders ({orders.length})
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('profile')}
-              className={`pb-3 uppercase tracking-wider font-meta font-semibold transition-colors cursor-pointer ${
+              className={`pb-3 uppercase tracking-[0.16em] font-semibold transition-colors cursor-pointer shrink-0 ${
                 activeTab === 'profile'
-                  ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]'
-                  : 'text-[#8E8B82] hover:text-[#EDEDED]'
+                  ? 'border-b-2 border-[#B89B5E] text-[#111111]'
+                  : 'text-[#5C574E] hover:text-[#111111]'
               }`}
             >
               Profile
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('addresses')}
-              className={`pb-3 uppercase tracking-wider font-meta font-semibold transition-colors cursor-pointer ${
+              className={`pb-3 uppercase tracking-[0.16em] font-semibold transition-colors cursor-pointer shrink-0 ${
                 activeTab === 'addresses'
-                  ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]'
-                  : 'text-[#8E8B82] hover:text-[#EDEDED]'
+                  ? 'border-b-2 border-[#B89B5E] text-[#111111]'
+                  : 'text-[#5C574E] hover:text-[#111111]'
               }`}
             >
               Saved Addresses ({addresses.length})
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('security')}
-              className={`pb-3 uppercase tracking-wider font-meta font-semibold transition-colors cursor-pointer ${
+              className={`pb-3 uppercase tracking-[0.16em] font-semibold transition-colors cursor-pointer shrink-0 ${
                 activeTab === 'security'
-                  ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]'
-                  : 'text-[#8E8B82] hover:text-[#EDEDED]'
+                  ? 'border-b-2 border-[#B89B5E] text-[#111111]'
+                  : 'text-[#5C574E] hover:text-[#111111]'
               }`}
             >
               Security
@@ -1341,27 +1357,28 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           {activeTab === 'orders' && (
             <div className="space-y-4">
               {returnSuccessMessage && (
-                <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
+                <div className="p-3 bg-[#F7F3EC] border border-[#B89B5E] text-[#111111] text-xs rounded-xs">
                   {returnSuccessMessage}
                 </div>
               )}
 
               {orders.length === 0 ? (
-                <div className="border border-white/5 bg-[#121212] p-10 text-center space-y-3 rounded-xs">
-                  <div className="font-editorial text-3xl text-[#D4AF37]">V</div>
-                  <h3 className="font-editorial text-base text-[#F8F7F4]">No orders placed yet</h3>
-                  <p className="text-xs text-[#8E8B82]">
+                <div className="border border-[#111111]/10 bg-[#FAF7F2] p-12 text-center space-y-4 rounded-xs">
+                  <div className="font-editorial text-3xl text-[#7A6230]">V</div>
+                  <h3 className="font-editorial text-xl text-[#111111]">No orders placed yet</h3>
+                  <p className="text-xs text-[#5C574E]">
                     Your past purchases and bank transfer verifications will be tracked here.
                   </p>
                   <button
+                    type="button"
                     onClick={() => onNavigate('/shop')}
-                    className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 cursor-pointer"
+                    className="gold-gradient-bg px-6 py-3 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer"
                   >
-                    Explore Finds
+                    Explore Collection
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {orders.map((order) => {
                     const isPaid = order.paymentStatus === 'paid';
                     const isAwaiting = order.paymentStatus === 'awaiting_verification';
@@ -1369,37 +1386,37 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     return (
                       <div
                         key={order.id || order.orderReference}
-                        className="border border-white/5 bg-[#121212] p-4 space-y-3 rounded-xs hover:border-white/10 transition-colors"
+                        className="border border-[#111111]/12 bg-[#FAF7F2] p-5 space-y-4 rounded-xs"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#111111]/10 pb-3">
                           <div>
-                            <span className="font-mono text-xs font-bold text-[#D4AF37]">
+                            <span className="text-sm font-semibold text-[#111111] tabular-nums">
                               {order.orderReference}
                             </span>
-                            <span className="text-[11px] text-[#8E8B82] ml-3">
+                            <span className="text-xs text-[#5C574E] ml-3">
                               Placed {new Date(order.createdAt).toLocaleDateString()}
                             </span>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2">
                             <span
-                              className={`px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider rounded-xs ${
+                              className={`px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] rounded-xs border ${
                                 isPaid
-                                  ? 'bg-[#0F2E22] text-[#48BB78] border border-[#34A853]/30'
+                                  ? 'bg-[#F7F3EC] text-[#111111] border-[#B89B5E]'
                                   : isAwaiting
-                                  ? 'bg-[#182635] text-[#63B3ED] border border-[#3182CE]/30'
-                                  : 'bg-[#2D2412] text-[#D4AF37] border border-[#D4AF37]/30'
+                                  ? 'bg-[#F7F3EC] text-[#7A6230] border-[#B89B5E]/50'
+                                  : 'bg-[#F7F3EC] text-[#5C574E] border-[#111111]/15'
                               }`}
                             >
                               Payment: {order.paymentStatus ? order.paymentStatus.replace('_', ' ') : 'pending'}
                             </span>
 
-                            <span className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider bg-[#181818] text-[#EDEDED] border border-white/10 rounded-xs">
-                              Status: {order.fulfilmentStatus || 'processing'}
+                            <span className="px-2.5 py-1 text-[9px] font-medium uppercase tracking-[0.14em] bg-[#F7F3EC] text-[#111111] border border-[#111111]/15 rounded-xs">
+                              {order.fulfilmentStatus || 'processing'}
                             </span>
 
                             {order.returnRequested && (
-                              <span className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider bg-[#2D2412] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xs">
+                              <span className="px-2.5 py-1 text-[9px] font-medium uppercase tracking-[0.14em] bg-[#F7F3EC] text-[#7A6230] border border-[#B89B5E]/50 rounded-xs">
                                 Return: {order.returnStatus || 'pending'}
                               </span>
                             )}
@@ -1407,27 +1424,27 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                         </div>
 
                         {/* Items in order */}
-                        <div className="divide-y divide-white/5">
+                        <div className="divide-y divide-[#111111]/10">
                           {(order.items || []).map((item: any, i: number) => (
-                            <div key={i} className="py-2 flex items-center justify-between text-xs">
+                            <div key={i} className="py-2.5 flex items-center justify-between text-xs">
                               <div className="flex items-center gap-3">
                                 {item.image ? (
                                   <img
                                     src={item.image}
                                     alt={item.title}
-                                    className="w-10 h-10 object-contain bg-[#181818] p-1 border border-white/5 rounded-xs"
+                                    className="w-11 h-11 object-cover bg-[#EFEAE0] border border-[#111111]/10 rounded-xs"
                                   />
                                 ) : (
-                                  <div className="w-10 h-10 bg-[#181818] border border-white/5 flex items-center justify-center font-editorial text-xs text-[#D4AF37]">
+                                  <div className="w-11 h-11 bg-[#EFEAE0] border border-[#111111]/10 flex items-center justify-center font-editorial text-xs text-[#7A6230] rounded-xs">
                                     V
                                   </div>
                                 )}
                                 <div>
-                                  <p className="font-medium text-[#F8F7F4]">{item.title}</p>
-                                  <p className="text-[10px] text-[#8E8B82]">Qty: {item.quantity}</p>
+                                  <p className="font-medium text-[#111111]">{item.title}</p>
+                                  <p className="text-[11px] text-[#5C574E] tabular-nums">Qty: {item.quantity}</p>
                                 </div>
                               </div>
-                              <span className="font-semibold text-[#D4AF37]">
+                              <span className="font-medium text-[#111111] tabular-nums">
                                 {order.currency === 'NGN'
                                   ? formatNGN(convertUsdCentsToNgn(item.totalCents || 0, order.exchangeRateUsed || 1500))
                                   : formatUSD(item.totalCents || 0)}
@@ -1438,18 +1455,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
                         {/* Tracking info if dispatched */}
                         {order.trackingNumber && (
-                          <div className="bg-[#181818] border border-white/10 p-3 text-xs space-y-1 rounded-xs">
-                            <span className="font-semibold text-[#D4AF37] uppercase tracking-wide text-[10px] block">
-                              📦 Shipment Dispatched ({order.carrier || 'Standard Courier'})
+                          <div className="bg-[#F7F3EC] border border-[#111111]/10 p-3 text-xs space-y-1 rounded-xs">
+                            <span className="font-semibold text-[#7A6230] uppercase tracking-wider text-[10px] block">
+                              Shipment Dispatched ({order.carrier || 'Standard Courier'})
                             </span>
                             <div className="flex items-center justify-between">
-                              <span className="font-mono text-[#EDEDED]">Tracking #{order.trackingNumber}</span>
+                              <span className="tabular-nums text-[#111111]">Tracking #{order.trackingNumber}</span>
                               {order.trackingUrl && (
                                 <a
                                   href={order.trackingUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[#D4AF37] underline hover:text-white"
+                                  className="text-[#7A6230] underline hover:text-[#111111]"
                                 >
                                   Track Carrier Package →
                                 </a>
@@ -1459,17 +1476,17 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                         )}
 
                         {/* Order Summary footer */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs border-t border-white/5">
-                          <span className="text-[#8E8B82]">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 text-xs border-t border-[#111111]/10">
+                          <span className="text-[#5C574E]">
                             Total Amount:{' '}
-                            <strong className="text-[#F8F7F4] font-bold text-sm">
+                            <strong className="text-[#111111] font-semibold text-sm tabular-nums">
                               {order.currency === 'NGN'
                                 ? formatNGN(convertUsdCentsToNgn(order.totalCents || 0, order.exchangeRateUsed || 1500))
                                 : formatUSD(order.totalCents || 0)}
                             </strong>
                           </span>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             {order.paymentStatus === 'pending' && (
                               <button
                                 type="button"
@@ -1477,7 +1494,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                                   setProofOrderRef(order.orderReference);
                                   setPaymentProofNotes(order.paymentProofNotes || '');
                                 }}
-                                className="bg-[#181818] border border-white/10 text-[#F8F7F4] px-3 py-1.5 text-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
+                                className="bg-[#F7F3EC] border border-[#111111]/15 text-[#111111] px-3 py-1.5 text-xs hover:border-[#B89B5E] transition-colors rounded-xs cursor-pointer"
                               >
                                 Submit Transfer Ref
                               </button>
@@ -1487,11 +1504,15 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                               type="button"
                               onClick={() => {
                                 setReturnModalOrder(order);
-                                setReturnType(order.fulfilmentStatus === 'shipped' || order.fulfilmentStatus === 'delivered' ? 'return' : 'cancellation');
+                                setReturnType(
+                                  order.fulfilmentStatus === 'shipped' || order.fulfilmentStatus === 'delivered'
+                                    ? 'return'
+                                    : 'cancellation'
+                                );
                                 setReturnReason('');
                                 setReturnErrorMessage('');
                               }}
-                              className="border border-white/10 text-[#A0A09A] hover:border-[#D4AF37] hover:text-[#D4AF37] px-3 py-1.5 text-xs rounded-xs transition-colors cursor-pointer"
+                              className="border border-[#111111]/15 text-[#5C574E] hover:border-[#B89B5E] hover:text-[#111111] px-3 py-1.5 text-xs rounded-xs transition-colors cursor-pointer"
                             >
                               Request Return / Cancel
                             </button>
@@ -1502,9 +1523,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-[#48BB78] border border-[#34A853]/30 bg-[#0F2E22] px-3 py-1.5 rounded-xs hover:bg-[#153e2f] transition-colors"
+                              className="text-xs text-[#111111] border border-[#B89B5E]/50 bg-[#F7F3EC] px-3 py-1.5 rounded-xs hover:bg-[#B89B5E] transition-colors inline-flex items-center gap-1.5"
                             >
-                              WhatsApp Concierge
+                              <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+                              <span>WhatsApp Concierge</span>
                             </a>
                           </div>
                         </div>
@@ -1518,66 +1540,69 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
           {/* Tab 2: Profile */}
           {activeTab === 'profile' && (
-            <div className="border border-white/5 bg-[#121212] p-5 rounded-xs space-y-4 max-w-xl">
-              <h3 className="font-editorial text-base text-[#F8F7F4] border-b border-white/5 pb-2">
+            <div className="border border-[#111111]/12 bg-[#FAF7F2] p-6 rounded-xs space-y-4 max-w-xl">
+              <h3 className="font-editorial text-lg text-[#111111] border-b border-[#111111]/10 pb-2.5">
                 Personal Details
               </h3>
 
               {successMessage && (
-                <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
+                <div className="p-3 bg-[#F7F3EC] border border-[#B89B5E] text-[#111111] text-xs rounded-xs">
                   {successMessage}
                 </div>
               )}
 
               {errorMessage && (
-                <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                <div className="p-3 bg-[#8E3A3A]/8 border border-[#8E3A3A]/30 text-[#8E3A3A] text-xs rounded-xs">
                   {errorMessage}
                 </div>
               )}
 
-              <form onSubmit={handleUpdateProfile} className="space-y-3.5 text-xs">
+              <form onSubmit={handleUpdateProfile} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="profile-email" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Email (Account identifier)
                   </label>
                   <input
+                    id="profile-email"
                     type="email"
                     disabled
                     value={user.email}
-                    className="w-full bg-[#181818]/60 border border-white/5 px-3 py-2 text-xs text-[#8E8B82] rounded-xs cursor-not-allowed"
+                    className="w-full bg-[#EFEAE0] border border-[#111111]/10 px-3 py-2.5 text-xs text-[#5C574E] rounded-xs cursor-not-allowed"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="profile-name" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Full Name
                   </label>
                   <input
+                    id="profile-name"
                     type="text"
                     required
                     value={name || user.name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="profile-phone" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Phone / WhatsApp
                   </label>
                   <input
+                    id="profile-phone"
                     type="tel"
                     value={phone !== '' ? phone : user.phone || ''}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="08167925842"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    placeholder="+234 816 792 5842"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] tabular-nums focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="gold-gradient-bg text-[#0B0B0B] px-5 py-2.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs hover:opacity-90 cursor-pointer disabled:opacity-50"
+                  className="gold-gradient-bg px-6 py-3 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs cursor-pointer disabled:opacity-50"
                 >
                   Save Profile Changes
                 </button>
@@ -1589,59 +1614,71 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
           {activeTab === 'addresses' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-editorial text-base text-[#F8F7F4]">Delivery Addresses</h3>
+                <h3 className="font-editorial text-lg text-[#111111]">Delivery Addresses</h3>
                 <button
+                  type="button"
                   onClick={() => setIsAddingAddress(!isAddingAddress)}
-                  className="bg-[#181818] border border-white/10 text-[#F8F7F4] px-3.5 py-1.5 text-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors rounded-xs cursor-pointer"
+                  className="bg-[#FAF7F2] border border-[#111111]/15 text-[#111111] px-4 py-2 text-xs hover:border-[#B89B5E] transition-colors rounded-xs cursor-pointer"
                 >
                   {isAddingAddress ? 'Cancel' : '+ Add Address'}
                 </button>
               </div>
 
               {isAddingAddress && (
-                <form onSubmit={handleAddAddress} className="border border-white/5 bg-[#121212] p-4 space-y-3 max-w-xl text-xs rounded-xs">
-                  <h4 className="font-meta uppercase tracking-wider text-[#D4AF37] text-[10px]">New Delivery Address</h4>
+                <form
+                  onSubmit={handleAddAddress}
+                  className="border border-[#111111]/12 bg-[#FAF7F2] p-5 space-y-3.5 max-w-xl text-xs rounded-xs"
+                >
+                  <h4 className="uppercase tracking-[0.2em] text-[#7A6230] text-[10px] font-semibold">
+                    New Delivery Address
+                  </h4>
                   {errorMessage && (
-                    <div className="p-2.5 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                    <div className="p-2.5 bg-[#8E3A3A]/8 border border-[#8E3A3A]/30 text-[#8E3A3A] text-xs rounded-xs">
                       {errorMessage}
                     </div>
                   )}
                   <div>
-                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Full Name</label>
+                    <label className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">Full Name</label>
                     <input
                       type="text"
                       required
                       value={newAddress.fullName}
                       onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
                       placeholder="Full recipient name"
-                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2 text-xs text-[#111111] rounded-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Phone (+234 format)</label>
+                    <label className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
+                      Phone (+234 format)
+                    </label>
                     <input
                       type="tel"
                       required
                       value={newAddress.phone}
                       onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
                       placeholder="+234 801 234 5678"
-                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2 text-xs text-[#111111] tabular-nums rounded-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Street Address</label>
+                    <label className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
+                      Street Address
+                    </label>
                     <input
                       type="text"
                       required
                       value={newAddress.streetAddress}
                       onChange={(e) => setNewAddress({ ...newAddress, streetAddress: e.target.value })}
                       placeholder="Plot / House number, street"
-                      className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2 text-xs text-[#111111] rounded-xs"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">Nigerian State / FCT</label>
+                      <label className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
+                        Nigerian State / FCT
+                      </label>
                       <select
                         value={newAddress.state}
                         onChange={(e) => {
@@ -1649,24 +1686,24 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                           const lgas = getLgasForState(s);
                           setNewAddress({ ...newAddress, state: s, city: lgas[0] || '' });
                         }}
-                        className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
+                        className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2 text-xs text-[#111111] rounded-xs"
                       >
                         {NIGERIAN_STATES.map((s) => (
-                          <option key={s.state} value={s.state} className="bg-[#181818] text-[#F8F7F4]">
+                          <option key={s.state} value={s.state} className="bg-[#FAF7F2] text-[#111111]">
                             {s.state}
                           </option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">LGA / City</label>
+                      <label className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">LGA / City</label>
                       <select
                         value={newAddress.city}
                         onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                        className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] rounded-xs"
+                        className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2 text-xs text-[#111111] rounded-xs"
                       >
                         {getLgasForState(newAddress.state || 'Lagos').map((city) => (
-                          <option key={city} value={city} className="bg-[#181818] text-[#F8F7F4]">
+                          <option key={city} value={city} className="bg-[#FAF7F2] text-[#111111]">
                             {city}
                           </option>
                         ))}
@@ -1676,7 +1713,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs uppercase tracking-wider font-meta font-bold rounded-xs cursor-pointer hover:opacity-90 disabled:opacity-50"
+                    className="gold-gradient-bg px-6 py-2.5 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs cursor-pointer disabled:opacity-50"
                   >
                     Save Address
                   </button>
@@ -1684,23 +1721,24 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
               )}
 
               {addresses.length === 0 ? (
-                <div className="border border-white/5 bg-[#121212] p-8 text-center text-xs text-[#8E8B82] rounded-xs">
+                <div className="border border-[#111111]/10 bg-[#FAF7F2] p-8 text-center text-xs text-[#5C574E] rounded-xs">
                   No delivery addresses saved yet. Add one above for faster checkout.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {addresses.map((addr) => (
-                    <div key={addr.id} className="border border-white/5 bg-[#121212] p-4 space-y-1.5 text-xs rounded-xs">
+                    <div key={addr.id} className="border border-[#111111]/12 bg-[#FAF7F2] p-5 space-y-1.5 text-xs rounded-xs">
                       <div className="flex justify-between items-start">
-                        <strong className="text-sm font-editorial text-[#F8F7F4]">{addr.fullName}</strong>
+                        <strong className="text-base font-editorial font-medium text-[#111111]">{addr.fullName}</strong>
                         <button
+                          type="button"
                           onClick={() => handleDeleteAddress(addr.id)}
-                          className="text-red-400 text-[10px] hover:underline cursor-pointer"
+                          className="text-[#8E3A3A] text-[11px] hover:underline cursor-pointer"
                         >
                           Delete
                         </button>
                       </div>
-                      <p className="text-[#8E8B82] leading-relaxed">
+                      <p className="text-[#5C574E] leading-relaxed">
                         {addr.streetAddress}
                         {addr.apartment ? `, ${addr.apartment}` : ''}
                         <br />
@@ -1708,7 +1746,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                         <br />
                         {addr.country}
                       </p>
-                      <p className="text-[#D4AF37] font-mono text-[11px]">{addr.phone}</p>
+                      <p className="text-[#7A6230] tabular-nums text-[11px] font-medium">{addr.phone}</p>
                     </div>
                   ))}
                 </div>
@@ -1718,70 +1756,73 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
           {/* Tab 4: Security & Password */}
           {activeTab === 'security' && (
-            <div className="border border-white/5 bg-[#121212] p-5 rounded-xs space-y-4 max-w-xl">
-              <h3 className="font-editorial text-base text-[#F8F7F4] border-b border-white/5 pb-2">
+            <div className="border border-[#111111]/12 bg-[#FAF7F2] p-6 rounded-xs space-y-4 max-w-xl">
+              <h3 className="font-editorial text-lg text-[#111111] border-b border-[#111111]/10 pb-2.5">
                 Security Credentials & Password
               </h3>
 
               {passwordChangeSuccess && (
-                <div className="p-3 bg-[#0F2E22] border border-[#34A853]/30 text-[#48BB78] text-xs rounded-xs">
+                <div className="p-3 bg-[#F7F3EC] border border-[#B89B5E] text-[#111111] text-xs rounded-xs">
                   {passwordChangeSuccess}
                 </div>
               )}
 
               {passwordChangeError && (
-                <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                <div className="p-3 bg-[#8E3A3A]/8 border border-[#8E3A3A]/30 text-[#8E3A3A] text-xs rounded-xs">
                   {passwordChangeError}
                 </div>
               )}
 
-              <form onSubmit={handleChangePassword} className="space-y-3.5 text-xs font-meta">
+              <form onSubmit={handleChangePassword} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="sec-current" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Current Password *
                   </label>
                   <input
+                    id="sec-current"
                     type="password"
                     required
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="sec-new" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     New Password (min. 8 characters) *
                   </label>
                   <input
+                    id="sec-new"
                     type="password"
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label htmlFor="sec-confirm" className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Confirm New Password *
                   </label>
                   <input
+                    id="sec-confirm"
                     type="password"
                     required
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-[#181818] border border-white/10 px-3 py-2 text-xs text-[#F8F7F4] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="gold-gradient-bg text-[#0B0B0B] px-5 py-2.5 text-xs uppercase tracking-wider font-bold rounded-xs hover:opacity-90 cursor-pointer disabled:opacity-50"
+                  className="gold-gradient-bg px-6 py-3 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? 'Updating...' : 'Update Password'}
                 </button>
@@ -1791,34 +1832,35 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
           {/* Return & Cancellation Modal */}
           {returnModalOrder && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
-              <div className="bg-[#121212] border border-[#D4AF37]/30 p-6 rounded-xs max-w-lg w-full space-y-4 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <h4 className="font-editorial text-base text-[#F8F7F4]">
+            <div className="vantera-overlay-fade fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111111]/60 backdrop-blur-xs">
+              <div className="bg-[#FAF7F2] border border-[#111111]/15 p-6 rounded-xs max-w-lg w-full space-y-4">
+                <div className="flex items-center justify-between border-b border-[#111111]/10 pb-3">
+                  <h4 className="font-editorial text-lg font-medium text-[#111111]">
                     Request Return / Cancellation
                   </h4>
                   <button
                     type="button"
                     onClick={() => setReturnModalOrder(null)}
-                    className="text-[#888880] hover:text-[#EDEDED] text-lg font-bold"
+                    aria-label="Close modal"
+                    className="text-[#5C574E] hover:text-[#111111] p-1 cursor-pointer"
                   >
-                    ✕
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
 
-                <p className="text-xs text-[#8E8B82] leading-relaxed">
-                  Order Reference: <strong className="font-mono text-[#D4AF37]">{returnModalOrder.orderReference}</strong>
+                <p className="text-xs text-[#5C574E]">
+                  Order Reference: <strong className="tabular-nums text-[#111111]">{returnModalOrder.orderReference}</strong>
                 </p>
 
                 {returnErrorMessage && (
-                  <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-xs">
+                  <div className="p-3 bg-[#8E3A3A]/8 border border-[#8E3A3A]/30 text-[#8E3A3A] text-xs rounded-xs">
                     {returnErrorMessage}
                   </div>
                 )}
 
-                <form onSubmit={handleCreateReturnRequest} className="space-y-3.5 text-xs font-meta">
+                <form onSubmit={handleCreateReturnRequest} className="space-y-3.5 text-xs">
                   <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                    <label className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1.5">
                       Request Type
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -1827,8 +1869,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                         onClick={() => setReturnType('cancellation')}
                         className={`p-2.5 text-xs border rounded-xs transition-colors cursor-pointer ${
                           returnType === 'cancellation'
-                            ? 'border-[#D4AF37] bg-[#181818] text-[#D4AF37] font-semibold'
-                            : 'border-white/10 bg-[#0B0B0B] text-[#888880]'
+                            ? 'border-[#B89B5E] bg-[#F7F3EC] text-[#111111] font-semibold'
+                            : 'border-[#111111]/12 bg-[#FAF7F2] text-[#5C574E]'
                         }`}
                       >
                         Order Cancellation
@@ -1838,8 +1880,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                         onClick={() => setReturnType('return')}
                         className={`p-2.5 text-xs border rounded-xs transition-colors cursor-pointer ${
                           returnType === 'return'
-                            ? 'border-[#D4AF37] bg-[#181818] text-[#D4AF37] font-semibold'
-                            : 'border-white/10 bg-[#0B0B0B] text-[#888880]'
+                            ? 'border-[#B89B5E] bg-[#F7F3EC] text-[#111111] font-semibold'
+                            : 'border-[#111111]/12 bg-[#FAF7F2] text-[#5C574E]'
                         }`}
                       >
                         Return / Exchange
@@ -1848,7 +1890,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                   </div>
 
                   <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-[#A9A69F] mb-1">
+                    <label className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                       Reason & Details *
                     </label>
                     <textarea
@@ -1857,7 +1899,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                       value={returnReason}
                       onChange={(e) => setReturnReason(e.target.value)}
                       placeholder="Please detail why you wish to cancel or return this order..."
-                      className="w-full bg-[#181818] border border-white/10 p-3 text-xs text-[#EDEDED] placeholder-[#555] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 p-3 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
 
@@ -1865,16 +1907,16 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     <button
                       type="button"
                       onClick={() => setReturnModalOrder(null)}
-                      className="px-4 py-2 border border-white/10 text-[#888880] hover:text-[#EDEDED] text-xs rounded-xs"
+                      className="px-4 py-2 border border-[#111111]/15 text-[#5C574E] hover:text-[#111111] text-xs rounded-xs cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={returnSubmitting || !returnReason.trim()}
-                      className="gold-gradient-bg text-[#0B0B0B] px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xs hover:brightness-110 disabled:opacity-40"
+                      className="gold-gradient-bg px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] rounded-xs disabled:opacity-40 cursor-pointer"
                     >
-                      {returnSubmitting ? 'Submitting...' : 'Submit Request to CEO'}
+                      {returnSubmitting ? 'Submitting...' : 'Submit Request'}
                     </button>
                   </div>
                 </form>
@@ -1884,21 +1926,26 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
 
           {/* Payment Proof Modal */}
           {proofOrderRef && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
-              <div className="bg-[#121212] max-w-md w-full p-5 border border-white/10 shadow-2xl space-y-3.5 rounded-xs">
-                <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <h3 className="font-editorial text-base font-bold text-[#F8F7F4]">
+            <div className="vantera-overlay-fade fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/60 backdrop-blur-xs p-4">
+              <div className="bg-[#FAF7F2] max-w-md w-full p-6 border border-[#111111]/15 space-y-4 rounded-xs">
+                <div className="flex justify-between items-center border-b border-[#111111]/10 pb-2.5">
+                  <h3 className="font-editorial text-lg font-medium text-[#111111]">
                     Submit Bank Transfer Details
                   </h3>
-                  <button onClick={() => setProofOrderRef(null)} className="text-[#8E8B82] hover:text-white cursor-pointer">
-                    ✕
+                  <button
+                    type="button"
+                    onClick={() => setProofOrderRef(null)}
+                    aria-label="Close modal"
+                    className="text-[#5C574E] hover:text-[#111111] p-1 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
-                <p className="text-xs text-[#8E8B82]">
-                  Order: <strong className="font-mono text-[#D4AF37]">{proofOrderRef}</strong>
+                <p className="text-xs text-[#5C574E]">
+                  Order: <strong className="tabular-nums text-[#111111]">{proofOrderRef}</strong>
                 </p>
                 <div>
-                  <label className="block text-[10px] font-meta uppercase tracking-wider text-[#A9A69F] mb-1">
+                  <label className="block text-[10px] uppercase tracking-[0.16em] text-[#5C574E] mb-1">
                     Transaction ID / Sender Name / Narration
                   </label>
                   <textarea
@@ -1906,20 +1953,22 @@ export const AccountPage: React.FC<AccountPageProps> = ({ onNavigate, initialMod
                     value={paymentProofNotes}
                     onChange={(e) => setPaymentProofNotes(e.target.value)}
                     placeholder="e.g. Sent from Zenith/GTBank account 'Comfort', Ref #894210"
-                    className="w-full bg-[#181818] border border-white/10 p-2.5 text-xs text-[#F8F7F4] placeholder-[#5C5A55] focus:border-[#D4AF37] focus:outline-hidden rounded-xs"
+                    className="w-full bg-[#F7F3EC] border border-[#111111]/15 p-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button
+                    type="button"
                     onClick={() => setProofOrderRef(null)}
-                    className="px-3.5 py-1.5 text-xs border border-white/10 text-[#EDEDED] rounded-xs cursor-pointer"
+                    className="px-4 py-2 text-xs border border-[#111111]/15 text-[#111111] rounded-xs cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
+                    type="button"
                     onClick={handleSubmitPaymentProof}
                     disabled={isSubmitting || !paymentProofNotes.trim()}
-                    className="gold-gradient-bg text-[#0B0B0B] px-4 py-1.5 text-xs uppercase tracking-wider font-meta font-bold rounded-xs cursor-pointer disabled:opacity-50"
+                    className="gold-gradient-bg px-4 py-2 text-[11px] uppercase tracking-[0.16em] font-semibold rounded-xs cursor-pointer disabled:opacity-50"
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit to CEO Adnuel'}
                   </button>

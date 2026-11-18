@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ArrowRight, Check, Copy, MessageCircle, X } from 'lucide-react';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
@@ -214,40 +215,40 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
     };
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-14 sm:py-20 space-y-8 font-meta">
-      {/* 1. Patient Confirming Loader State — never falsely shows success or premature error */}
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-14 sm:py-24 space-y-8 font-meta text-[#111111]">
+      {/* 1. Patient Confirming Loader State */}
       {(loading || isConfirming) && !isPaid && !isFailed && !isAwaitingTransfer && (
-        <div className="border border-white/10 bg-[#141416] p-8 sm:p-12 text-center space-y-6 rounded-xs">
-          <div className="w-12 h-12 rounded-full border border-[#C8A96A]/40 flex items-center justify-center mx-auto text-[#C8A96A] font-editorial text-xl">
+        <div className="border border-[#111111]/12 bg-[#FAF7F2] p-8 sm:p-14 text-center space-y-6 rounded-xs">
+          <div className="w-12 h-12 rounded-full border border-[#B89B5E]/50 flex items-center justify-center mx-auto text-[#7A6230] font-editorial text-xl">
             V
           </div>
 
-          <div className="w-40 h-0.5 bg-white/10 mx-auto overflow-hidden rounded-full">
-            <div className="h-full w-1/2 bg-[#C8A96A] vantera-loader-bar" />
+          <div className="w-40 h-0.5 bg-[#111111]/10 mx-auto overflow-hidden rounded-full">
+            <div className="h-full w-1/2 bg-[#B89B5E] vantera-loader-bar" />
           </div>
 
-          <div className="space-y-2.5">
-            <span className="text-[10px] uppercase tracking-[0.22em] text-[#C8A96A] block">
-              Verifying With Payment Gateway
+          <div className="space-y-3">
+            <span className="text-[10px] uppercase tracking-[0.25em] text-[#7A6230] font-semibold block">
+              Verifying Payment
             </span>
-            <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#F5F1E8]">
-              Confirming your payment...
+            <h1 className="font-editorial text-3xl sm:text-4xl font-medium text-[#111111]">
+              Confirming your <em className="italic font-normal">payment...</em>
             </h1>
-            <p className="text-xs sm:text-sm text-[#A8A297] max-w-md mx-auto leading-relaxed">
-              We are awaiting final confirmation from our payment processor for order{' '}
-              <strong className="font-mono text-[#C8A96A]">{orderReference}</strong>. This updates automatically the moment your bank settles.
+            <p className="text-xs sm:text-sm text-[#5C574E] max-w-md mx-auto leading-relaxed">
+              We are awaiting final confirmation from our payment gateway for order{' '}
+              <strong className="text-[#111111] font-semibold tabular-nums">{orderReference}</strong>. This screen updates automatically the moment your settlement completes.
             </p>
           </div>
 
           {pollCount >= 4 && (
             <div className="pt-2 space-y-3 max-w-xs mx-auto">
-              <p className="text-[11px] text-[#A8A297]">
-                Bank settlement can sometimes take a moment. Your cart items remain safe until confirmation completes.
+              <p className="text-[11px] text-[#5C574E]">
+                Bank settlement can sometimes take a moment. Your bag items stay saved until confirmation completes.
               </p>
               <button
                 type="button"
                 onClick={handleManualRecheck}
-                className="w-full bg-[#0B0B0C] border border-[#C8A96A]/40 text-[#C8A96A] py-2.5 text-[10px] uppercase tracking-[0.18em] rounded-xs hover:bg-[#C8A96A] hover:text-[#0B0B0C] transition-colors cursor-pointer"
+                className="w-full gold-gradient-bg py-3 text-[10px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer"
               >
                 Check Confirmation Status Now
               </button>
@@ -255,7 +256,7 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
                 type="button"
                 disabled={isCancelling}
                 onClick={handleTryAgain}
-                className="w-full bg-[#0B0B0C] border border-white/10 text-[#A8A297] py-2 text-[10px] uppercase tracking-[0.18em] rounded-xs hover:text-[#F5F1E8] transition-colors cursor-pointer"
+                className="w-full border border-[#111111]/15 text-[#5C574E] hover:text-[#111111] hover:border-[#111111]/35 py-2.5 text-[10px] uppercase tracking-[0.18em] rounded-xs transition-colors cursor-pointer"
               >
                 {isCancelling ? 'Releasing Reservation...' : 'Cancel & Return to Bag'}
               </button>
@@ -266,9 +267,9 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
 
       {/* No reference fallback */}
       {!loading && !orderReference && (
-        <div className="border border-white/10 bg-[#141416] p-10 text-center space-y-5 rounded-xs">
-          <h1 className="font-editorial text-2xl font-medium text-[#F5F1E8]">No Order Reference Found</h1>
-          <p className="text-xs sm:text-sm text-[#A8A297]">
+        <div className="border border-[#111111]/12 bg-[#FAF7F2] p-10 text-center space-y-5 rounded-xs">
+          <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#111111]">No Order Reference Found</h1>
+          <p className="text-xs sm:text-sm text-[#5C574E] max-w-md mx-auto leading-relaxed">
             Visit your client account or enter your order reference on the tracking page to view your receipt.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
@@ -282,7 +283,7 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
             <button
               type="button"
               onClick={() => onNavigate('/track')}
-              className="border border-white/15 text-[#F5F1E8] px-6 py-3 text-[11px] uppercase tracking-[0.2em] rounded-xs cursor-pointer hover:border-[#C8A96A]"
+              className="border border-[#111111]/20 text-[#111111] px-6 py-3 text-[11px] uppercase tracking-[0.2em] rounded-xs cursor-pointer hover:border-[#B89B5E]"
             >
               Track Order
             </button>
@@ -293,70 +294,73 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
       {/* 2. Verified Payment Successful State */}
       {isPaid && orderStatus && (
         <div className="space-y-6">
-          <div className="border border-white/10 bg-[#141416] p-8 sm:p-10 text-center space-y-5 rounded-xs">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#0F2E22] border border-[#2E9B6B]/40 text-[#2E9B6B] text-xl">
-              ✓
+          <div className="border border-[#111111]/12 bg-[#FAF7F2] p-8 sm:p-12 text-center space-y-5 rounded-xs">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full border border-[#B89B5E]/50 bg-[#F7F3EC] text-[#7A6230] mx-auto">
+              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path className="vantera-checkmark-path" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
 
-            <div className="space-y-2">
-              <span className="text-[10px] uppercase tracking-[0.25em] text-[#C8A96A] block">
+            <div className="space-y-2.5">
+              <span className="text-[10px] uppercase tracking-[0.25em] text-[#7A6230] font-semibold block">
                 Payment Successful
               </span>
-              <h1 className="font-editorial text-3xl sm:text-4xl font-medium text-[#F5F1E8]">
-                Thank You. Order Confirmed.
+              <h1 className="font-editorial text-3xl sm:text-4xl font-medium text-[#111111]">
+                Thank you. Order <em className="italic font-normal">confirmed.</em>
               </h1>
-              <p className="text-xs sm:text-sm text-[#A8A297] max-w-md mx-auto leading-relaxed">
-                Your payment has been verified server-side. Your receipt has been emailed and your order is now processing for dispatch.
+              <p className="text-xs sm:text-sm text-[#5C574E] max-w-md mx-auto leading-relaxed">
+                Your payment has been verified server-side. Your receipt has been emailed and your order is now preparing for dispatch.
               </p>
             </div>
 
             {/* Order Reference Box */}
-            <div className="bg-[#0B0B0C] border border-white/10 p-4 rounded-xs max-w-md mx-auto flex items-center justify-between gap-3">
+            <div className="bg-[#F7F3EC] border border-[#111111]/12 p-4 rounded-xs max-w-md mx-auto flex items-center justify-between gap-3">
               <div className="text-left min-w-0">
-                <span className="text-[9px] uppercase tracking-[0.2em] text-[#A8A297] block">Order Number</span>
-                <span className="font-mono text-sm font-semibold text-[#C8A96A] truncate block">
+                <span className="text-[9px] uppercase tracking-[0.2em] text-[#5C574E] block">Order Number</span>
+                <span className="text-sm font-semibold text-[#111111] tabular-nums truncate block">
                   {orderStatus.orderReference}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleCopyReference}
-                className="bg-[#141416] border border-white/10 text-[#F5F1E8] px-3.5 py-1.5 text-[10px] uppercase tracking-[0.18em] hover:border-[#C8A96A] hover:text-[#C8A96A] transition-colors rounded-xs cursor-pointer shrink-0"
+                className="border border-[#111111]/15 bg-[#FAF7F2] text-[#111111] px-3.5 py-2 text-[10px] uppercase tracking-[0.18em] hover:border-[#B89B5E] hover:text-[#7A6230] transition-colors rounded-xs cursor-pointer shrink-0 inline-flex items-center gap-1.5"
               >
-                {copied ? '✓ Copied' : 'Copy'}
+                {copied ? <Check className="w-3 h-3" strokeWidth={2} /> : <Copy className="w-3 h-3" strokeWidth={1.5} />}
+                <span>{copied ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
           </div>
 
           {/* Purchased Items & Financial Summary */}
-          <div className="border border-white/10 bg-[#141416] p-6 sm:p-8 rounded-xs space-y-4">
-            <h2 className="font-editorial text-lg font-medium text-[#F5F1E8] border-b border-white/8 pb-3">
+          <div className="border border-[#111111]/12 bg-[#FAF7F2] p-6 sm:p-8 rounded-xs space-y-5">
+            <h2 className="font-editorial text-xl font-medium text-[#111111] border-b border-[#111111]/10 pb-3">
               Order Receipt & Items ({orderStatus.currency || currency})
             </h2>
 
             {orderStatus.items && orderStatus.items.length > 0 && (
-              <div className="space-y-3">
+              <div className="divide-y divide-[#111111]/10">
                 {orderStatus.items.map((item: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 last:border-0">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div key={idx} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-3.5 min-w-0">
                       {item.image ? (
                         <img
                           src={item.image}
                           alt={item.title}
-                          className="w-12 h-12 object-contain bg-[#0a0a0a] p-1 border border-white/5 rounded-xs shrink-0"
+                          className="w-12 h-12 object-cover bg-[#EFEAE0] border border-[#111111]/10 rounded-xs shrink-0"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-[#0a0a0a] flex items-center justify-center font-editorial text-[#D4AF37] text-sm border border-white/5 shrink-0">
+                        <div className="w-12 h-12 bg-[#EFEAE0] flex items-center justify-center font-editorial text-[#7A6230] text-sm border border-[#111111]/10 rounded-xs shrink-0">
                           V
                         </div>
                       )}
                       <div className="min-w-0">
-                        <span className="text-xs font-editorial text-[#EDEDED] block truncate">{item.title}</span>
-                        <span className="text-[10px] font-meta text-[#73736E]">Qty: {item.quantity}</span>
+                        <span className="text-sm font-editorial text-[#111111] block truncate">{item.title}</span>
+                        <span className="text-[11px] text-[#5C574E] tabular-nums">Qty: {item.quantity}</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-xs font-editorial text-[#D4AF37]">
+                      <span className="text-sm font-medium text-[#111111] tabular-nums">
                         {displayMoney(item.totalCents || item.unitPriceCents * item.quantity, orderStatus)}
                       </span>
                     </div>
@@ -365,26 +369,28 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
               </div>
             )}
 
-            <div className="pt-3 border-t border-white/10 space-y-1.5 text-xs font-meta">
-              <div className="flex justify-between text-[#8E8B82]">
+            <div className="pt-4 border-t border-[#111111]/10 space-y-2 text-xs">
+              <div className="flex justify-between text-[#5C574E]">
                 <span>Subtotal</span>
-                <span>{displayMoney(orderStatus.subtotalCents || orderStatus.totalCents, orderStatus)}</span>
+                <span className="tabular-nums text-[#111111]">
+                  {displayMoney(orderStatus.subtotalCents || orderStatus.totalCents, orderStatus)}
+                </span>
               </div>
               {orderStatus.discountCents > 0 && (
-                <div className="flex justify-between text-[#10b981]">
+                <div className="flex justify-between text-[#7A6230]">
                   <span>Discount {orderStatus.couponCode ? `(${orderStatus.couponCode})` : ''}</span>
-                  <span>-{displayMoney(orderStatus.discountCents, orderStatus)}</span>
+                  <span className="tabular-nums">-{displayMoney(orderStatus.discountCents, orderStatus)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-[#8E8B82]">
+              <div className="flex justify-between text-[#5C574E]">
                 <span>Delivery Fee ({orderStatus.estimatedTransitTime || '1–4 business days'})</span>
-                <span>
+                <span className="tabular-nums text-[#111111]">
                   {orderStatus.shippingFeeCents > 0 ? displayMoney(orderStatus.shippingFeeCents, orderStatus) : 'Complimentary'}
                 </span>
               </div>
-              <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[#F8F7F4] font-semibold">Amount Paid ({orderStatus.currency || currency})</span>
-                <span className="text-base font-bold text-[#D4AF37] font-editorial">
+              <div className="pt-3 border-t border-[#111111]/10 flex items-center justify-between">
+                <span className="text-[#111111] font-medium">Amount Paid ({orderStatus.currency || currency})</span>
+                <span className="text-xl font-editorial font-medium text-[#111111] tabular-nums">
                   {displayMoney(orderStatus.totalCents, orderStatus)}
                 </span>
               </div>
@@ -392,13 +398,13 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
           </div>
 
           {/* Delivery Details Card */}
-          <div className="border border-white/10 bg-[#121212] p-6 rounded-xs space-y-3">
-            <h3 className="font-editorial text-sm font-semibold text-[#F8F7F4]">
+          <div className="border border-[#111111]/12 bg-[#FAF7F2] p-6 sm:p-8 rounded-xs space-y-3">
+            <h3 className="font-editorial text-lg font-medium text-[#111111]">
               Delivery Details
             </h3>
-            <div className="text-xs text-[#A9A69F] space-y-1">
+            <div className="text-xs text-[#5C574E] space-y-1 leading-relaxed">
               {orderStatus.shippingAddress?.fullName && (
-                <p className="text-[#F8F7F4] font-semibold">{orderStatus.shippingAddress.fullName}</p>
+                <p className="text-[#111111] font-medium">{orderStatus.shippingAddress.fullName}</p>
               )}
               {orderStatus.shippingAddress?.streetAddress && (
                 <p>{orderStatus.shippingAddress.streetAddress}</p>
@@ -413,11 +419,11 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
                   .join(', ')}
               </p>
               {orderStatus.shippingAddress?.phone && (
-                <p className="font-mono text-[#8E8B82]">{orderStatus.shippingAddress.phone}</p>
+                <p className="tabular-nums text-[#5C574E]">{orderStatus.shippingAddress.phone}</p>
               )}
-              <p className="pt-2 text-[#D4AF37] font-meta text-[11px]">
-                Estimated Delivery: {orderStatus.estimatedTransitTime || '1–4 business days'} · Fulfilment Status:{' '}
-                <span className="uppercase">{orderStatus.fulfilmentStatus}</span>
+              <p className="pt-2 text-[#7A6230] text-[11px] uppercase tracking-[0.14em]">
+                Estimated Delivery: {orderStatus.estimatedTransitTime || '1–4 business days'} · Fulfilment:{' '}
+                <span>{orderStatus.fulfilmentStatus}</span>
               </p>
             </div>
           </div>
@@ -427,14 +433,15 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
             <button
               type="button"
               onClick={() => onNavigate(`/track/${encodeURIComponent(orderStatus.orderReference)}`)}
-              className="w-full sm:w-1/2 gold-gradient-bg text-[#0B0B0B] py-3 text-xs font-meta font-bold uppercase tracking-wider rounded-xs hover:brightness-110 cursor-pointer"
+              className="w-full sm:w-1/2 gold-gradient-bg py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] rounded-xs cursor-pointer inline-flex items-center justify-center gap-2"
             >
-              Track Order Dispatch →
+              <span>Track Order Dispatch</span>
+              <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/account')}
-              className="w-full sm:w-1/2 bg-[#181818] border border-white/10 text-[#EDEDED] py-3 text-xs font-meta uppercase tracking-wider rounded-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer"
+              className="w-full sm:w-1/2 border border-[#111111]/20 bg-[#FAF7F2] text-[#111111] py-3.5 text-[11px] uppercase tracking-[0.2em] rounded-xs hover:border-[#B89B5E] transition-colors cursor-pointer"
             >
               View Order in Account
             </button>
@@ -445,42 +452,42 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
       {/* 3. Awaiting Bank Transfer State */}
       {!loading && isAwaitingTransfer && orderStatus && (
         <div className="space-y-6">
-          <div className="border border-[#D4AF37]/30 bg-[#14120a] p-7 text-center space-y-4 rounded-xs">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-2xl font-editorial">
+          <div className="border border-[#B89B5E]/40 bg-[#FAF7F2] p-8 sm:p-10 text-center space-y-5 rounded-xs">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#F7F3EC] border border-[#B89B5E]/50 text-[#7A6230] text-2xl font-editorial">
               V
             </div>
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase tracking-[0.22em] font-meta text-[#D4AF37] block">
-                ORDER REGISTERED · AWAITING PAYMENT
+            <div className="space-y-2">
+              <span className="text-[10px] uppercase tracking-[0.24em] text-[#7A6230] font-semibold block">
+                Order Registered · Awaiting Payment
               </span>
-              <h1 className="font-editorial text-2xl font-bold text-[#F8F7F4]">
+              <h1 className="font-editorial text-3xl font-medium text-[#111111]">
                 Complete Bank Transfer
               </h1>
-              <p className="text-xs text-[#A9A69F] max-w-md mx-auto leading-relaxed">
-                Transfer <strong className="text-[#D4AF37]">{displayMoney(orderStatus.totalCents, orderStatus)}</strong> using your order reference as transfer narration. Orders remain pending until confirmed.
+              <p className="text-xs sm:text-sm text-[#5C574E] max-w-md mx-auto leading-relaxed">
+                Transfer <strong className="text-[#111111] tabular-nums">{displayMoney(orderStatus.totalCents, orderStatus)}</strong> using your order reference as transfer narration. Orders remain pending until confirmed.
               </p>
             </div>
 
-            <div className="bg-[#0B0B0B] border border-white/10 p-4 rounded-xs max-w-md mx-auto text-left space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-[#73736E]">Order Reference:</span>
-                <span className="font-mono font-bold text-[#D4AF37]">{orderStatus.orderReference}</span>
+            <div className="bg-[#F7F3EC] border border-[#111111]/12 p-5 rounded-xs max-w-md mx-auto text-left space-y-2.5 text-xs">
+              <div className="flex justify-between gap-3">
+                <span className="text-[#5C574E]">Order Reference:</span>
+                <span className="font-semibold text-[#111111] tabular-nums">{orderStatus.orderReference}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-[#73736E]">Bank Name:</span>
-                <span className="text-[#EDEDED]">{activeBank.bankName}</span>
+              <div className="flex justify-between gap-3">
+                <span className="text-[#5C574E]">Bank Name:</span>
+                <span className="text-[#111111] font-medium text-right">{activeBank.bankName}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-[#73736E]">Account Number:</span>
-                <span className="font-mono text-[#D4AF37] font-bold">{activeBank.accountNumber}</span>
+              <div className="flex justify-between gap-3">
+                <span className="text-[#5C574E]">Account Number:</span>
+                <span className="text-[#7A6230] font-semibold tabular-nums">{activeBank.accountNumber}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-[#73736E]">Account Name:</span>
-                <span className="text-[#EDEDED]">{activeBank.accountName}</span>
+              <div className="flex justify-between gap-3">
+                <span className="text-[#5C574E]">Account Name:</span>
+                <span className="text-[#111111] font-medium text-right">{activeBank.accountName}</span>
               </div>
-              <div className="flex justify-between text-xs pt-2 border-t border-white/5">
-                <span className="text-[#73736E]">Amount Due:</span>
-                <span className="font-editorial font-bold text-[#D4AF37]">
+              <div className="flex justify-between gap-3 pt-2.5 border-t border-[#111111]/10">
+                <span className="text-[#5C574E]">Amount Due:</span>
+                <span className="font-editorial text-base font-medium text-[#111111] tabular-nums">
                   {displayMoney(orderStatus.totalCents, orderStatus)}
                 </span>
               </div>
@@ -493,14 +500,15 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-[#0F2E22] border border-[#34A853]/40 text-[#48BB78] px-5 py-2.5 text-xs font-meta uppercase tracking-wider rounded-xs hover:bg-[#153e2f] transition-colors"
+                className="inline-flex items-center justify-center gap-2 gold-gradient-bg px-6 py-3 text-[11px] uppercase tracking-[0.18em] font-semibold rounded-xs"
               >
-                <span>Notify CEO Adnuel on WhatsApp ↗</span>
+                <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span>Notify CEO Adnuel on WhatsApp</span>
               </a>
               <button
                 type="button"
                 onClick={() => onNavigate(`/track/${encodeURIComponent(orderStatus.orderReference)}`)}
-                className="bg-[#181818] border border-white/15 text-[#EDEDED] px-5 py-2.5 text-xs font-meta uppercase tracking-wider rounded-xs hover:border-[#D4AF37] cursor-pointer"
+                className="border border-[#111111]/20 bg-[#F7F3EC] text-[#111111] px-6 py-3 text-[11px] uppercase tracking-[0.18em] rounded-xs hover:border-[#B89B5E] cursor-pointer"
               >
                 Track Order →
               </button>
@@ -511,18 +519,18 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
 
       {/* 4. Verified Payment Failed State */}
       {isFailed && (
-        <div className="border border-red-500/30 bg-red-950/20 p-8 text-center space-y-5 rounded-xs shadow-xl">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-950/40 border border-red-500/40 text-red-400 text-2xl font-bold">
-            ✕
+        <div className="border border-[#8E3A3A]/30 bg-[#FAF7F2] p-8 sm:p-10 text-center space-y-5 rounded-xs">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#8E3A3A]/10 border border-[#8E3A3A]/30 text-[#8E3A3A] mx-auto">
+            <X className="w-6 h-6" strokeWidth={1.5} />
           </div>
-          <div className="space-y-1.5">
-            <span className="text-[10px] uppercase tracking-[0.25em] font-meta text-red-400 block">
-              PAYMENT FAILED
+          <div className="space-y-2">
+            <span className="text-[10px] uppercase tracking-[0.25em] text-[#8E3A3A] font-semibold block">
+              Payment Failed
             </span>
-            <h1 className="font-editorial text-2xl font-bold text-[#F8F7F4]">
+            <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#111111]">
               Transaction Not Completed
             </h1>
-            <p className="text-xs text-[#A9A69F] max-w-md mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#5C574E] max-w-md mx-auto leading-relaxed">
               {failureReason ||
                 'Your payment could not be completed or was cancelled before authorization. Your bag items have been kept intact.'}
             </p>
@@ -532,7 +540,7 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
             <button
               type="button"
               onClick={handleTryAgain}
-              className="w-full gold-gradient-bg text-[#0B0B0B] py-3 text-xs font-meta font-bold uppercase tracking-wider rounded-xs hover:brightness-110 cursor-pointer shadow-lg"
+              className="w-full gold-gradient-bg py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] rounded-xs cursor-pointer"
             >
               Try Again (Cart Intact)
             </button>
@@ -540,7 +548,7 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({ on
             <button
               type="button"
               onClick={() => onNavigate('/contact')}
-              className="w-full bg-[#181818] border border-white/10 text-[#EDEDED] py-2.5 text-xs font-meta uppercase tracking-wider rounded-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer"
+              className="w-full border border-[#111111]/20 bg-[#F7F3EC] text-[#111111] py-3 text-[11px] uppercase tracking-[0.18em] rounded-xs hover:border-[#B89B5E] transition-colors cursor-pointer"
             >
               Contact Support Concierge
             </button>

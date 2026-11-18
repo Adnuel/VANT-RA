@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Check, Copy, Lock, MessageCircle, Minus, Plus, X } from 'lucide-react';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
@@ -20,14 +21,21 @@ interface CartDrawerProps {
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
-  const { items, itemCount, subtotalCents, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart, clearCart } =
-    useCart();
+  const {
+    items,
+    itemCount,
+    subtotalCents,
+    isCartOpen,
+    setIsCartOpen,
+    checkoutStep,
+    setCheckoutStep,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+  } = useCart();
   const { user, token } = useAuth();
   const { currency, setCurrency, exchangeRate } = useCurrency();
 
-  const [checkoutStep, setCheckoutStep] = useState<
-    'cart' | 'auth_required' | 'shipping' | 'confirming_payment' | 'confirmed' | 'payment_failed'
-  >('cart');
   const [paymentMethod, setPaymentMethod] = useState<'card_online' | 'bank_transfer'>('card_online');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -45,7 +53,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
   // Nigerian Logistics State
   const [selectedState, setSelectedState] = useState<string>('Lagos');
   const [selectedLga, setSelectedLga] = useState<string>('Ikeja');
-  const [phoneValidation, setPhoneValidation] = useState<{ valid: boolean; formatted: string; error?: string }>({ valid: true, formatted: '' });
+  const [phoneValidation, setPhoneValidation] = useState<{ valid: boolean; formatted: string; error?: string }>({
+    valid: true,
+    formatted: '',
+  });
 
   // Form fields
   const [formData, setFormData] = useState({
@@ -179,7 +190,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
           return;
         }
 
-        // Fallback status check in case webhook updated DB independently
         const statusRes = await safeFetchJson<any>(
           `/api/orders/status/${encodeURIComponent(confirmedOrder.orderReference)}`
         );
@@ -263,14 +273,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
   const subtotalNgn = convertUsdCentsToNgn(subtotalCents, exchangeRate);
   const discountNgn = convertUsdCentsToNgn(discountCents, exchangeRate);
 
-  const activeStateInfo = NIGERIAN_STATES.find(
-    (s) => s.state.toLowerCase() === (formData.state || selectedState).toLowerCase()
-  ) || NIGERIAN_STATES[0];
+  const activeStateInfo =
+    NIGERIAN_STATES.find((s) => s.state.toLowerCase() === (formData.state || selectedState).toLowerCase()) ||
+    NIGERIAN_STATES[0];
 
   const isComplimentaryShipping =
-    currency === 'NGN'
-      ? subtotalNgn >= FREE_SHIPPING_THRESHOLD_NGN
-      : subtotalCents >= FREE_SHIPPING_THRESHOLD_USD_CENTS;
+    currency === 'NGN' ? subtotalNgn >= FREE_SHIPPING_THRESHOLD_NGN : subtotalCents >= FREE_SHIPPING_THRESHOLD_USD_CENTS;
   const shippingFeeNgn = isComplimentaryShipping ? 0 : activeStateInfo.feeNgn;
   const shippingFeeCents = isComplimentaryShipping ? 0 : activeStateInfo.feeUsdCents;
 
@@ -292,7 +300,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
         setAppliedCoupon(res.data.coupon);
         setCouponMessage(`✓ Code ${res.data.coupon.code} applied (${res.data.coupon.discountValue}% off)`);
       } else {
-        setCouponMessage(res.data?.message || res.error || 'Invalid or expired reservation voucher');
+        setCouponMessage(res.data?.message || res.error || 'Invalid or expired voucher code');
       }
     } catch {
       setCouponMessage('Unable to validate voucher');
@@ -303,7 +311,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
 
   const handleClose = () => {
     setIsCartOpen(false);
-    if (checkoutStep === 'confirmed') {
+    if (checkoutStep === 'confirmed' || checkoutStep === 'payment_failed') {
       setCheckoutStep('cart');
     }
   };
@@ -398,7 +406,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
     }
   };
 
-  // Server-first Card Checkout initiation via Wavy (order remains 'pending' until server confirms)
+  // Server-first Card Checkout initiation via Wavy
   const handleInitiateOnlineOrder = async () => {
     setErrorMessage('');
     const validationErr = validateCheckoutFields();
@@ -498,99 +506,115 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/80 backdrop-blur-md transition-opacity">
-      <div className="flex h-full w-full max-w-md flex-col bg-[#0B0B0C] text-[#F5F1E8] border-l border-white/8">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Shopping Bag Drawer"
+      className="vantera-overlay-fade fixed inset-0 z-50 flex justify-end bg-[#111111]/55 backdrop-blur-xs"
+    >
+      <div className="vantera-slide-in-right flex h-full w-full max-w-md flex-col bg-[#F7F3EC] text-[#111111] border-l border-[#111111]/12 font-meta">
         {/* Drawer Header */}
-        <div className="flex items-center justify-between border-b border-white/8 px-5 py-4 bg-[#141416]">
-          <div className="flex items-center gap-2">
-            <span className="font-editorial text-lg text-[#F5F1E8]">
+        <div className="flex items-center justify-between border-b border-[#111111]/10 px-5 py-4 bg-[#FAF7F2]">
+          <div className="flex items-center gap-2.5">
+            <span className="font-editorial text-lg font-medium text-[#111111]">
               {checkoutStep === 'cart' && `Shopping Bag (${itemCount})`}
-              {checkoutStep === 'auth_required' && 'Account Required'}
+              {checkoutStep === 'auth_required' && 'Client Access'}
               {checkoutStep === 'shipping' && 'Delivery & Payment'}
               {checkoutStep === 'confirming_payment' && 'Confirming Payment'}
               {checkoutStep === 'payment_failed' && 'Payment Failed'}
-              {checkoutStep === 'confirmed' && (confirmedOrder?.paymentStatus === 'paid' ? 'Payment Successful' : 'Order Placed')}
+              {checkoutStep === 'confirmed' &&
+                (confirmedOrder?.paymentStatus === 'paid' ? 'Payment Successful' : 'Order Placed')}
             </span>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-[#C8A96A] font-meta">VANTÉRA</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-[#7A6230] font-semibold">VANTÉRA</span>
           </div>
           <button
+            type="button"
             onClick={handleClose}
             aria-label="Close bag drawer"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#888880] hover:text-[#EDEDED] hover:bg-white/5 transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#5C574E] hover:text-[#111111] hover:bg-[#111111]/5 transition-colors cursor-pointer"
           >
-            ✕
+            <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Real-Time Currency Selector & Live Rate Bar */}
-          {checkoutStep !== 'confirmed' && checkoutStep !== 'confirming_payment' && checkoutStep !== 'payment_failed' && (
-            <div className="bg-[#121212] p-4 border border-white/5 rounded-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] uppercase font-meta tracking-[0.25em] text-[#D4AF37] font-semibold">
-                  Settlement Currency
-                </span>
-                <span className="text-[10px] font-meta text-[#888880] flex items-center gap-1.5 bg-[#181818] px-2 py-0.5 rounded-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse"></span>
-                  <span>1 USD = ₦{exchangeRate.toLocaleString()}</span>
-                </span>
-              </div>
+          {checkoutStep !== 'confirmed' &&
+            checkoutStep !== 'confirming_payment' &&
+            checkoutStep !== 'payment_failed' && (
+              <div className="bg-[#FAF7F2] p-4 border border-[#111111]/10 rounded-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] uppercase tracking-[0.24em] text-[#7A6230] font-semibold">
+                    Settlement Currency
+                  </span>
+                  <span className="text-[10px] text-[#5C574E] flex items-center gap-1.5 bg-[#F7F3EC] border border-[#111111]/10 px-2 py-0.5 rounded-xs tabular-nums">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#B89B5E]" />
+                    <span>1 USD = ₦{exchangeRate.toLocaleString()}</span>
+                  </span>
+                </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrency('USD')}
-                  className={`py-2 px-3 text-[11px] font-meta tracking-wider uppercase font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer rounded-xs ${
-                    currency === 'USD'
-                      ? 'gold-gradient-bg text-[#0B0B0B] font-bold shadow-md'
-                      : 'bg-[#181818] text-[#888880] border border-white/5 hover:border-white/10'
-                  }`}
-                >
-                  <span>US Dollar ($ USD)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrency('NGN')}
-                  className={`py-2 px-3 text-[11px] font-meta tracking-wider uppercase font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer rounded-xs ${
-                    currency === 'NGN'
-                      ? 'gold-gradient-bg text-[#0B0B0B] font-bold shadow-md'
-                      : 'bg-[#181818] text-[#888880] border border-white/5 hover:border-white/10'
-                  }`}
-                >
-                  <span>Naira (₦ NGN)</span>
-                </button>
-              </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrency('USD')}
+                    className={`py-2 px-3 text-[11px] tracking-[0.14em] uppercase font-medium flex items-center justify-center transition-colors cursor-pointer rounded-xs border ${
+                      currency === 'USD'
+                        ? 'bg-[#B89B5E] text-[#111111] border-[#B89B5E] font-semibold'
+                        : 'bg-[#F7F3EC] text-[#5C574E] border-[#111111]/12 hover:text-[#111111]'
+                    }`}
+                  >
+                    US Dollar ($ USD)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrency('NGN')}
+                    className={`py-2 px-3 text-[11px] tracking-[0.14em] uppercase font-medium flex items-center justify-center transition-colors cursor-pointer rounded-xs border ${
+                      currency === 'NGN'
+                        ? 'bg-[#B89B5E] text-[#111111] border-[#B89B5E] font-semibold'
+                        : 'bg-[#F7F3EC] text-[#5C574E] border-[#111111]/12 hover:text-[#111111]'
+                    }`}
+                  >
+                    Naira (₦ NGN)
+                  </button>
+                </div>
 
-              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] text-[#888880] font-meta">
-                <span>
-                  Active Subtotal:{' '}
-                  <strong className="text-[#F5F5F0]">
-                    {currency === 'NGN' ? formatNGN(totalNgn) : formatUSD(totalCents)}
-                  </strong>
-                </span>
-                <span className="text-[#D4AF37]">
-                  ~{currency === 'NGN' ? formatUSD(totalCents) : formatNGN(totalNgn)}
-                </span>
+                <div className="pt-2 border-t border-[#111111]/10 flex items-center justify-between text-[11px] text-[#5C574E]">
+                  <span>
+                    Active Total:{' '}
+                    <strong className="text-[#111111] font-semibold tabular-nums">
+                      {currency === 'NGN' ? formatNGN(totalNgn) : formatUSD(totalCents)}
+                    </strong>
+                  </span>
+                  <span className="text-[#7A6230] tabular-nums">
+                    ~{currency === 'NGN' ? formatUSD(totalCents) : formatNGN(totalNgn)}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {checkoutStep === 'cart' && (
             <>
               {items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center text-[#77746d]">
-                  <div className="mb-4 text-4xl font-editorial text-[#D4AF37]">V</div>
-                  <p className="text-sm font-medium text-[#EDEDED] font-editorial">Your Atelier Bag is Empty</p>
-                  <p className="mt-2 text-xs text-[#888880] font-meta">Explore curated tech finds, charging monoliths, and acoustic relics.</p>
+                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full border border-[#B89B5E]/40 flex items-center justify-center font-editorial text-2xl text-[#7A6230]">
+                    V
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-lg font-medium text-[#111111] font-editorial">Your Shopping Bag is Empty</p>
+                    <p className="text-xs text-[#5C574E] max-w-xs mx-auto leading-relaxed">
+                      Explore inspected everyday tech, workspace pieces, and smart home essentials.
+                    </p>
+                  </div>
                   <button
+                    type="button"
                     onClick={() => {
                       setIsCartOpen(false);
                       onNavigate('/shop');
                     }}
-                    className="mt-6 gold-gradient-bg text-[#0B0B0B] px-6 py-2.5 text-[10px] font-meta font-bold uppercase tracking-[0.2em] shadow-md hover:brightness-110"
+                    className="gold-gradient-bg px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] rounded-xs cursor-pointer"
                   >
-                    Explore Curations
+                    Explore Collection
                   </button>
                 </div>
               ) : (
@@ -604,63 +628,63 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     return (
                       <div
                         key={itemKey}
-                        className="flex items-start gap-4 bg-[#121212] p-4 border border-white/5 rounded-xs"
+                        className="flex items-start gap-4 bg-[#FAF7F2] p-4 border border-[#111111]/10 rounded-xs"
                       >
-                        <div className="h-16 w-16 shrink-0 overflow-hidden bg-[#0a0a0a] p-1.5 border border-white/5 flex items-center justify-center">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden bg-[#EFEAE0] border border-[#111111]/10 flex items-center justify-center rounded-xs">
                           {product.image ? (
                             <img
                               src={product.image}
                               alt={product.title}
-                              className="h-full w-full object-contain"
+                              className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="font-editorial text-sm text-[#D4AF37]">
-                              V
-                            </div>
+                            <div className="font-editorial text-sm text-[#7A6230]">V</div>
                           )}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <h4 className="text-xs font-editorial text-[#EDEDED] line-clamp-1">{product.title}</h4>
-                            <div className="text-right shrink-0">
-                              <span className="text-xs font-editorial text-[#D4AF37] block">
-                                {currency === 'NGN' ? formatNGN(itemTotalNgn) : formatUSD(itemTotalCents)}
-                              </span>
-                            </div>
+                            <h4 className="text-sm font-editorial font-medium text-[#111111] line-clamp-1">
+                              {product.title}
+                            </h4>
+                            <span className="text-xs font-medium text-[#111111] shrink-0 tabular-nums">
+                              {currency === 'NGN' ? formatNGN(itemTotalNgn) : formatUSD(itemTotalCents)}
+                            </span>
                           </div>
                           {variantLabel && (
-                            <span className="text-[10px] text-[#C8A96A] font-meta block mt-0.5 truncate">
-                              {variantLabel}
-                            </span>
+                            <span className="text-[10px] text-[#7A6230] block mt-0.5 truncate">{variantLabel}</span>
                           )}
-                          <span className="text-[9px] uppercase tracking-[0.2em] text-[#73736E] font-meta block mt-1">{product.category}</span>
+                          <span className="text-[9px] uppercase tracking-[0.18em] text-[#5C574E] block mt-1">
+                            {product.category.replace(/-/g, ' ')}
+                          </span>
 
                           <div className="mt-3 flex items-center justify-between">
-                            <div className="flex items-center border border-white/10 rounded-xs bg-[#0B0B0B]">
+                            <div className="inline-flex items-center border border-[#111111]/15 rounded-xs bg-[#F7F3EC]">
                               <button
                                 type="button"
+                                aria-label="Decrease quantity"
                                 onClick={() => updateQuantity(product.id, quantity - 1, variantId)}
-                                className="px-2.5 py-0.5 text-xs text-[#888880] hover:text-[#EDEDED]"
+                                className="px-2.5 py-1.5 text-[#5C574E] hover:text-[#111111] cursor-pointer"
                               >
-                                -
+                                <Minus className="w-3 h-3" strokeWidth={1.5} />
                               </button>
-                              <span className="px-2 text-xs font-meta text-[#EDEDED]">{quantity}</span>
+                              <span className="px-2.5 text-xs text-[#111111] tabular-nums">{quantity}</span>
                               <button
                                 type="button"
+                                aria-label="Increase quantity"
                                 onClick={() => updateQuantity(product.id, quantity + 1, variantId)}
-                                className="px-2.5 py-0.5 text-xs text-[#888880] hover:text-[#EDEDED]"
+                                className="px-2.5 py-1.5 text-[#5C574E] hover:text-[#111111] cursor-pointer"
                               >
-                                +
+                                <Plus className="w-3 h-3" strokeWidth={1.5} />
                               </button>
                             </div>
 
                             <button
                               type="button"
                               onClick={() => removeFromCart(product.id, variantId)}
-                              className="text-[10px] font-meta tracking-wider text-[#A0A09A] hover:text-red-400"
+                              className="text-[10px] uppercase tracking-[0.14em] text-[#5C574E] hover:text-[#8E3A3A] cursor-pointer"
                             >
-                              Release
+                              Remove
                             </button>
                           </div>
                         </div>
@@ -669,9 +693,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                   })}
 
                   {/* Promo Code Input */}
-                  <div className="bg-[#121212] p-4 border border-white/5 space-y-2 rounded-xs">
-                    <span className="text-[9px] font-meta font-semibold uppercase tracking-[0.25em] text-[#888880] block">
-                      Privé Allocation Voucher
+                  <div className="bg-[#FAF7F2] p-4 border border-[#111111]/10 space-y-2.5 rounded-xs">
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#5C574E] block">
+                      Voucher Code
                     </span>
                     <form onSubmit={handleApplyCoupon} className="flex gap-2">
                       <input
@@ -679,18 +703,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value)}
                         placeholder="e.g. VANTERA10"
-                        className="flex-1 bg-[#0B0B0B] border border-white/10 px-3 py-2 text-xs uppercase font-meta text-[#EDEDED] placeholder-[#444] focus:border-[#D4AF37] focus:outline-hidden"
+                        className="flex-1 bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2 text-xs uppercase text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                       />
                       <button
                         type="submit"
                         disabled={isApplyingCoupon || !couponCode.trim()}
-                        className="bg-[#1C1C1C] text-[#D4AF37] border border-[#D4AF37]/30 px-4 py-2 text-[10px] font-meta uppercase tracking-[0.2em] hover:bg-[#D4AF37] hover:text-[#0B0B0B] transition-colors disabled:opacity-40"
+                        className="bg-[#111111] text-[#F7F3EC] hover:bg-[#B89B5E] hover:text-[#111111] px-4 py-2 text-[10px] uppercase tracking-[0.18em] font-semibold transition-colors disabled:opacity-40 rounded-xs cursor-pointer"
                       >
-                        {isApplyingCoupon ? '...' : 'Validate'}
+                        {isApplyingCoupon ? '...' : 'Apply'}
                       </button>
                     </form>
                     {couponMessage && (
-                      <p className={`text-[10px] font-meta ${couponMessage.startsWith('✓') ? 'text-[#10b981]' : 'text-red-400'}`}>
+                      <p
+                        className={`text-[11px] ${
+                          couponMessage.startsWith('✓') ? 'text-[#7A6230] font-medium' : 'text-[#8E3A3A]'
+                        }`}
+                      >
                         {couponMessage}
                       </p>
                     )}
@@ -702,18 +730,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
 
           {checkoutStep === 'auth_required' && (
             <div className="space-y-6 py-6 px-2 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#181818] border border-[#D4AF37]/40 text-[#D4AF37] font-editorial text-2xl shadow-[0_0_20px_rgba(212,175,55,0.2)]">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#FAF7F2] border border-[#B89B5E]/50 text-[#7A6230] font-editorial text-2xl">
                 V
               </div>
               <div className="space-y-2">
-                <span className="text-[9px] uppercase tracking-[0.25em] font-meta text-[#D4AF37] block">
-                  Client Account Strictly Required
+                <span className="text-[10px] uppercase tracking-[0.24em] text-[#7A6230] font-semibold block">
+                  Client Account Required
                 </span>
-                <h3 className="font-editorial text-xl font-bold text-[#F8F7F4]">
-                  Authenticate to Allocate Tech
+                <h3 className="font-editorial text-2xl font-medium text-[#111111]">
+                  Sign in to complete checkout
                 </h3>
-                <p className="text-xs text-[#8E8B82] max-w-xs mx-auto leading-relaxed">
-                  To ensure genuine client data isolation and verified transaction allocation, guest checkout has been decommissioned. Your shopping bag remains saved.
+                <p className="text-xs text-[#5C574E] max-w-xs mx-auto leading-relaxed">
+                  VANTÉRA keeps every order connected to your verified client account. Your shopping bag items remain saved.
                 </p>
               </div>
 
@@ -724,7 +752,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     setIsCartOpen(false);
                     onNavigate('/account?mode=login&returnTo=cart');
                   }}
-                  className="w-full gold-gradient-bg text-[#0B0B0B] py-3.5 text-xs font-meta font-bold uppercase tracking-widest rounded-xs hover:brightness-110 cursor-pointer shadow-lg"
+                  className="w-full gold-gradient-bg py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] rounded-xs cursor-pointer"
                 >
                   Sign In to Existing Account
                 </button>
@@ -735,15 +763,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     setIsCartOpen(false);
                     onNavigate('/account?mode=register&returnTo=cart');
                   }}
-                  className="w-full bg-[#181818] border border-white/10 text-[#EDEDED] py-3.5 text-xs font-meta uppercase tracking-widest rounded-xs hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer"
+                  className="w-full bg-[#FAF7F2] border border-[#111111]/20 text-[#111111] py-3.5 text-[11px] uppercase tracking-[0.2em] rounded-xs hover:border-[#B89B5E] transition-colors cursor-pointer"
                 >
-                  Create New Client Account
+                  Create Client Account
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setCheckoutStep('cart')}
-                  className="text-[11px] text-[#73736E] hover:text-[#EDEDED] underline pt-2 block mx-auto cursor-pointer"
+                  className="text-xs text-[#5C574E] hover:text-[#111111] underline pt-2 block mx-auto cursor-pointer"
                 >
                   ← Back to Shopping Bag
                 </button>
@@ -754,18 +782,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
           {checkoutStep === 'shipping' && (
             <form id="checkout-form" onSubmit={handlePlaceOrder} className="space-y-4">
               {errorMessage && (
-                <div className="border border-red-500/30 bg-red-950/40 p-3 text-xs text-red-300 font-meta">
+                <div className="border border-[#8E3A3A]/30 bg-[#8E3A3A]/8 p-3 text-xs text-[#8E3A3A] rounded-xs">
                   {errorMessage}
                 </div>
               )}
 
-              <div className="bg-[#121212] p-5 border border-white/5 space-y-3 rounded-xs">
-                <h4 className="text-[10px] font-meta uppercase tracking-[0.25em] text-[#D4AF37]">
-                  Recipient Credentials
+              <div className="bg-[#FAF7F2] p-5 border border-[#111111]/10 space-y-3.5 rounded-xs">
+                <h4 className="text-[10px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold">
+                  Recipient Details
                 </h4>
                 <div className="space-y-3 text-xs">
                   <div>
-                    <label htmlFor="checkout-name" className="block text-[10px] font-meta uppercase tracking-wider text-[#888880] mb-1">Full Legal Name *</label>
+                    <label htmlFor="checkout-name" className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
+                      Full Name *
+                    </label>
                     <input
                       id="checkout-name"
                       type="text"
@@ -773,29 +803,31 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                       value={formData.customerName}
                       onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                       placeholder="e.g. Emmanuel Adarikwu"
-                      className="w-full bg-[#0B0B0B] border border-white/10 px-3 py-2 text-xs text-[#EDEDED] placeholder-[#444] focus:border-[#D4AF37] focus:outline-hidden"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
                   <div>
-                    <label htmlFor="checkout-email" className="block text-[10px] font-meta uppercase tracking-wider text-[#888880] mb-1">Email (Vault Confirmation) *</label>
+                    <label htmlFor="checkout-email" className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
+                      Email (Receipt & Tracking) *
+                    </label>
                     <input
                       id="checkout-email"
                       type="email"
                       required
                       value={formData.customerEmail}
                       onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                      placeholder="e.g. emmanuel@example.com"
-                      className="w-full bg-[#0B0B0B] border border-white/10 px-3 py-2 text-xs text-[#EDEDED] placeholder-[#444] focus:border-[#D4AF37] focus:outline-hidden"
+                      placeholder="e.g. client@example.com"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label htmlFor="checkout-phone" className="block text-[10px] font-meta uppercase tracking-wider text-[#888880]">
+                      <label htmlFor="checkout-phone" className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E]">
                         WhatsApp / Mobile (+234 format) *
                       </label>
                       {formData.customerPhone && (
-                        <span className={`text-[9px] font-mono ${phoneValidation.valid ? 'text-[#10b981]' : 'text-red-400'}`}>
-                          {phoneValidation.valid ? '✓ Valid format' : 'Invalid format'}
+                        <span className={`text-[10px] ${phoneValidation.valid ? 'text-[#7A6230]' : 'text-[#8E3A3A]'}`}>
+                          {phoneValidation.valid ? 'Valid format' : 'Invalid format'}
                         </span>
                       )}
                     </div>
@@ -811,32 +843,32 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         setFormData({ ...formData, customerPhone: val });
                       }}
                       placeholder="+234 913 279 3670"
-                      className={`w-full bg-[#0B0B0B] border px-3 py-2 text-xs text-[#EDEDED] placeholder-[#444] focus:outline-hidden ${
+                      className={`w-full bg-[#F7F3EC] border px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:outline-hidden rounded-xs tabular-nums ${
                         formData.customerPhone && !phoneValidation.valid
-                          ? 'border-red-500/50 focus:border-red-500'
-                          : 'border-white/10 focus:border-[#D4AF37]'
+                          ? 'border-[#8E3A3A]/60 focus:border-[#8E3A3A]'
+                          : 'border-[#111111]/15 focus:border-[#B89B5E]'
                       }`}
                     />
                     {formData.customerPhone && !phoneValidation.valid && (
-                      <p className="text-[10px] text-red-400 mt-1">{phoneValidation.error}</p>
+                      <p className="text-[11px] text-[#8E3A3A] mt-1">{phoneValidation.error}</p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#121212] p-5 border border-white/5 space-y-3 rounded-xs">
+              <div className="bg-[#FAF7F2] p-5 border border-[#111111]/10 space-y-3.5 rounded-xs">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-[10px] font-meta uppercase tracking-[0.25em] text-[#D4AF37]">
-                    Delivery Sanctuary
+                  <h4 className="text-[10px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold">
+                    Delivery Destination
                   </h4>
-                  <span className="text-[9px] font-meta uppercase tracking-wider text-[#10b981]">
-                    ⚡ {activeStateInfo.deliveryEstimate}
+                  <span className="text-[10px] text-[#5C574E]">
+                    {activeStateInfo.deliveryEstimate}
                   </span>
                 </div>
 
                 <div className="space-y-3 text-xs">
                   <div>
-                    <label htmlFor="checkout-state" className="block text-[10px] font-meta uppercase tracking-wider text-[#888880] mb-1">
+                    <label htmlFor="checkout-state" className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
                       Nigerian State / FCT *
                     </label>
                     <select
@@ -850,20 +882,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         setSelectedLga(defaultLga);
                         setFormData({ ...formData, state: newState, city: defaultLga });
                       }}
-                      className="w-full bg-[#0B0B0B] border border-white/10 px-3 py-2 text-xs text-[#EDEDED] focus:border-[#D4AF37] focus:outline-hidden"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     >
                       {NIGERIAN_STATES.map((s) => (
-                        <option key={s.state} value={s.state} className="bg-[#121212] text-[#EDEDED]">
+                        <option key={s.state} value={s.state} className="bg-[#FAF7F2] text-[#111111]">
                           {s.state} — {currency === 'NGN' ? formatNGN(s.feeNgn) : formatUSD(s.feeUsdCents)} ({s.deliveryEstimate})
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label htmlFor="checkout-city" className="block text-[10px] font-meta uppercase tracking-wider text-[#888880] mb-1">
-                        LGA / Major City *
+                      <label htmlFor="checkout-city" className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
+                        LGA / City *
                       </label>
                       <select
                         id="checkout-city"
@@ -872,10 +904,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                           setSelectedLga(e.target.value);
                           setFormData({ ...formData, city: e.target.value });
                         }}
-                        className="w-full bg-[#0B0B0B] border border-white/10 px-3 py-2 text-xs text-[#EDEDED] focus:border-[#D4AF37] focus:outline-hidden"
+                        className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                       >
                         {getLgasForState(formData.state || selectedState).map((city) => (
-                          <option key={city} value={city} className="bg-[#121212] text-[#EDEDED]">
+                          <option key={city} value={city} className="bg-[#FAF7F2] text-[#111111]">
                             {city}
                           </option>
                         ))}
@@ -883,7 +915,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     </div>
 
                     <div>
-                      <label htmlFor="checkout-postal" className="block text-[10px] font-meta uppercase tracking-wider text-[#888880] mb-1">
+                      <label htmlFor="checkout-postal" className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
                         Postal Code
                       </label>
                       <input
@@ -892,14 +924,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         value={formData.postalCode}
                         onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
                         placeholder="100001"
-                        className="w-full bg-[#0B0B0B] border border-white/10 px-3 py-2 text-xs text-[#EDEDED] placeholder-[#444] focus:border-[#D4AF37] focus:outline-hidden"
+                        className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] tabular-nums placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label htmlFor="checkout-street" className="block text-[10px] font-meta uppercase tracking-wider text-[#888880] mb-1">
-                      Full Street Address / Building Details *
+                    <label htmlFor="checkout-street" className="block text-[10px] uppercase tracking-[0.14em] text-[#5C574E] mb-1">
+                      Street Address *
                     </label>
                     <input
                       id="checkout-street"
@@ -908,26 +940,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                       value={formData.streetAddress}
                       onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
                       placeholder="e.g. Plot 14 Admiralty Way, Lekki Phase 1"
-                      className="w-full bg-[#0B0B0B] border border-white/10 px-3 py-2 text-xs text-[#EDEDED] placeholder-[#444] focus:border-[#D4AF37] focus:outline-hidden"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                   </div>
 
-                  <div className="bg-[#0B0B0B] p-2.5 border border-white/5 rounded-xs flex items-center justify-between text-[11px] font-meta">
-                    <span className="text-[#888880]">Estimated Delivery:</span>
-                    <span className="text-[#D4AF37] font-semibold">{activeStateInfo.deliveryEstimate}</span>
+                  <div className="bg-[#F7F3EC] p-3 border border-[#111111]/10 rounded-xs flex items-center justify-between text-[11px]">
+                    <span className="text-[#5C574E]">Estimated Delivery:</span>
+                    <span className="text-[#7A6230] font-medium">{activeStateInfo.deliveryEstimate}</span>
                   </div>
 
                   {cjQuoteData?.hasCjItems && (
-                    <div className="bg-[#0B0B0B] p-3 border border-white/10 rounded-xs space-y-2 text-[11px] font-meta">
+                    <div className="bg-[#F7F3EC] p-3 border border-[#111111]/10 rounded-xs space-y-2 text-[11px]">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[9px] uppercase tracking-[0.2em] text-[#D4AF37]">
-                          Global Supplier Freight Estimate
+                        <span className="text-[9px] uppercase tracking-[0.2em] text-[#7A6230] font-semibold">
+                          Global Carrier Freight
                         </span>
                         <select
                           aria-label="CJ freight destination country"
                           value={cjQuoteCountry}
                           onChange={(e) => setCjQuoteCountry(e.target.value)}
-                          className="bg-[#141416] border border-white/15 px-2 py-0.5 text-[10px] text-[#EDEDED]"
+                          className="bg-[#FAF7F2] border border-[#111111]/15 px-2 py-0.5 text-[10px] text-[#111111] rounded-xs"
                         >
                           <option value="NG">Nigeria (NG)</option>
                           <option value="US">United States (US)</option>
@@ -937,17 +969,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         </select>
                       </div>
                       {cjQuoteLoading ? (
-                        <p className="text-[10px] text-[#888880]">Checking live carrier schedules...</p>
+                        <p className="text-[10px] text-[#5C574E]">Checking live carrier schedules...</p>
                       ) : cjQuoteData.error ? (
-                        <p className="text-[10px] text-[#E57373]">{cjQuoteData.error}</p>
+                        <p className="text-[10px] text-[#8E3A3A]">{cjQuoteData.error}</p>
                       ) : cjQuoteData.options.length > 0 ? (
                         <div className="space-y-1">
                           {cjQuoteData.options.slice(0, 3).map((opt) => (
                             <div key={opt.logisticName} className="flex items-center justify-between gap-2 text-[10px]">
-                              <span className="text-[#EDEDED] truncate">
+                              <span className="text-[#111111] truncate">
                                 {opt.logisticName} ({opt.logisticAging})
                               </span>
-                              <span className="text-[#D4AF37] shrink-0 font-mono">
+                              <span className="text-[#7A6230] shrink-0 tabular-nums font-medium">
                                 {currency === 'NGN'
                                   ? formatNGN(opt.totalPostageFeeNgn)
                                   : formatUSD(opt.totalPostageFeeCents)}
@@ -956,7 +988,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[10px] text-[#888880]">
+                        <p className="text-[10px] text-[#5C574E]">
                           No international carrier methods returned for {cjQuoteCountry}.
                         </p>
                       )}
@@ -966,29 +998,27 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
               </div>
 
               {/* Payment Method Selector: Wavy vs Bank Transfer */}
-              <div className="bg-[#121212] p-4 border border-white/5 space-y-3 rounded-xs">
-                <span className="text-[9px] font-meta uppercase tracking-[0.25em] text-[#D4AF37] font-semibold block">
-                  Select Settlement Channel
+              <div className="bg-[#FAF7F2] p-5 border border-[#111111]/10 space-y-3 rounded-xs">
+                <span className="text-[10px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold block">
+                  Payment Method
                 </span>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('card_online')}
-                    className={`p-3 text-left border rounded-xs transition-all cursor-pointer ${
+                    className={`p-3 text-left border rounded-xs transition-colors cursor-pointer ${
                       paymentMethod === 'card_online'
-                        ? 'border-[#D4AF37] bg-[#181818] shadow-sm'
-                        : 'border-white/5 bg-[#0B0B0B] text-[#888880] hover:border-white/10'
+                        ? 'border-[#B89B5E] bg-[#F7F3EC]'
+                        : 'border-[#111111]/12 bg-[#FAF7F2] text-[#5C574E] hover:border-[#111111]/25'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`text-xs font-editorial font-bold ${paymentMethod === 'card_online' ? 'text-[#D4AF37]' : 'text-[#EDEDED]'}`}>
-                        Card / Wavy
-                      </span>
-                      <span className="text-[9px] font-mono px-1.5 py-0.2 bg-[#0F2E22] text-[#48BB78] rounded-xs uppercase">
-                        LIVE
+                      <span className="text-xs font-editorial font-medium text-[#111111]">Card / Wavy</span>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-[#FAF7F2] text-[#7A6230] border border-[#B89B5E]/40 rounded-xs uppercase">
+                        Live
                       </span>
                     </div>
-                    <p className="text-[10px] text-[#888880] leading-tight">
+                    <p className="text-[10px] text-[#5C574E] leading-tight">
                       Mastercard, Visa, Verve & Apple Pay via Wavy.
                     </p>
                   </button>
@@ -996,22 +1026,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('bank_transfer')}
-                    className={`p-3 text-left border rounded-xs transition-all cursor-pointer ${
+                    className={`p-3 text-left border rounded-xs transition-colors cursor-pointer ${
                       paymentMethod === 'bank_transfer'
-                        ? 'border-[#D4AF37] bg-[#181818] shadow-sm'
-                        : 'border-white/5 bg-[#0B0B0B] text-[#888880] hover:border-white/10'
+                        ? 'border-[#B89B5E] bg-[#F7F3EC]'
+                        : 'border-[#111111]/12 bg-[#FAF7F2] text-[#5C574E] hover:border-[#111111]/25'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`text-xs font-editorial font-bold ${paymentMethod === 'bank_transfer' ? 'text-[#D4AF37]' : 'text-[#EDEDED]'}`}>
-                        Direct Wire
-                      </span>
-                      <span className="text-[9px] font-mono px-1.5 py-0.2 bg-[#2D2412] text-[#D4AF37] rounded-xs uppercase">
-                        GTB/ZENITH
+                      <span className="text-xs font-editorial font-medium text-[#111111]">Bank Transfer</span>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-[#FAF7F2] text-[#5C574E] border border-[#111111]/12 rounded-xs uppercase">
+                        GTB / Wire
                       </span>
                     </div>
-                    <p className="text-[10px] text-[#888880] leading-tight">
-                      Instant bank transfer with automated narration.
+                    <p className="text-[10px] text-[#5C574E] leading-tight">
+                      Direct settlement using order narration.
                     </p>
                   </button>
                 </div>
@@ -1037,17 +1065,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     />
                   </div>
                 ) : (
-                  <div className="border border-[#D4AF37]/30 bg-[#0F2E22]/20 p-4 space-y-2 rounded-xs">
+                  <div className="border border-[#B89B5E]/40 bg-[#F7F3EC] p-4 space-y-2 rounded-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-editorial text-xs text-[#D4AF37]">
+                      <span className="font-editorial text-sm font-medium text-[#111111]">
                         {currency === 'NGN' ? 'Nigerian Naira Bank Settlement' : 'USD Global Wire Transfer'}
                       </span>
-                      <span className="text-[10px] font-meta bg-[#0B0B0B] text-[#D4AF37] border border-[#D4AF37]/30 px-2 py-0.5 rounded-xs">
+                      <span className="text-[10px] bg-[#FAF7F2] text-[#7A6230] border border-[#B89B5E]/40 px-2 py-0.5 rounded-xs">
                         {currency}
                       </span>
                     </div>
-                    <p className="text-[11px] text-[#A0A09A] font-meta leading-relaxed">
-                      You are allocating in <strong>{currency === 'NGN' ? 'Nigerian Naira (₦)' : 'United States Dollar ($)'}</strong>. Bank transfer orders remain Awaiting Payment until verified by CEO Adnuel.
+                    <p className="text-[11px] text-[#5C574E] leading-relaxed">
+                      Settling in <strong className="text-[#111111]">{currency === 'NGN' ? 'Nigerian Naira (₦)' : 'US Dollar ($)'}</strong>. Bank transfer orders remain awaiting confirmation until verified by CEO Adnuel.
                     </p>
                   </div>
                 )}
@@ -1057,28 +1085,30 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
 
           {checkoutStep === 'confirming_payment' && confirmedOrder && (
             <div className="py-12 px-4 text-center space-y-6">
-              <div className="w-12 h-12 rounded-full border border-[#C8A96A]/40 flex items-center justify-center mx-auto font-editorial text-xl text-[#C8A96A]">
+              <div className="w-12 h-12 rounded-full border border-[#B89B5E]/50 flex items-center justify-center mx-auto font-editorial text-xl text-[#7A6230]">
                 V
               </div>
 
-              <div className="w-36 h-0.5 bg-white/10 mx-auto overflow-hidden rounded-full">
-                <div className="h-full w-1/2 bg-[#C8A96A] vantera-loader-bar" />
+              <div className="w-36 h-0.5 bg-[#111111]/10 mx-auto overflow-hidden rounded-full">
+                <div className="h-full w-1/2 bg-[#B89B5E] vantera-loader-bar" />
               </div>
 
               <div className="space-y-2.5">
-                <span className="text-[10px] font-meta uppercase tracking-[0.22em] text-[#C8A96A] block">
-                  Live Gateway Verification
+                <span className="text-[10px] uppercase tracking-[0.24em] text-[#7A6230] font-semibold block">
+                  Verifying With Payment Gateway
                 </span>
-                <h3 className="font-editorial text-2xl font-medium text-[#F5F1E8]">
-                  Confirming your payment...
+                <h3 className="font-editorial text-2xl font-medium text-[#111111]">
+                  Confirming your <em className="italic font-normal">payment...</em>
                 </h3>
-                <p className="text-xs text-[#A8A297] leading-relaxed max-w-xs mx-auto">
+                <p className="text-xs text-[#5C574E] leading-relaxed max-w-xs mx-auto">
                   Waiting for Wavy to confirm payment for{' '}
-                  <strong className="text-[#C8A96A] font-mono">{confirmedOrder.orderReference}</strong> (
+                  <strong className="text-[#111111] tabular-nums">{confirmedOrder.orderReference}</strong> (
                   {confirmedOrder.currency === 'NGN'
-                    ? formatNGN(convertUsdCentsToNgn(confirmedOrder.totalCents, confirmedOrder.exchangeRateUsed || exchangeRate))
+                    ? formatNGN(
+                        convertUsdCentsToNgn(confirmedOrder.totalCents, confirmedOrder.exchangeRateUsed || exchangeRate)
+                      )
                     : formatUSD(confirmedOrder.totalCents)}
-                  ). This screen updates automatically — no refresh needed.
+                  ). Updates automatically — no refresh needed.
                 </p>
               </div>
 
@@ -1087,7 +1117,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                   href={pendingCheckoutUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block w-full gold-gradient-bg py-3 text-[11px] font-meta font-semibold uppercase tracking-[0.2em] rounded-xs"
+                  className="inline-block w-full gold-gradient-bg py-3 text-[11px] font-semibold uppercase tracking-[0.2em] rounded-xs"
                 >
                   Open Wavy Payment Window ↗
                 </a>
@@ -1096,7 +1126,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
               <button
                 type="button"
                 onClick={handleCancelOnlinePayment}
-                className="w-full border border-white/12 text-[#A8A297] hover:text-red-400 hover:border-red-500/30 py-2.5 text-[11px] uppercase tracking-[0.16em] font-meta rounded-xs cursor-pointer transition-colors"
+                className="w-full border border-[#111111]/15 text-[#5C574E] hover:text-[#8E3A3A] hover:border-[#8E3A3A]/40 py-2.5 text-[11px] uppercase tracking-[0.16em] rounded-xs cursor-pointer transition-colors"
               >
                 Cancel Payment & Keep Bag Intact
               </button>
@@ -1104,19 +1134,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
           )}
 
           {checkoutStep === 'payment_failed' && (
-            <div className="border border-red-500/30 bg-red-950/20 p-6 text-center space-y-4 rounded-xs my-4">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-950/50 border border-red-500/40 text-red-400 text-xl font-bold">
-                ✕
+            <div className="border border-[#8E3A3A]/30 bg-[#FAF7F2] p-6 text-center space-y-4 rounded-xs my-4">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#8E3A3A]/10 border border-[#8E3A3A]/30 text-[#8E3A3A] mx-auto">
+                <X className="w-5 h-5" strokeWidth={1.5} />
               </div>
               <div className="space-y-1.5">
-                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-red-400 block">
-                  TRANSACTION NOT COMPLETED
+                <span className="text-[10px] uppercase tracking-[0.22em] text-[#8E3A3A] font-semibold block">
+                  Transaction Not Completed
                 </span>
-                <h3 className="font-editorial text-xl font-bold text-[#F8F7F4]">
-                  Payment Failed
-                </h3>
-                <p className="text-xs text-[#8E8B82] leading-relaxed">
-                  {failureReason || 'Your card authorization could not be completed. No charge was captured and your bag items remain intact.'}
+                <h3 className="font-editorial text-2xl font-medium text-[#111111]">Payment Failed</h3>
+                <p className="text-xs text-[#5C574E] leading-relaxed">
+                  {failureReason ||
+                    'Your card authorization could not be completed. No charge was captured and your bag items remain intact.'}
                 </p>
               </div>
               <div className="space-y-2.5 pt-2">
@@ -1126,16 +1155,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     setErrorMessage('');
                     setCheckoutStep('shipping');
                   }}
-                  className="w-full gold-gradient-bg text-[#0B0B0B] py-3 text-xs font-meta font-bold uppercase tracking-widest rounded-xs hover:brightness-110 cursor-pointer"
+                  className="w-full gold-gradient-bg py-3 text-[11px] font-semibold uppercase tracking-[0.2em] rounded-xs cursor-pointer"
                 >
                   Try Again
                 </button>
                 <button
                   type="button"
                   onClick={() => setCheckoutStep('cart')}
-                  className="w-full border border-white/10 text-[#EDEDED] py-2.5 text-xs font-meta uppercase tracking-wider rounded-xs hover:border-[#D4AF37] cursor-pointer"
+                  className="w-full border border-[#111111]/15 text-[#111111] py-2.5 text-[11px] uppercase tracking-[0.18em] rounded-xs hover:border-[#B89B5E] cursor-pointer"
                 >
-                  Return to Atelier Bag
+                  Return to Shopping Bag
                 </button>
               </div>
             </div>
@@ -1143,83 +1172,101 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
 
           {checkoutStep === 'confirmed' && confirmedOrder && (
             <div className="space-y-5">
-              {/* Prominent Real-World Payment Status Banner */}
-              <div
-                className={`p-6 text-center rounded-xs border ${
-                  confirmedOrder.paymentStatus === 'paid'
-                    ? 'border-[#34A853]/40 bg-[#0F2E22]/50'
-                    : 'border-[#D4AF37]/30 bg-[#2D2412]/30'
-                }`}
-              >
-                <span className="text-3xl text-[#D4AF37]">
-                  {confirmedOrder.paymentStatus === 'paid' ? '✓' : '✦'}
-                </span>
-                <div className="mt-2 inline-block">
-                  <span
-                    className={`px-3 py-1 text-[10px] font-mono font-bold tracking-widest uppercase rounded-xs ${
-                      confirmedOrder.paymentStatus === 'paid'
-                        ? 'bg-[#0F2E22] text-[#48BB78] border border-[#34A853]/40'
-                        : 'bg-[#181818] text-[#D4AF37] border border-[#D4AF37]/40'
-                    }`}
-                  >
-                    STATUS: {confirmedOrder.paymentStatus === 'paid' ? 'PAID & VERIFIED' : 'AWAITING PAYMENT'}
+              {/* Prominent Payment Status Banner with Animated Checkmark */}
+              <div className="p-6 text-center rounded-xs border border-[#B89B5E]/40 bg-[#FAF7F2] space-y-3">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full border border-[#B89B5E]/50 bg-[#F7F3EC] text-[#7A6230] mx-auto">
+                  {confirmedOrder.paymentStatus === 'paid' ? (
+                    <svg
+                      className="w-6 h-6"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path className="vantera-checkmark-path" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <span className="font-editorial text-xl">V</span>
+                  )}
+                </div>
+
+                <div>
+                  <span className="inline-block px-3 py-1 text-[9px] font-semibold tracking-[0.2em] uppercase rounded-xs bg-[#F7F3EC] text-[#7A6230] border border-[#B89B5E]/40">
+                    {confirmedOrder.paymentStatus === 'paid' ? 'Paid & Verified' : 'Awaiting Bank Transfer'}
                   </span>
                 </div>
-                <h3 className="mt-2 font-editorial text-lg font-medium text-[#F5F5F0]">
-                  {confirmedOrder.paymentStatus === 'paid'
-                    ? 'Payment Successful'
-                    : 'Reservation Placed — Awaiting Bank Transfer'}
+
+                <h3 className="font-editorial text-2xl font-medium text-[#111111]">
+                  {confirmedOrder.paymentStatus === 'paid' ? 'Payment Successful' : 'Order Placed'}
                 </h3>
-                <p className="mt-1 text-xs text-[#A0A09A] font-meta">
-                  Order Number: <strong className="font-mono text-sm text-[#D4AF37]">{confirmedOrder.orderReference}</strong>
+
+                <p className="text-xs text-[#5C574E]">
+                  Order Number:{' '}
+                  <strong className="text-[#111111] tabular-nums">{confirmedOrder.orderReference}</strong>
                 </p>
+
                 {confirmedOrder.paymentReference && (
-                  <p className="text-[10px] font-mono text-[#888880] mt-0.5">
+                  <p className="text-[11px] text-[#5C574E] tabular-nums">
                     Gateway Reference: {confirmedOrder.paymentReference}
                   </p>
                 )}
-                <div className="mt-3 bg-[#0B0B0B] p-3 border border-white/10 inline-block rounded-xs">
-                  <span className="text-[9px] uppercase font-meta tracking-[0.2em] text-[#888880] block">
-                    {confirmedOrder.paymentStatus === 'paid' ? `Amount Paid (${confirmedOrder.currency})` : `Due (${confirmedOrder.currency})`}
+
+                <div className="bg-[#F7F3EC] p-3 border border-[#111111]/10 inline-block rounded-xs">
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-[#5C574E] block">
+                    {confirmedOrder.paymentStatus === 'paid'
+                      ? `Amount Paid (${confirmedOrder.currency})`
+                      : `Amount Due (${confirmedOrder.currency})`}
                   </span>
-                  <strong className="text-xl font-editorial text-[#D4AF37]">
+                  <strong className="text-xl font-editorial font-medium text-[#111111] tabular-nums">
                     {confirmedOrder.currency === 'NGN'
-                      ? formatNGN(convertUsdCentsToNgn(confirmedOrder.totalCents, confirmedOrder.exchangeRateUsed || exchangeRate))
+                      ? formatNGN(
+                          convertUsdCentsToNgn(
+                            confirmedOrder.totalCents,
+                            confirmedOrder.exchangeRateUsed || exchangeRate
+                          )
+                        )
                       : formatUSD(confirmedOrder.totalCents)}
                   </strong>
                 </div>
               </div>
 
               {/* Order Items & Delivery Summary Receipt */}
-              <div className="border border-white/5 bg-[#121212] p-4 rounded-xs space-y-3 text-xs font-meta">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] block font-semibold">
+              <div className="border border-[#111111]/10 bg-[#FAF7F2] p-4 rounded-xs space-y-3 text-xs">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[#7A6230] block font-semibold">
                   Order Receipt & Delivery
                 </span>
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-[#111111]/10">
                   {(confirmedOrder.items || []).map((item: any, idx: number) => (
                     <div key={idx} className="py-2 flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <span className="text-[#EDEDED] block truncate">{item.title}</span>
-                        <span className="text-[10px] text-[#73736E]">Qty: {item.quantity}</span>
+                        <span className="text-[#111111] block truncate font-medium">{item.title}</span>
+                        <span className="text-[10px] text-[#5C574E] tabular-nums">Qty: {item.quantity}</span>
                       </div>
-                      <span className="text-[#D4AF37] font-mono shrink-0">
+                      <span className="text-[#111111] tabular-nums shrink-0 font-medium">
                         {confirmedOrder.currency === 'NGN'
-                          ? formatNGN(convertUsdCentsToNgn(item.totalCents || 0, confirmedOrder.exchangeRateUsed || exchangeRate))
+                          ? formatNGN(
+                              convertUsdCentsToNgn(
+                                item.totalCents || 0,
+                                confirmedOrder.exchangeRateUsed || exchangeRate
+                              )
+                            )
                           : formatUSD(item.totalCents || 0)}
                       </span>
                     </div>
                   ))}
                 </div>
                 {confirmedOrder.shippingAddress && (
-                  <div className="pt-2 border-t border-white/5 text-[11px] text-[#8E8B82] space-y-0.5">
-                    <div className="text-[#EDEDED] font-semibold">{confirmedOrder.shippingAddress.fullName}</div>
+                  <div className="pt-2 border-t border-[#111111]/10 text-[11px] text-[#5C574E] space-y-0.5">
+                    <div className="text-[#111111] font-medium">{confirmedOrder.shippingAddress.fullName}</div>
                     <div>
                       {confirmedOrder.shippingAddress.streetAddress}, {confirmedOrder.shippingAddress.city},{' '}
                       {confirmedOrder.shippingAddress.state}
                     </div>
-                    <div>{confirmedOrder.shippingAddress.phone}</div>
+                    <div className="tabular-nums">{confirmedOrder.shippingAddress.phone}</div>
                     {confirmedOrder.estimatedTransitTime && (
-                      <div className="text-[#D4AF37]">Estimated Delivery: {confirmedOrder.estimatedTransitTime}</div>
+                      <div className="text-[#7A6230]">Estimated Delivery: {confirmedOrder.estimatedTransitTime}</div>
                     )}
                   </div>
                 )}
@@ -1230,17 +1277,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                 <>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-meta uppercase tracking-[0.2em] text-[10px] text-[#A0A09A]">
-                        Official Settlement Coordinates
+                      <h4 className="uppercase tracking-[0.18em] text-[10px] text-[#5C574E] font-semibold">
+                        Bank Transfer Coordinates
                       </h4>
-                      <div className="flex border border-white/10 text-[10px] font-meta rounded-xs overflow-hidden">
+                      <div className="flex border border-[#111111]/15 text-[10px] rounded-xs overflow-hidden">
                         <button
                           type="button"
                           onClick={() => setViewBankCurrency('NGN')}
-                          className={`px-3 py-1 transition-colors ${
+                          className={`px-3 py-1 transition-colors cursor-pointer ${
                             viewBankCurrency === 'NGN'
-                              ? 'gold-gradient-bg text-[#0B0B0B] font-bold'
-                              : 'bg-[#141414] text-[#888880] hover:text-[#EDEDED]'
+                              ? 'bg-[#B89B5E] text-[#111111] font-semibold'
+                              : 'bg-[#F7F3EC] text-[#5C574E] hover:text-[#111111]'
                           }`}
                         >
                           ₦ NGN Bank
@@ -1248,10 +1295,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                         <button
                           type="button"
                           onClick={() => setViewBankCurrency('USD')}
-                          className={`px-3 py-1 transition-colors ${
+                          className={`px-3 py-1 transition-colors cursor-pointer ${
                             viewBankCurrency === 'USD'
-                              ? 'gold-gradient-bg text-[#0B0B0B] font-bold'
-                              : 'bg-[#141414] text-[#888880] hover:text-[#EDEDED]'
+                              ? 'bg-[#B89B5E] text-[#111111] font-semibold'
+                              : 'bg-[#F7F3EC] text-[#5C574E] hover:text-[#111111]'
                           }`}
                         >
                           $ USD Wire
@@ -1260,20 +1307,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     </div>
 
                     {viewBankCurrency === 'NGN' ? (
-                      <div className="border border-white/5 bg-[#121212] p-5 space-y-3 text-xs rounded-xs">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                          <span className="font-editorial text-[#F5F5F0]">Nigerian Naira (₦) GTBank Account</span>
-                          <span className="text-[9px] bg-[#0F2E22] text-[#10b981] px-2 py-0.5 font-meta uppercase">Instant Clearing</span>
+                      <div className="border border-[#111111]/10 bg-[#FAF7F2] p-4 space-y-3 text-xs rounded-xs">
+                        <div className="flex items-center justify-between border-b border-[#111111]/10 pb-2">
+                          <span className="font-editorial text-sm font-medium text-[#111111]">
+                            Nigerian Naira (₦) GTBank Account
+                          </span>
+                          <span className="text-[9px] bg-[#F7F3EC] text-[#7A6230] border border-[#B89B5E]/40 px-2 py-0.5 uppercase">
+                            Instant Clearing
+                          </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs font-meta">
+                        <div className="grid grid-cols-2 gap-3 text-xs">
                           <div>
-                            <span className="text-[10px] text-[#73736E] block">Bank Entity</span>
-                            <strong className="text-[#EDEDED]">{activeNgn?.bankName || bankSettings.bankName}</strong>
+                            <span className="text-[10px] text-[#5C574E] block">Bank Entity</span>
+                            <strong className="text-[#111111] font-medium">
+                              {activeNgn?.bankName || bankSettings.bankName}
+                            </strong>
                           </div>
                           <div>
-                            <span className="text-[10px] text-[#73736E] block">Account Number</span>
+                            <span className="text-[10px] text-[#5C574E] block">Account Number</span>
                             <div className="flex items-center gap-2">
-                              <strong className="text-sm tracking-widest text-[#D4AF37]">
+                              <strong className="text-sm tabular-nums text-[#7A6230]">
                                 {activeNgn?.accountNumber || bankSettings.accountNumber}
                               </strong>
                               <button
@@ -1283,37 +1336,54 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                                   setCopiedKey('ngn');
                                   setTimeout(() => setCopiedKey(null), 2000);
                                 }}
-                                className="text-[10px] text-[#D4AF37] hover:underline"
+                                aria-label="Copy account number"
+                                className="text-[10px] text-[#7A6230] hover:underline inline-flex items-center gap-1 cursor-pointer"
                               >
-                                {copiedKey === 'ngn' ? '✓' : 'Copy'}
+                                {copiedKey === 'ngn' ? (
+                                  <Check className="w-3 h-3" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
                               </button>
                             </div>
                           </div>
                           <div className="col-span-2">
-                            <span className="text-[10px] text-[#73736E] block">Beneficiary Name</span>
-                            <strong className="text-[#EDEDED]">{activeNgn?.accountName || bankSettings.accountName}</strong>
+                            <span className="text-[10px] text-[#5C574E] block">Beneficiary Name</span>
+                            <strong className="text-[#111111] font-medium">
+                              {activeNgn?.accountName || bankSettings.accountName}
+                            </strong>
                           </div>
-                          <div className="col-span-2 bg-[#0B0B0B] p-2.5 border border-white/5 rounded-xs">
-                            <span className="text-[9px] uppercase tracking-wider text-[#888880] block">Mandatory Transfer Narration</span>
-                            <strong className="text-xs text-[#D4AF37]">{confirmedOrder.orderReference}</strong>
+                          <div className="col-span-2 bg-[#F7F3EC] p-2.5 border border-[#111111]/10 rounded-xs">
+                            <span className="text-[9px] uppercase tracking-wider text-[#5C574E] block">
+                              Mandatory Transfer Narration
+                            </span>
+                            <strong className="text-xs text-[#111111] tabular-nums">
+                              {confirmedOrder.orderReference}
+                            </strong>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="border border-white/5 bg-[#121212] p-5 space-y-3 text-xs rounded-xs">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                          <span className="font-editorial text-[#F5F5F0]">USD Global Settlement Wire</span>
-                          <span className="text-[9px] bg-[#0F2E22] text-[#10b981] px-2 py-0.5 font-meta uppercase">Mercury / Wire</span>
+                      <div className="border border-[#111111]/10 bg-[#FAF7F2] p-4 space-y-3 text-xs rounded-xs">
+                        <div className="flex items-center justify-between border-b border-[#111111]/10 pb-2">
+                          <span className="font-editorial text-sm font-medium text-[#111111]">
+                            USD Global Settlement Wire
+                          </span>
+                          <span className="text-[9px] bg-[#F7F3EC] text-[#7A6230] border border-[#B89B5E]/40 px-2 py-0.5 uppercase">
+                            Wire
+                          </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs font-meta">
+                        <div className="grid grid-cols-2 gap-3 text-xs">
                           <div>
-                            <span className="text-[10px] text-[#73736E] block">Institution</span>
-                            <strong className="text-[#EDEDED]">{activeUsd?.bankName || 'VANTÉRA Global Settlement'}</strong>
+                            <span className="text-[10px] text-[#5C574E] block">Institution</span>
+                            <strong className="text-[#111111] font-medium">
+                              {activeUsd?.bankName || 'VANTÉRA Global Settlement'}
+                            </strong>
                           </div>
                           <div>
-                            <span className="text-[10px] text-[#73736E] block">Account Number</span>
+                            <span className="text-[10px] text-[#5C574E] block">Account Number</span>
                             <div className="flex items-center gap-2">
-                              <strong className="text-sm tracking-widest text-[#D4AF37]">
+                              <strong className="text-sm tabular-nums text-[#7A6230]">
                                 {activeUsd?.accountNumber || '984102938471'}
                               </strong>
                               <button
@@ -1323,23 +1393,32 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                                   setCopiedKey('usd');
                                   setTimeout(() => setCopiedKey(null), 2000);
                                 }}
-                                className="text-[10px] text-[#D4AF37] hover:underline"
+                                aria-label="Copy USD account number"
+                                className="text-[10px] text-[#7A6230] hover:underline inline-flex items-center gap-1 cursor-pointer"
                               >
-                                {copiedKey === 'usd' ? '✓' : 'Copy'}
+                                {copiedKey === 'usd' ? (
+                                  <Check className="w-3 h-3" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
                               </button>
                             </div>
                           </div>
                           <div>
-                            <span className="text-[10px] text-[#73736E] block">Routing Number</span>
-                            <strong className="text-[#EDEDED]">{activeUsd?.sortCodeOrRouting || '021000021'}</strong>
+                            <span className="text-[10px] text-[#5C574E] block">Routing Number</span>
+                            <strong className="text-[#111111] tabular-nums">
+                              {activeUsd?.sortCodeOrRouting || '021000021'}
+                            </strong>
                           </div>
                           <div>
-                            <span className="text-[10px] text-[#73736E] block">SWIFT / BIC</span>
-                            <strong className="text-[#EDEDED]">{activeUsd?.swiftBic || 'MERCUS33XXX'}</strong>
+                            <span className="text-[10px] text-[#5C574E] block">SWIFT / BIC</span>
+                            <strong className="text-[#111111] tabular-nums">{activeUsd?.swiftBic || 'MERCUS33XXX'}</strong>
                           </div>
                           <div className="col-span-2">
-                            <span className="text-[10px] text-[#73736E] block">Beneficiary</span>
-                            <strong className="text-[#EDEDED]">{activeUsd?.accountName || 'VANTÉRA ENTERPRISES - Adnuel'}</strong>
+                            <span className="text-[10px] text-[#5C574E] block">Beneficiary</span>
+                            <strong className="text-[#111111] font-medium">
+                              {activeUsd?.accountName || 'VANTÉRA ENTERPRISES - Adnuel'}
+                            </strong>
                           </div>
                         </div>
                       </div>
@@ -1347,32 +1426,32 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                   </div>
 
                   {/* Payment Proof Submission */}
-                  <div className="border border-white/5 bg-[#121212] p-5 space-y-3 rounded-xs">
-                    <h4 className="text-[10px] font-meta uppercase tracking-[0.25em] text-[#D4AF37]">
+                  <div className="border border-[#111111]/10 bg-[#FAF7F2] p-4 space-y-3 rounded-xs">
+                    <h4 className="text-[10px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold">
                       Notify CEO Adnuel of Settlement
                     </h4>
-                    <p className="text-[11px] text-[#888880] font-meta">
-                      Already wired? Enter your transfer transaction ID or bank sender name:
+                    <p className="text-[11px] text-[#5C574E]">
+                      Already transferred? Enter your transaction reference or sender name:
                     </p>
                     <input
                       type="text"
                       placeholder="e.g. Sent via GTWorld app, Narration Ref #984210"
                       value={formData.paymentReference}
                       onChange={(e) => setFormData({ ...formData, paymentReference: e.target.value })}
-                      className="w-full bg-[#0B0B0B] border border-white/10 px-3 py-2 text-xs text-[#EDEDED] placeholder-[#444] focus:border-[#D4AF37] focus:outline-hidden"
+                      className="w-full bg-[#F7F3EC] border border-[#111111]/15 px-3 py-2.5 text-xs text-[#111111] placeholder-[#5C574E]/50 focus:border-[#B89B5E] focus:outline-hidden rounded-xs"
                     />
                     {paymentNoteSent ? (
-                      <div className="p-3 bg-[#0F2E22] text-[#10b981] border border-[#10b981]/30 text-xs font-meta text-center rounded-xs">
-                        ✓ Notification transmitted. CEO Adnuel is verifying your allocation.
+                      <div className="p-3 bg-[#F7F3EC] text-[#7A6230] border border-[#B89B5E] text-xs text-center rounded-xs">
+                        Notification submitted. CEO Adnuel is confirming your transfer.
                       </div>
                     ) : (
                       <button
                         type="button"
                         disabled={isSubmitting || !formData.paymentReference}
                         onClick={handlePaymentProofSubmit}
-                        className="w-full gold-gradient-bg text-[#0B0B0B] py-3 text-[10px] font-meta font-bold uppercase tracking-[0.2em] hover:brightness-110 disabled:opacity-40"
+                        className="w-full gold-gradient-bg py-3 text-[10px] font-semibold uppercase tracking-[0.2em] rounded-xs disabled:opacity-40 cursor-pointer"
                       >
-                        {isSubmitting ? 'Transmitting...' : 'Confirm Transfer Transmitted'}
+                        {isSubmitting ? 'Sending...' : 'Confirm Transfer Sent'}
                       </button>
                     )}
                   </div>
@@ -1380,20 +1459,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
               )}
 
               {/* Direct WhatsApp link to CEO */}
-              <div className="text-center pt-2">
+              <div className="text-center pt-1">
                 <a
                   href={`https://wa.me/2349132793670?text=${encodeURIComponent(
                     `Hello CEO Adnuel, regarding VANTÉRA order ${confirmedOrder.orderReference} (${
                       confirmedOrder.currency === 'NGN'
-                        ? formatNGN(convertUsdCentsToNgn(confirmedOrder.totalCents, confirmedOrder.exchangeRateUsed || exchangeRate))
+                        ? formatNGN(
+                            convertUsdCentsToNgn(
+                              confirmedOrder.totalCents,
+                              confirmedOrder.exchangeRateUsed || exchangeRate
+                            )
+                          )
                         : formatUSD(confirmedOrder.totalCents)
                     }).`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-meta tracking-wide text-[#D4AF37] hover:underline"
+                  className="inline-flex items-center gap-2 text-xs text-[#7A6230] hover:underline"
                 >
-                  <span>Direct VIP Concierge with CEO Adnuel (+234 913 279 3670) ↗</span>
+                  <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>Direct WhatsApp with CEO Adnuel (+234 913 279 3670)</span>
                 </a>
               </div>
             </div>
@@ -1401,31 +1486,29 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
         </div>
 
         {/* Footer Summary & Action */}
-        <div className="border-t border-white/5 bg-[#0E0E0E] p-7">
+        <div className="border-t border-[#111111]/10 bg-[#FAF7F2] px-6 py-5">
           {checkoutStep === 'cart' && items.length > 0 && (
             <div>
-              <div className="space-y-2 text-xs mb-5 font-meta">
-                <div className="flex justify-between text-[#888880]">
+              <div className="space-y-2 text-xs mb-5">
+                <div className="flex justify-between text-[#5C574E]">
                   <span>Subtotal</span>
-                  <div className="text-right">
-                    <span className="font-medium text-[#EDEDED]">
-                      {currency === 'NGN' ? formatNGN(subtotalNgn) : formatUSD(subtotalCents)}
-                    </span>
-                  </div>
+                  <span className="font-medium text-[#111111] tabular-nums">
+                    {currency === 'NGN' ? formatNGN(subtotalNgn) : formatUSD(subtotalCents)}
+                  </span>
                 </div>
 
                 {discountCents > 0 && (
-                  <div className="flex justify-between text-[#10b981]">
-                    <span>Privé Privilege ({appliedCoupon?.code})</span>
-                    <div className="text-right">
-                      <span>-{currency === 'NGN' ? formatNGN(discountNgn) : formatUSD(discountCents)}</span>
-                    </div>
+                  <div className="flex justify-between text-[#7A6230]">
+                    <span>Discount ({appliedCoupon?.code})</span>
+                    <span className="tabular-nums">
+                      -{currency === 'NGN' ? formatNGN(discountNgn) : formatUSD(discountCents)}
+                    </span>
                   </div>
                 )}
 
-                <div className="flex justify-between text-[#888880]">
-                  <span>Courier Allocation</span>
-                  <span className="text-[#EDEDED]">
+                <div className="flex justify-between text-[#5C574E]">
+                  <span>Delivery</span>
+                  <span className="text-[#111111] tabular-nums">
                     {shippingFeeCents === 0
                       ? 'Complimentary'
                       : currency === 'NGN'
@@ -1434,15 +1517,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                   </span>
                 </div>
 
-                <div className="flex justify-between text-sm pt-3 border-t border-white/5 font-editorial">
-                  <div>
-                    <span className="text-[#EDEDED]">Total ({currency})</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-base text-[#D4AF37] font-bold">
-                      {currency === 'NGN' ? formatNGN(totalNgn) : formatUSD(totalCents)}
-                    </span>
-                  </div>
+                <div className="flex justify-between items-baseline text-sm pt-3 border-t border-[#111111]/10">
+                  <span className="font-editorial text-[#111111]">Total ({currency})</span>
+                  <span className="text-lg font-editorial font-medium text-[#111111] tabular-nums">
+                    {currency === 'NGN' ? formatNGN(totalNgn) : formatUSD(totalCents)}
+                  </span>
                 </div>
               </div>
 
@@ -1461,23 +1540,28 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                     setCheckoutStep('shipping');
                   }
                 }}
-                className="w-full gold-gradient-bg text-[#0B0B0B] py-3.5 text-[10px] font-meta font-bold uppercase tracking-[0.25em] shadow-lg hover:brightness-110 active:scale-98 transition-all cursor-pointer"
+                className="w-full gold-gradient-bg py-3.5 text-[11px] font-semibold uppercase tracking-[0.22em] rounded-xs cursor-pointer inline-flex items-center justify-center gap-2"
               >
-                Proceed to Allocation
+                <Lock className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span>Proceed to Checkout</span>
               </button>
             </div>
           )}
 
           {checkoutStep === 'shipping' && (
-            <div className="space-y-3 font-meta">
-              <div className="bg-[#121212] p-3 border border-white/5 text-xs space-y-1 rounded-xs">
-                <div className="flex justify-between text-[#888880]">
+            <div className="space-y-3">
+              <div className="bg-[#F7F3EC] p-3 border border-[#111111]/10 text-xs space-y-1 rounded-xs">
+                <div className="flex justify-between text-[#5C574E]">
                   <span>Settlement Currency</span>
-                  <strong className="text-[#D4AF37]">{currency === 'NGN' ? 'Nigerian Naira (₦)' : 'US Dollar ($)'}</strong>
+                  <strong className="text-[#7A6230]">
+                    {currency === 'NGN' ? 'Nigerian Naira (₦)' : 'US Dollar ($)'}
+                  </strong>
                 </div>
-                <div className="flex justify-between text-[#EDEDED] font-editorial pt-1 border-t border-white/5">
+                <div className="flex justify-between text-[#111111] font-editorial pt-1 border-t border-[#111111]/10">
                   <span>Total Amount</span>
-                  <span className="text-[#D4AF37] font-bold">{currency === 'NGN' ? formatNGN(totalNgn) : formatUSD(totalCents)}</span>
+                  <span className="font-semibold tabular-nums">
+                    {currency === 'NGN' ? formatNGN(totalNgn) : formatUSD(totalCents)}
+                  </span>
                 </div>
               </div>
 
@@ -1486,41 +1570,41 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
                   type="submit"
                   form="checkout-form"
                   disabled={isSubmitting}
-                  className="w-full gold-gradient-bg text-[#0B0B0B] py-3.5 text-[10px] font-meta font-bold uppercase tracking-[0.25em] hover:brightness-110 disabled:opacity-40 transition-all shadow-lg"
+                  className="w-full gold-gradient-bg py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] rounded-xs disabled:opacity-40 cursor-pointer"
                 >
                   {isSubmitting
-                    ? 'Allocating...'
+                    ? 'Placing Order...'
                     : `Place Bank Transfer Order · ${currency === 'NGN' ? formatNGN(totalNgn) : formatUSD(totalCents)}`}
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setCheckoutStep('cart')}
-                className="w-full text-center text-xs text-[#888880] hover:text-[#EDEDED] transition-colors"
+                className="w-full text-center text-xs text-[#5C574E] hover:text-[#111111] transition-colors cursor-pointer"
               >
-                ← Return to Atelier Bag
+                ← Return to Shopping Bag
               </button>
             </div>
           )}
 
           {checkoutStep === 'confirmed' && (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <button
                 type="button"
                 onClick={() => {
                   handleClose();
                   onNavigate('/account');
                 }}
-                className="w-full gold-gradient-bg text-[#0B0B0B] py-3 text-[10px] font-meta font-bold uppercase tracking-[0.2em] hover:brightness-110"
+                className="w-full gold-gradient-bg py-3 text-[11px] font-semibold uppercase tracking-[0.2em] rounded-xs cursor-pointer"
               >
                 View in Client Account
               </button>
               <button
                 type="button"
                 onClick={handleClose}
-                className="w-full text-center text-xs text-[#888880] hover:text-[#EDEDED] transition-colors"
+                className="w-full text-center text-xs text-[#5C574E] hover:text-[#111111] transition-colors cursor-pointer"
               >
-                Continue Atelier Exploration
+                Continue Exploring
               </button>
             </div>
           )}

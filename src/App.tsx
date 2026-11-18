@@ -24,13 +24,18 @@ function MainRouter() {
   const { route, navigate } = useNavigation();
   const { adminToken } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState<boolean>(true);
 
   const refreshProducts = React.useCallback(() => {
-    safeFetchJson<{ products: Product[] }>('/api/products', { cache: 'no-store' }).then((res) => {
-      if (res.ok && res.data && Array.isArray(res.data.products)) {
-        setProducts(res.data.products);
-      }
-    });
+    safeFetchJson<{ products: Product[] }>('/api/products', { cache: 'no-store' })
+      .then((res) => {
+        if (res.ok && res.data && Array.isArray(res.data.products)) {
+          setProducts(res.data.products);
+        }
+      })
+      .finally(() => {
+        setIsProductsLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -62,11 +67,12 @@ function MainRouter() {
   let pageContent: React.ReactNode = null;
 
   if (route.path === '/') {
-    pageContent = <Home products={products} onNavigate={navigate} />;
+    pageContent = <Home products={products} isLoading={isProductsLoading} onNavigate={navigate} />;
   } else if (route.path === '/shop') {
     pageContent = (
       <ShopPage
         products={products}
+        isLoading={isProductsLoading}
         initialFilter={route.filter}
         initialSearchQuery={route.searchQuery}
         onNavigate={navigate}
@@ -76,6 +82,7 @@ function MainRouter() {
     pageContent = (
       <ShopPage
         products={products}
+        isLoading={isProductsLoading}
         activeCategory={route.category}
         initialFilter={route.filter}
         initialSearchQuery={route.searchQuery}
@@ -83,7 +90,7 @@ function MainRouter() {
       />
     );
   } else if (route.path === '/product') {
-    pageContent = <ProductPage productSlug={route.productSlug || ''} products={products} onNavigate={navigate} />;
+    pageContent = <ProductPage productSlug={route.productSlug || ''} products={products} isLoading={isProductsLoading} onNavigate={navigate} />;
   } else if (['/about', '/contact', '/faq', '/shipping', '/shipping-policy', '/returns', '/refund-policy', '/privacy', '/privacy-policy', '/terms'].includes(route.path)) {
     pageContent = <InfoPage pageKey={route.path} onNavigate={navigate} />;
   } else if (route.path === '/order-confirmed') {
@@ -95,14 +102,14 @@ function MainRouter() {
   } else {
     pageContent = (
       <div className="max-w-3xl mx-auto px-6 py-28 text-center space-y-6">
-        <p className="text-[11px] uppercase tracking-[0.28em] text-[#C8A96A] font-medium">
+        <p className="text-[11px] uppercase tracking-[0.28em] text-[#7A6230] font-semibold">
           Error 404
         </p>
-        <h1 className="font-editorial text-4xl sm:text-5xl font-medium text-[#F5F1E8]">
-          This Page Could Not Be Found
+        <h1 className="font-editorial text-4xl sm:text-5xl font-medium text-[#111111]">
+          This page could not be <em className="italic font-normal">found</em>
         </h1>
-        <p className="text-sm sm:text-base text-[#A8A297] max-w-md mx-auto leading-relaxed">
-          The link may be outdated or the item has moved. Return to our collection or view your client account below.
+        <p className="text-sm sm:text-base text-[#5C574E] max-w-md mx-auto leading-relaxed">
+          The link may be outdated or the item has moved. Return to our collection or browse available objects below.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
           <button
@@ -115,7 +122,7 @@ function MainRouter() {
           <button
             type="button"
             onClick={() => navigate('/shop')}
-            className="border border-white/15 hover:border-[#C8A96A] text-[#F5F1E8] hover:text-[#C8A96A] px-7 py-3.5 text-xs uppercase tracking-[0.2em] font-medium rounded-xs transition-colors cursor-pointer"
+            className="border border-[#111111]/20 hover:border-[#B89B5E] text-[#111111] hover:text-[#7A6230] px-7 py-3.5 text-xs uppercase tracking-[0.2em] font-medium rounded-xs transition-colors cursor-pointer"
           >
             Browse Collection
           </button>

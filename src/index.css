@@ -9,24 +9,32 @@
 }
 
 :root {
-  --vantera-canvas: #0B0B0C;
-  --vantera-surface: #141416;
-  --vantera-ink: #F5F1E8;
-  --vantera-muted: #A8A297;
-  --vantera-accent: #C8A96A;
+  --vantera-canvas: #F7F3EC;
+  --vantera-surface: #FAF7F2;
+  --vantera-studio: #EFEAE0;
+  --vantera-ink: #111111;
+  --vantera-charcoal: #1B1B1B;
+  --vantera-muted: #5C574E;
+  --vantera-accent: #B89B5E;
+  --vantera-accent-text: #7A6230;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #F5F1E8;
-  background-color: #0B0B0C;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  color: #111111;
+  background-color: #F7F3EC;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
-/* Strictly Two Typefaces: Playfair Display (Headings) + Montserrat (Body & Labels) */
+/* Strictly Two Typefaces: Playfair Display (Headings) + Montserrat (Body, UI & Labels) */
 .font-editorial {
   font-family: 'Playfair Display', Georgia, serif;
 }
@@ -40,70 +48,207 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Muted Champagne Gold Accent */
+/* Champagne Gold Accent (#B89B5E) */
 .gold-gradient-text {
-  color: #C8A96A;
+  color: #B89B5E;
 }
 
 .gold-gradient-bg {
-  background-color: #C8A96A;
-  color: #0B0B0C;
-  transition: background-color 200ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: #B89B5E;
+  color: #111111;
+  transition: background-color 240ms cubic-bezier(0.22, 1, 0.36, 1), transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.gold-gradient-bg:hover {
-  background-color: #D8BC82;
+.gold-gradient-bg:hover:not(:disabled) {
+  background-color: #C7AB6E;
 }
 
-/* Refined Quiet Border Cards */
+.gold-gradient-bg:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+/* Refined Quiet Hairline Surface Cards */
 .zero-border-card {
-  border: 1px solid rgba(245, 241, 232, 0.08);
-  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), border-color 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(17, 17, 17, 0.09);
+  transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1), border-color 350ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .zero-border-card:hover {
-  border-color: rgba(200, 169, 106, 0.4);
+  border-color: rgba(184, 155, 94, 0.65);
 }
 
-/* Subtle Loading Bar Animation (Minimal & Refined) */
+/* Subtle Loading Bar & Skeleton Shimmer (GPU-only) */
 @keyframes vanteraProgress {
   0% {
-    transform: translateX(-100%);
+    transform: translate3d(-100%, 0, 0);
   }
   50% {
-    transform: translateX(0%);
+    transform: translate3d(0%, 0, 0);
   }
   100% {
-    transform: translateX(100%);
+    transform: translate3d(100%, 0, 0);
   }
 }
 
 .vantera-loader-bar {
-  animation: vanteraProgress 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation: vanteraProgress 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    transform: translate3d(-100%, 0, 0);
+  }
+  100% {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+.vantera-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: #EDE7DC;
+}
+
+.vantera-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(247, 243, 236, 0.72), transparent);
+  transform: translate3d(-100%, 0, 0);
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+/* Line-by-line Hero Headline Reveal */
+@keyframes heroLineReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.hero-line-reveal {
+  opacity: 0;
+  animation: heroLineReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Smooth Page Route Transition */
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.vantera-page-enter {
+  animation: pageEnter 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Gentle Cart Badge Bounce */
+@keyframes cartBadgeBounce {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.28) translate3d(0, -2px, 0);
+  }
+  70% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cart-badge-bounce {
+  animation: cartBadgeBounce 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Smooth Drawer & Overlay Motion */
+@keyframes slideInRight {
+  0% {
+    transform: translate3d(100%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.vantera-slide-in-right {
+  animation: slideInRight 340ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes fadeInOverlay {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.vantera-overlay-fade {
+  animation: fadeInOverlay 240ms ease-out forwards;
+}
+
+/* Animated Success Checkmark */
+@keyframes checkmarkDraw {
+  0% {
+    stroke-dashoffset: 36;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.vantera-checkmark-path {
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: checkmarkDraw 650ms cubic-bezier(0.22, 1, 0.36, 1) 120ms forwards;
 }
 
 /* Scroll Fade-In */
 .fade-in-section {
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translate3d(0, 16px, 0);
+  transition: opacity 650ms cubic-bezier(0.22, 1, 0.36, 1), transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .fade-in-section.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   .zero-border-card,
   .gold-gradient-bg,
   .fade-in-section {
-    transition: none;
-    opacity: 1;
-    transform: none;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
-  .vantera-loader-bar {
-    animation: none;
+  .vantera-loader-bar,
+  .vantera-shimmer::after,
+  .hero-line-reveal,
+  .vantera-page-enter,
+  .cart-badge-bounce,
+  .vantera-slide-in-right,
+  .vantera-overlay-fade,
+  .vantera-checkmark-path {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    stroke-dashoffset: 0 !important;
   }
 }
 

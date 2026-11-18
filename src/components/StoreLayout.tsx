@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
+import { Menu, X, Search, User, Heart, ShoppingBag, ArrowUpRight } from 'lucide-react';
 import { Product } from '../data/catalog.ts';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
 import { useWishlist } from '../contexts/WishlistContext.tsx';
+import { getMobileActiveTab, shouldShowMobileBottomNav } from '../lib/storefrontHelpers.ts';
 import { CartDrawer } from './CartDrawer.tsx';
 import { AndroidInstallModal } from './AndroidInstallModal.tsx';
+import { MobileBottomNav } from './MobileBottomNav.tsx';
+import { FullScreenSearch } from './FullScreenSearch.tsx';
 
 interface StoreLayoutProps {
   children: React.ReactNode;
@@ -20,7 +24,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
   products = [],
   onNavigate,
 }) => {
-  const { itemCount, setIsCartOpen, addToCart } = useCart();
+  const { itemCount, isCartOpen, setIsCartOpen, checkoutStep, cartBounceKey, addToCart } = useCart();
   const { user } = useAuth();
   const { currency, setCurrency, formatAmount } = useCurrency();
   const { wishlistIds, isWishlistOpen, setIsWishlistOpen, removeFromWishlist } = useWishlist();
@@ -46,13 +50,6 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
     } catch {}
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    setIsSearchOpen(false);
-    onNavigate(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
-  };
-
   const navItems = [
     { label: 'Shop', href: '/shop' },
     { label: 'Tech', href: '/category/premium-tech-accessories' },
@@ -63,19 +60,21 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
   ];
 
   const wishlistedProducts = products.filter((p) => wishlistIds.includes(p.id));
+  const showBottomNav = shouldShowMobileBottomNav(activePath, isCartOpen, checkoutStep);
+  const activeMobileTab = getMobileActiveTab(activePath, isSearchOpen, isCartOpen);
 
   return (
-    <div className="min-h-screen bg-[#0B0B0C] text-[#F5F1E8] flex flex-col font-meta selection:bg-[#C8A96A]/30 selection:text-[#F5F1E8]">
-      {/* Slim Sticky Luxury Header */}
-      <header className="sticky top-0 z-40 bg-[#0B0B0C]/95 backdrop-blur-md border-b border-white/8">
-        <div className="max-w-7xl mx-auto px-3 sm:px-8 lg:px-12 h-16 sm:h-[70px] flex items-center justify-between gap-2 sm:gap-4">
+    <div className="min-h-screen bg-[#F7F3EC] text-[#111111] flex flex-col font-meta selection:bg-[#B89B5E]/25 selection:text-[#111111]">
+      {/* Slim Sticky Luxury Header (Compact 56px mobile, 68px desktop) */}
+      <header className="sticky top-0 z-40 bg-[#F7F3EC]/92 backdrop-blur-md border-b border-[#111111]/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 h-14 lg:h-[68px] flex items-center justify-between gap-3">
           {/* Left: Minimal Navigation (Desktop) */}
           <nav
             aria-label="Primary Navigation"
-            className="hidden lg:flex items-center gap-4 xl:gap-5 text-[10px] xl:text-[11px] uppercase tracking-[0.14em] xl:tracking-[0.18em] font-medium text-[#A8A297] lg:flex-1"
+            className="hidden lg:flex items-center gap-5 text-[11px] uppercase tracking-[0.16em] font-medium text-[#5C574E] lg:flex-1"
           >
             {navItems.map((item) => {
-              const isActive = activePath === item.href;
+              const isActive = activePath === item.href || window.location.pathname === item.href;
               return (
                 <a
                   key={item.href}
@@ -86,8 +85,8 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   }}
                   className={`whitespace-nowrap shrink-0 transition-colors py-1 border-b ${
                     isActive
-                      ? 'text-[#F5F1E8] border-[#C8A96A]'
-                      : 'border-transparent hover:text-[#F5F1E8]'
+                      ? 'text-[#111111] border-[#B89B5E]'
+                      : 'border-transparent hover:text-[#111111]'
                   }`}
                 >
                   {item.label}
@@ -96,22 +95,18 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
             })}
           </nav>
 
-          {/* Mobile Left Hamburger */}
+          {/* Mobile Left Menu Toggle (Secondary Links: Track, Policies, Philosophy) */}
           <div className="flex lg:hidden items-center shrink-0">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle navigation menu"
-              className="p-2 -ml-1 text-[#F5F1E8] hover:text-[#C8A96A] transition-colors cursor-pointer"
+              className="min-w-[44px] min-h-[44px] -ml-2 inline-flex items-center justify-center text-[#111111] hover:text-[#7A6230] transition-colors cursor-pointer"
             >
               {isMobileMenuOpen ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-5 h-5" strokeWidth={1.5} />
               ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
-                </svg>
+                <Menu className="w-5 h-5" strokeWidth={1.5} />
               )}
             </button>
           </div>
@@ -124,27 +119,26 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
               setIsMobileMenuOpen(false);
               onNavigate('/');
             }}
-            className="font-editorial text-lg sm:text-2xl font-medium tracking-[0.2em] sm:tracking-[0.28em] uppercase text-[#F5F1E8] hover:text-[#C8A96A] transition-colors whitespace-nowrap shrink-0 cursor-pointer text-center"
+            className="font-editorial text-lg sm:text-2xl font-medium tracking-[0.24em] uppercase text-[#111111] hover:text-[#7A6230] transition-colors whitespace-nowrap shrink-0 cursor-pointer text-center"
           >
             VANTÉRA
           </a>
 
-          {/* Right: Subtle Currency Switcher & Thin-Stroke Icon Controls */}
-          <div className="flex items-center justify-end gap-1 sm:gap-4 lg:flex-1 shrink-0">
-            {/* Discreet ₦ / $ Switcher */}
+          {/* Right: Discreet Currency Switcher & Consistent Thin-Stroke Controls */}
+          <div className="flex items-center justify-end gap-1.5 sm:gap-3 lg:flex-1 shrink-0">
             <div
               role="group"
               aria-label="Select currency"
-              className="flex items-center text-[11px] uppercase tracking-[0.12em] border border-white/10 rounded-xs overflow-hidden bg-[#141416]"
+              className="flex items-center text-[11px] uppercase tracking-[0.12em] border border-[#111111]/15 rounded-xs overflow-hidden bg-[#FAF7F2]"
             >
               <button
                 type="button"
                 onClick={() => setCurrency('NGN')}
                 aria-pressed={currency === 'NGN'}
-                className={`px-2 py-1 transition-colors cursor-pointer ${
+                className={`px-2.5 py-1.5 min-h-[34px] transition-colors cursor-pointer ${
                   currency === 'NGN'
-                    ? 'bg-[#C8A96A] text-[#0B0B0C] font-semibold'
-                    : 'text-[#A8A297] hover:text-[#F5F1E8]'
+                    ? 'bg-[#B89B5E] text-[#111111] font-semibold'
+                    : 'text-[#5C574E] hover:text-[#111111]'
                 }`}
               >
                 ₦
@@ -153,29 +147,27 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                 type="button"
                 onClick={() => setCurrency('USD')}
                 aria-pressed={currency === 'USD'}
-                className={`px-2 py-1 transition-colors cursor-pointer ${
+                className={`px-2.5 py-1.5 min-h-[34px] transition-colors cursor-pointer ${
                   currency === 'USD'
-                    ? 'bg-[#C8A96A] text-[#0B0B0C] font-semibold'
-                    : 'text-[#A8A297] hover:text-[#F5F1E8]'
+                    ? 'bg-[#B89B5E] text-[#111111] font-semibold'
+                    : 'text-[#5C574E] hover:text-[#111111]'
                 }`}
               >
                 $
               </button>
             </div>
 
-            {/* Search Icon */}
+            {/* Search Icon (Desktop — mobile uses bottom bar Search tab) */}
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
               aria-label="Search products"
-              className="p-2 text-[#A8A297] hover:text-[#F5F1E8] transition-colors cursor-pointer"
+              className="hidden lg:inline-flex items-center justify-center p-2 text-[#5C574E] hover:text-[#111111] transition-colors cursor-pointer"
             >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
+              <Search className="w-[18px] h-[18px]" strokeWidth={1.5} />
             </button>
 
-            {/* Account Icon */}
+            {/* Account Icon (Desktop) */}
             <button
               type="button"
               onClick={() => {
@@ -183,13 +175,11 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                 onNavigate(user ? '/account' : '/account?mode=login');
               }}
               aria-label={user ? `Account: ${user.name}` : 'Sign in or open account'}
-              className="hidden sm:inline-flex items-center justify-center p-2 text-[#A8A297] hover:text-[#F5F1E8] transition-colors cursor-pointer relative"
+              className="hidden lg:inline-flex items-center justify-center p-2 text-[#5C574E] hover:text-[#111111] transition-colors cursor-pointer relative"
             >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
+              <User className="w-[18px] h-[18px]" strokeWidth={1.5} />
               {user && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#C8A96A] absolute top-1.5 right-1.5" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#B89B5E] absolute top-1.5 right-1.5" />
               )}
             </button>
 
@@ -198,37 +188,38 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
               type="button"
               onClick={() => setIsWishlistOpen(true)}
               aria-label={`Open saved items (${wishlistIds.length})`}
-              className="p-2 text-[#A8A297] hover:text-[#F5F1E8] transition-colors cursor-pointer relative"
+              className="min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-[#5C574E] hover:text-[#111111] transition-colors cursor-pointer relative"
             >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-              </svg>
+              <Heart className="w-[18px] h-[18px]" strokeWidth={1.5} />
               {wishlistIds.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#C8A96A] text-[#0B0B0C] text-[10px] font-semibold flex items-center justify-center tabular-nums">
+                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#B89B5E] text-[#111111] text-[9px] font-semibold flex items-center justify-center tabular-nums">
                   {wishlistIds.length}
                 </span>
               )}
             </button>
 
-            {/* Bag Icon */}
+            {/* Bag Icon (Desktop — mobile uses bottom bar Cart tab) */}
             <button
               type="button"
               onClick={() => setIsCartOpen(true)}
               aria-label={`Open shopping bag (${itemCount} items)`}
-              className="p-1.5 sm:p-2 text-[#F5F1E8] hover:text-[#C8A96A] transition-colors cursor-pointer relative flex items-center gap-1"
+              className="hidden lg:inline-flex p-2 text-[#111111] hover:text-[#7A6230] transition-colors cursor-pointer relative items-center gap-1.5"
             >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
-              </svg>
-              <span className="text-[11px] font-medium tabular-nums tracking-wider">{itemCount}</span>
+              <ShoppingBag className="w-[18px] h-[18px]" strokeWidth={1.5} />
+              <span
+                key={cartBounceKey}
+                className="cart-badge-bounce text-[11px] font-semibold tabular-nums tracking-wider"
+              >
+                {itemCount}
+              </span>
             </button>
           </div>
         </div>
 
-        {/* Uncluttered Mobile Navigation Drawer with Large Tap Targets */}
+        {/* Clean Mobile Drawer Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden bg-[#141416] border-t border-white/8 px-6 py-6 space-y-6">
-            <nav aria-label="Mobile Navigation" className="flex flex-col divide-y divide-white/6">
+          <div className="lg:hidden bg-[#F7F3EC] border-t border-[#111111]/10 px-6 py-6 space-y-6">
+            <nav aria-label="Mobile Navigation" className="flex flex-col divide-y divide-[#111111]/8">
               <a
                 href="/"
                 onClick={(e) => {
@@ -236,7 +227,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   setIsMobileMenuOpen(false);
                   onNavigate('/');
                 }}
-                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#F5F1E8] hover:text-[#C8A96A]"
+                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#111111] hover:text-[#7A6230]"
               >
                 Home
               </a>
@@ -249,7 +240,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                     setIsMobileMenuOpen(false);
                     onNavigate(item.href);
                   }}
-                  className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#F5F1E8] hover:text-[#C8A96A]"
+                  className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#111111] hover:text-[#7A6230]"
                 >
                   {item.label}
                 </a>
@@ -261,7 +252,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   setIsMobileMenuOpen(false);
                   onNavigate('/track');
                 }}
-                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#F5F1E8] hover:text-[#C8A96A]"
+                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#111111] hover:text-[#7A6230]"
               >
                 Order Tracking
               </a>
@@ -272,9 +263,9 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   setIsMobileMenuOpen(false);
                   onNavigate('/about');
                 }}
-                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#A8A297] hover:text-[#F5F1E8]"
+                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#5C574E] hover:text-[#111111]"
               >
-                About & Trust
+                Philosophy & Craft
               </a>
               <a
                 href="/contact"
@@ -283,116 +274,24 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   setIsMobileMenuOpen(false);
                   onNavigate('/contact');
                 }}
-                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#A8A297] hover:text-[#F5F1E8]"
+                className="min-h-[48px] flex items-center text-xs uppercase tracking-[0.2em] text-[#5C574E] hover:text-[#111111]"
               >
                 Concierge
               </a>
             </nav>
-
-            <div className="pt-2 space-y-3">
-              {user ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    onNavigate('/account');
-                  }}
-                  className="w-full min-h-[48px] px-4 text-xs uppercase tracking-[0.2em] font-semibold gold-gradient-bg rounded-xs cursor-pointer"
-                >
-                  Account · {user.name.split(' ')[0]}
-                </button>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onNavigate('/account?mode=login');
-                    }}
-                    className="min-h-[48px] px-4 text-xs uppercase tracking-[0.18em] border border-white/15 text-[#F5F1E8] rounded-xs cursor-pointer"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onNavigate('/account?mode=register');
-                    }}
-                    className="min-h-[48px] px-4 text-xs uppercase tracking-[0.18em] font-semibold gold-gradient-bg rounded-xs cursor-pointer"
-                  >
-                    Register
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </header>
 
-      {/* Search Overlay */}
-      {isSearchOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Search Catalog"
-          className="fixed inset-0 z-50 flex items-start justify-center pt-20 sm:pt-28 bg-black/85 backdrop-blur-md px-4"
-        >
-          <div className="bg-[#141416] w-full max-w-xl p-6 sm:p-8 rounded-xs border border-white/10 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="font-editorial text-2xl font-medium text-[#F5F1E8]">
-                Search VANTÉRA
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsSearchOpen(false)}
-                className="text-[#A8A297] hover:text-[#F5F1E8] p-2 cursor-pointer"
-                aria-label="Close search"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSearchSubmit} className="flex gap-3">
-              <label htmlFor="header-search-input" className="sr-only">
-                Search catalog
-              </label>
-              <input
-                id="header-search-input"
-                type="text"
-                autoFocus
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search chargers, cases, desk stands, earbuds..."
-                className="flex-1 bg-[#0B0B0C] border border-white/12 rounded-xs py-3 px-4 text-sm text-[#F5F1E8] placeholder-[#A8A297]/60 focus:outline-hidden focus:border-[#C8A96A]"
-              />
-              <button
-                type="submit"
-                className="gold-gradient-bg px-6 py-3 text-[11px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer whitespace-nowrap"
-              >
-                Search
-              </button>
-            </form>
-
-            <div className="flex flex-wrap gap-2 pt-1">
-              {['MagSafe', 'Case', 'Desk Stand', 'Earbuds', 'Charging'].map((term) => (
-                <button
-                  key={term}
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery(term);
-                    setIsSearchOpen(false);
-                    onNavigate(`/shop?q=${encodeURIComponent(term)}`);
-                  }}
-                  className="text-[11px] uppercase tracking-[0.15em] bg-[#0B0B0C] border border-white/10 hover:border-[#C8A96A] hover:text-[#C8A96A] text-[#A8A297] px-3 py-1.5 rounded-xs transition-colors cursor-pointer"
-                >
-                  {term}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Smooth Full-Screen Search Overlay with Live Suggestions */}
+      <FullScreenSearch
+        isOpen={isSearchOpen}
+        query={searchQuery}
+        onQueryChange={setSearchQuery}
+        onClose={() => setIsSearchOpen(false)}
+        products={products}
+        onNavigate={onNavigate}
+      />
 
       {/* Saved Wishlist Slide-Over Drawer */}
       {isWishlistOpen && (
@@ -400,13 +299,13 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
           role="dialog"
           aria-modal="true"
           aria-label="Saved Wishlist"
-          className="fixed inset-0 z-50 flex justify-end bg-black/80 backdrop-blur-md"
+          className="vantera-overlay-fade fixed inset-0 z-50 flex justify-end bg-[#111111]/60 backdrop-blur-md"
         >
-          <div className="flex h-full w-full max-w-md flex-col bg-[#0B0B0C] text-[#F5F1E8] border-l border-white/8">
-            <div className="flex items-center justify-between border-b border-white/8 px-6 py-5 bg-[#141416]">
+          <div className="vantera-slide-in-right flex h-full w-full max-w-md flex-col bg-[#F7F3EC] text-[#111111] border-l border-[#111111]/12">
+            <div className="flex items-center justify-between border-b border-[#111111]/10 px-6 py-5 bg-[#FAF7F2]">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-[#C8A96A]">VANTÉRA</p>
-                <h2 className="font-editorial text-xl font-medium text-[#F5F1E8]">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-[#7A6230] font-medium">VANTÉRA</p>
+                <h2 className="font-editorial text-xl font-medium text-[#111111]">
                   Saved Selection ({wishlistedProducts.length})
                 </h2>
               </div>
@@ -414,18 +313,18 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                 type="button"
                 onClick={() => setIsWishlistOpen(false)}
                 aria-label="Close wishlist"
-                className="p-2 text-[#A8A297] hover:text-[#F5F1E8] cursor-pointer"
+                className="min-w-[40px] min-h-[40px] inline-flex items-center justify-center text-[#5C574E] hover:text-[#111111] cursor-pointer"
               >
-                ✕
+                <X className="w-5 h-5" strokeWidth={1.5} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {wishlistedProducts.length === 0 ? (
                 <div className="py-24 text-center space-y-4">
-                  <span className="font-editorial text-3xl text-[#C8A96A] block">V</span>
-                  <p className="font-editorial text-lg text-[#F5F1E8]">Your wishlist is empty.</p>
-                  <p className="text-xs text-[#A8A297] max-w-xs mx-auto leading-relaxed">
+                  <span className="font-editorial text-3xl text-[#B89B5E] block">V</span>
+                  <p className="font-editorial text-xl text-[#111111]">Your wishlist is empty.</p>
+                  <p className="text-xs text-[#5C574E] max-w-xs mx-auto leading-relaxed">
                     Save hardware pieces as you browse to revisit or move them into your shopping bag anytime.
                   </p>
                   <button
@@ -446,7 +345,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   return (
                     <div
                       key={product.id}
-                      className="flex gap-4 bg-[#141416] border border-white/8 p-4 rounded-xs items-center"
+                      className="flex gap-4 bg-[#FAF7F2] border border-[#111111]/10 p-4 rounded-xs items-center"
                     >
                       <button
                         type="button"
@@ -454,12 +353,12 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                           setIsWishlistOpen(false);
                           onNavigate(`/product/${product.slug}`);
                         }}
-                        className="w-16 h-16 bg-[#0B0B0C] border border-white/8 p-2 shrink-0 flex items-center justify-center cursor-pointer"
+                        className="w-16 h-16 bg-[#EFEAE0] shrink-0 flex items-center justify-center cursor-pointer overflow-hidden"
                       >
                         <img
                           src={product.image || '/products/charging-phone-stand.jpg'}
                           alt={product.title}
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-cover"
                         />
                       </button>
                       <div className="flex-1 min-w-0 space-y-1.5">
@@ -469,14 +368,14 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                             setIsWishlistOpen(false);
                             onNavigate(`/product/${product.slug}`);
                           }}
-                          className="text-left text-sm font-medium text-[#F5F1E8] hover:text-[#C8A96A] truncate block w-full cursor-pointer"
+                          className="text-left font-editorial text-sm font-medium text-[#111111] hover:text-[#7A6230] truncate block w-full cursor-pointer"
                         >
                           {product.title}
                         </button>
-                        <div className="text-xs text-[#C8A96A] font-medium tabular-nums">
+                        <div className="text-xs text-[#111111] font-medium tabular-nums">
                           {formatAmount(product.retailPriceCents)}
                         </div>
-                        <div className="flex items-center gap-3 pt-1">
+                        <div className="flex items-center gap-4 pt-1">
                           {!out ? (
                             <button
                               type="button"
@@ -486,19 +385,19 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                                 setIsWishlistOpen(false);
                                 setIsCartOpen(true);
                               }}
-                              className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#C8A96A] hover:underline cursor-pointer"
+                              className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#7A6230] hover:underline cursor-pointer"
                             >
                               Move to Bag
                             </button>
                           ) : (
-                            <span className="text-[10px] uppercase tracking-[0.18em] text-[#A8A297]">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-[#8E3A3A]">
                               Out of stock
                             </span>
                           )}
                           <button
                             type="button"
                             onClick={() => removeFromWishlist(product.id)}
-                            className="text-[10px] uppercase tracking-[0.18em] text-[#A8A297] hover:text-[#F5F1E8] cursor-pointer"
+                            className="text-[10px] uppercase tracking-[0.18em] text-[#5C574E] hover:text-[#111111] cursor-pointer"
                           >
                             Remove
                           </button>
@@ -513,20 +412,22 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="flex-1 w-full">{children}</main>
+      {/* Main Content with Smooth Route Transition */}
+      <main key={activePath} className="flex-1 w-full vantera-page-enter">
+        {children}
+      </main>
 
-      {/* Editorial Footer */}
-      <footer className="bg-[#0B0B0C] border-t border-white/8 mt-24">
+      {/* Clean Editorial Luxury Footer */}
+      <footer className="bg-[#111111] text-[#F7F3EC] border-t border-[#111111]/15 mt-20 pb-[calc(76px+env(safe-area-inset-bottom))] lg:pb-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-16 lg:py-20 space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-12">
             {/* Brand + Newsletter */}
             <div className="md:col-span-5 space-y-5">
               <div className="space-y-3">
-                <span className="font-editorial text-2xl font-medium tracking-[0.28em] uppercase text-[#F5F1E8] block">
+                <span className="font-editorial text-2xl font-medium tracking-[0.28em] uppercase text-[#F7F3EC] block">
                   VANTÉRA
                 </span>
-                <p className="text-sm text-[#A8A297] max-w-sm leading-relaxed">
+                <p className="text-sm text-[#C7C0B4] max-w-sm leading-relaxed font-light">
                   Refined smartphone protection, wireless charging architecture, and everyday desk hardware dispatched from Lagos worldwide.
                 </p>
               </div>
@@ -563,7 +464,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
                   placeholder="Email for restock notifications"
-                  className="flex-1 bg-[#141416] border border-white/10 px-4 py-2.5 text-sm text-[#F5F1E8] placeholder-[#A8A297]/60 focus:outline-hidden focus:border-[#C8A96A] rounded-xs"
+                  className="flex-1 bg-[#1B1B1B] border border-[#F7F3EC]/15 px-4 py-2.5 text-sm text-[#F7F3EC] placeholder-[#C7C0B4]/60 focus:outline-hidden focus:border-[#B89B5E] rounded-xs"
                   required
                 />
                 <button
@@ -575,51 +476,51 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
                 </button>
               </form>
               {newsletterStatus === 'success' && (
-                <p className="text-xs text-[#2E9B6B]">You are subscribed to VANTÉRA restock alerts.</p>
+                <p className="text-xs text-[#B89B5E]">You are subscribed to VANTÉRA restock alerts.</p>
               )}
               {newsletterStatus === 'error' && (
-                <p className="text-xs text-[#E57373]">Unable to register that email right now.</p>
+                <p className="text-xs text-[#E59B9B]">Unable to register that email right now.</p>
               )}
             </div>
 
             {/* Collections */}
             <div className="md:col-span-3 space-y-4">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#C8A96A]">
-                Collection
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#B89B5E]">
+                Collections
               </h3>
-              <ul className="space-y-3 text-sm text-[#A8A297]">
+              <ul className="space-y-2.5 text-sm text-[#C7C0B4] font-light">
                 <li>
-                  <button type="button" onClick={() => onNavigate('/shop')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/shop')} className="hover:text-[#F7F3EC] cursor-pointer text-left">
                     All Collections
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/category/premium-tech-accessories')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/category/premium-tech-accessories')} className="hover:text-[#F7F3EC] cursor-pointer text-left">
                     Premium Tech Accessories
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/category/smart-home-technology')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/category/smart-home-technology')} className="hover:text-[#F7F3EC] cursor-pointer text-left">
                     Smart Home Technology
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/category/laptop-workspace')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/category/laptop-workspace')} className="hover:text-[#F7F3EC] cursor-pointer text-left">
                     Laptop & Workspace Accessories
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/category/trending-lifestyle-gadgets')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/category/trending-lifestyle-gadgets')} className="hover:text-[#F7F3EC] cursor-pointer text-left">
                     Trending Lifestyle Gadgets
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/category/premium-everyday-accessories')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/category/premium-everyday-accessories')} className="hover:text-[#F7F3EC] cursor-pointer text-left">
                     Premium Everyday Accessories
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/track')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/track')} className="hover:text-[#F7F3EC] cursor-pointer text-left">
                     Order Tracking
                   </button>
                 </li>
@@ -628,100 +529,102 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
 
             {/* Client Care & Policies */}
             <div className="md:col-span-4 space-y-4">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#C8A96A]">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#B89B5E]">
                 Client Care & Policies
               </h3>
-              <ul className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm text-[#A8A297]">
+              <ul className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-sm text-[#C7C0B4] font-light">
                 <li>
-                  <button type="button" onClick={() => onNavigate('/about')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/about')} className="hover:text-[#F7F3EC] cursor-pointer">
                     About VANTÉRA
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/shipping')} className="hover:text-[#F5F1E8] cursor-pointer">
-                    Shipping Rates
+                  <button type="button" onClick={() => onNavigate('/shipping')} className="hover:text-[#F7F3EC] cursor-pointer">
+                    Shipping Policy
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/returns')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/returns')} className="hover:text-[#F7F3EC] cursor-pointer">
                     Returns Policy
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/faq')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/faq')} className="hover:text-[#F7F3EC] cursor-pointer">
                     FAQ
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/privacy')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/privacy')} className="hover:text-[#F7F3EC] cursor-pointer">
                     Privacy Policy
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/terms')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/terms')} className="hover:text-[#F7F3EC] cursor-pointer">
                     Terms of Sale
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/contact')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/contact')} className="hover:text-[#F7F3EC] cursor-pointer">
                     Contact Us
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => onNavigate('/account')} className="hover:text-[#F5F1E8] cursor-pointer">
+                  <button type="button" onClick={() => onNavigate('/account')} className="hover:text-[#F7F3EC] cursor-pointer">
                     Client Account
                   </button>
                 </li>
               </ul>
 
-              <div className="pt-3 border-t border-white/8 text-xs text-[#A8A297] space-y-1.5">
+              <div className="pt-4 border-t border-[#F7F3EC]/10 text-xs text-[#C7C0B4] space-y-1.5">
                 <div>
                   WhatsApp Concierge:{' '}
                   <a
                     href="https://wa.me/2349132793670"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#C8A96A] hover:underline"
+                    className="text-[#B89B5E] hover:underline"
                   >
                     +234 913 279 3670
                   </a>
                 </div>
                 <div>
                   Email:{' '}
-                  <a href="mailto:emmanueladarikwu@gmail.com" className="hover:text-[#F5F1E8]">
+                  <a href="mailto:emmanueladarikwu@gmail.com" className="hover:text-[#F7F3EC]">
                     emmanueladarikwu@gmail.com
                   </a>
                 </div>
-                <div className="flex items-center gap-4 pt-1 text-[11px] uppercase tracking-[0.15em]">
+                <div className="flex items-center gap-5 pt-1 text-[11px] uppercase tracking-[0.16em]">
                   <a
                     href="https://instagram.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#A8A297] hover:text-[#C8A96A]"
+                    className="inline-flex items-center gap-1 text-[#C7C0B4] hover:text-[#B89B5E]"
                   >
-                    Instagram ↗
+                    <span>Instagram</span>
+                    <ArrowUpRight className="w-3 h-3" strokeWidth={1.5} />
                   </a>
                   <a
                     href="https://wa.me/2349132793670"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#A8A297] hover:text-[#C8A96A]"
+                    className="inline-flex items-center gap-1 text-[#C7C0B4] hover:text-[#B89B5E]"
                   >
-                    WhatsApp ↗
+                    <span>WhatsApp</span>
+                    <ArrowUpRight className="w-3 h-3" strokeWidth={1.5} />
                   </a>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#A8A297]">
+          <div className="pt-8 border-t border-[#F7F3EC]/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#C7C0B4]">
             <div>© {new Date().getFullYear()} VANTÉRA. All rights reserved.</div>
             <div className="flex flex-wrap items-center gap-6">
               {cookieConsent === null && (
                 <button
                   type="button"
                   onClick={() => handleSaveCookieConsent('essential')}
-                  className="text-[#C8A96A] hover:underline cursor-pointer"
+                  className="text-[#B89B5E] hover:underline cursor-pointer"
                 >
                   Essential Cookies Active · Dismiss
                 </button>
@@ -729,7 +632,7 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAndroidModalOpen(true)}
-                className="hover:text-[#F5F1E8] cursor-pointer"
+                className="hover:text-[#F7F3EC] cursor-pointer"
               >
                 Android App
               </button>
@@ -738,6 +641,38 @@ export const StoreLayout: React.FC<StoreLayoutProps> = ({
           </div>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation Bar (5 Tabs: Home, Products, Search, Profile, Cart) */}
+      <MobileBottomNav
+        visible={showBottomNav}
+        activeTab={activeMobileTab}
+        itemCount={itemCount}
+        cartBounceKey={cartBounceKey}
+        isLoggedIn={Boolean(user)}
+        onSelectHome={() => {
+          setIsSearchOpen(false);
+          setIsCartOpen(false);
+          onNavigate('/');
+        }}
+        onSelectProducts={() => {
+          setIsSearchOpen(false);
+          setIsCartOpen(false);
+          onNavigate('/shop');
+        }}
+        onSelectSearch={() => {
+          setIsCartOpen(false);
+          setIsSearchOpen(true);
+        }}
+        onSelectProfile={() => {
+          setIsSearchOpen(false);
+          setIsCartOpen(false);
+          onNavigate(user ? '/account' : '/account?mode=login');
+        }}
+        onSelectCart={() => {
+          setIsSearchOpen(false);
+          setIsCartOpen(true);
+        }}
+      />
 
       {/* Shopping Bag Drawer */}
       <CartDrawer onNavigate={onNavigate} />

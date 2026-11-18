@@ -1,19 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Heart, Maximize2, X, Plus, Minus, Check } from 'lucide-react';
 import { Product, CATEGORIES } from '../data/catalog.ts';
 import { mapLegacyCategoryToCurated } from '../lib/curatedCjCatalog.ts';
+import { wrapGalleryIndex } from '../lib/storefrontHelpers.ts';
 import { useCart } from '../contexts/CartContext.tsx';
 import { useCurrency } from '../contexts/CurrencyContext.tsx';
 import { useWishlist } from '../contexts/WishlistContext.tsx';
 import { ProductCard } from '../components/ProductCard.tsx';
+import { LuxuryImage } from '../components/LuxuryImage.tsx';
 import { trackEvent } from '../lib/tracker.ts';
 
 interface ProductPageProps {
   productSlug: string;
   products: Product[];
+  isLoading?: boolean;
   onNavigate: (url: string) => void;
 }
 
-export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products, onNavigate }) => {
+export const ProductPage: React.FC<ProductPageProps> = ({
+  productSlug,
+  products,
+  isLoading = false,
+  onNavigate,
+}) => {
   const { addToCart, setIsCartOpen } = useCart();
   const { currency, formatAmount } = useCurrency();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -21,28 +30,48 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
   const [quantity, setQuantity] = useState(1);
   const [selectedFinish, setSelectedFinish] = useState('Obsidian Noir');
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
-  const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const [addedNotice, setAddedNotice] = useState(false);
-  const [activeView, setActiveView] = useState<'studio' | 'detail' | 'angle'>('studio');
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<'materials' | 'delivery' | 'returns' | 'specs' | null>(
     'materials'
   );
+  const touchStartXRef = useRef<number | null>(null);
 
   const product = products.find((p) => p.slug === productSlug || p.id === productSlug);
+
+  // Build deduplicated full gallery array (lead image + galleryImages + variant image if unique)
+  const galleryList = useMemo(() => {
+    if (!product) return [];
+    const list: string[] = [];
+    if (product.image) list.push(product.image);
+    if (Array.isArray(product.galleryImages)) {
+      for (const g of product.galleryImages) {
+        if (g && !list.includes(g)) list.push(g);
+      }
+    }
+    if (Array.isArray(product.variants)) {
+      for (const v of product.variants) {
+        if (v.image && !list.includes(v.image)) list.push(v.image);
+      }
+    }
+    if (list.length === 0) {
+      list.push('/products/charging-phone-stand.jpg');
+    }
+    return list;
+  }, [product]);
 
   useEffect(() => {
     setQuantity(1);
     setAddedNotice(false);
-    setActiveView('studio');
     setIsZoomOpen(false);
+    setGalleryIndex(0);
     if (product) {
       const firstAvail =
         product.variants && product.variants.length > 0
           ? product.variants.find((v) => v.isAvailable && v.stockQuantity > 0) || product.variants[0]
           : null;
       setSelectedVariantId(firstAvail?.id || null);
-      setSelectedGalleryImage(firstAvail?.image || product.image || null);
       trackEvent('product_viewed', {
         productId: product.id,
         productTitle: product.title,
@@ -51,16 +80,32 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
       });
     } else {
       setSelectedVariantId(null);
-      setSelectedGalleryImage(null);
     }
   }, [product?.id]);
+
+  if (isLoading && !product) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-12 lg:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+          <div className="lg:col-span-7 aspect-square vantera-shimmer rounded-xs" />
+          <div className="lg:col-span-5 space-y-6">
+            <div className="h-4 w-32 vantera-shimmer rounded-xs" />
+            <div className="h-10 w-3/4 vantera-shimmer rounded-xs" />
+            <div className="h-8 w-36 vantera-shimmer rounded-xs" />
+            <div className="h-24 w-full vantera-shimmer rounded-xs" />
+            <div className="h-14 w-full vantera-shimmer rounded-xs" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-8 py-28 text-center space-y-6">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-[#C8A96A]">Unavailable</p>
-        <h1 className="text-3xl font-editorial font-medium text-[#F5F1E8]">Product Not Found</h1>
-        <p className="text-sm text-[#A8A297]">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-[#7A6230] font-semibold">Unavailable</p>
+        <h1 className="text-3xl font-editorial font-medium text-[#111111]">Product Not Found</h1>
+        <p className="text-sm text-[#5C574E]">
           The piece you requested is unavailable or has been archived.
         </p>
         <button
@@ -81,7 +126,8 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
 
   const effectiveStock = activeVariant ? activeVariant.stockQuantity : product.stockQuantity;
   const effectivePriceCents = activeVariant ? activeVariant.retailPriceCents : product.retailPriceCents;
-  const displayImage = selectedGalleryImage || activeVariant?.image || product.image;
+  const displayImage = galleryList[galleryIndex] || activeVariant?.image || product.image || '/products/charging-phone-stand.jpg';
+
   const isOutOfStock =
     !product.isAvailable ||
     effectiveStock <= 0 ||
@@ -92,8 +138,14 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
   const mappedCatId = mapLegacyCategoryToCurated(product.category);
   const categoryObj = CATEGORIES.find((c) => c.id === mappedCatId || c.id === product.category);
   const categoryLabel = categoryObj?.label || product.category.replace(/-/g, ' ');
+
   const related = products
-    .filter((p) => mapLegacyCategoryToCurated(p.category) === mappedCatId && p.id !== product.id)
+    .filter((p) => p.id !== product.id)
+    .sort((a, b) => {
+      const aSame = mapLegacyCategoryToCurated(a.category) === mappedCatId ? 1 : 0;
+      const bSame = mapLegacyCategoryToCurated(b.category) === mappedCatId ? 1 : 0;
+      return bSame - aSame;
+    })
     .slice(0, 3);
 
   const handleAddToCart = () => {
@@ -103,30 +155,37 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
     setTimeout(() => setAddedNotice(false), 3500);
   };
 
-  const finishes = [
-    { name: 'Obsidian Noir', hex: '#141416' },
-    { name: 'Champagne Gold', hex: '#C8A96A' },
-    { name: 'Slate Gray', hex: '#4B5563' },
-    { name: 'Brushed Silver', hex: '#E5E7EB' },
-  ];
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (galleryList.length <= 1) return;
+    touchStartXRef.current = e.touches[0].clientX;
+  };
 
-  const views: Array<{ id: 'studio' | 'detail' | 'angle'; label: string; imgClass: string }> = [
-    { id: 'studio', label: 'Studio Front', imgClass: 'object-contain scale-100' },
-    { id: 'detail', label: 'Finish Macro', imgClass: 'object-contain scale-[1.38] origin-center' },
-    { id: 'angle', label: 'Silhouette Crop', imgClass: 'object-contain scale-[1.25] origin-top-left' },
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || galleryList.length <= 1) return;
+    const deltaX = touchStartXRef.current - e.changedTouches[0].clientX;
+    if (Math.abs(deltaX) > 36) {
+      setGalleryIndex((prev) => wrapGalleryIndex(prev, deltaX > 0 ? 1 : -1, galleryList.length));
+    }
+    touchStartXRef.current = null;
+  };
+
+  const finishes = [
+    { name: 'Obsidian Noir', hex: '#1B1B1B' },
+    { name: 'Champagne Gold', hex: '#B89B5E' },
+    { name: 'Warm Stone', hex: '#A69F94' },
+    { name: 'Brushed Silver', hex: '#D8D4CC' },
   ];
-  const currentView = views.find((v) => v.id === activeView) || views[0];
 
   const toggleSection = (key: 'materials' | 'delivery' | 'returns' | 'specs') => {
     setOpenAccordion((prev) => (prev === key ? null : key));
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10 lg:py-16 space-y-20">
+    <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-10 pb-24 lg:py-16 space-y-20 text-[#111111]">
       {/* Breadcrumb Trail */}
       <nav
         aria-label="Breadcrumb"
-        className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#A8A297] flex-wrap"
+        className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#5C574E] flex-wrap"
       >
         <a
           href="/"
@@ -134,7 +193,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             e.preventDefault();
             onNavigate('/');
           }}
-          className="hover:text-[#F5F1E8] transition-colors"
+          className="hover:text-[#111111] transition-colors"
         >
           Home
         </a>
@@ -145,7 +204,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             e.preventDefault();
             onNavigate('/shop');
           }}
-          className="hover:text-[#F5F1E8] transition-colors"
+          className="hover:text-[#111111] transition-colors"
         >
           Shop
         </a>
@@ -156,96 +215,89 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             e.preventDefault();
             onNavigate(`/category/${mappedCatId}`);
           }}
-          className="hover:text-[#F5F1E8] transition-colors"
+          className="hover:text-[#111111] transition-colors"
         >
           {categoryLabel}
         </a>
         <span aria-hidden="true">/</span>
-        <span className="text-[#F5F1E8] truncate max-w-xs">{product.title}</span>
+        <span className="text-[#111111] font-medium truncate max-w-xs">{product.title}</span>
       </nav>
 
       {/* Main 2-Column Showcase */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-        {/* Left: Uniform Studio Viewer & Multi-Angle Framing Strip */}
+        {/* Left: Swipeable Studio Gallery & Framing Strip */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="relative bg-[#141416] border border-white/8 aspect-square w-full flex items-center justify-center p-8 sm:p-14 rounded-xs overflow-hidden group">
-            {displayImage ? (
-              <img
-                src={displayImage}
-                alt={product.imageAlt || product.title}
-                onClick={() => setIsZoomOpen(true)}
-                className={`max-h-full max-w-full cursor-zoom-in transition-transform duration-500 ease-out ${currentView.imgClass} ${
-                  isOutOfStock ? 'opacity-50' : ''
-                }`}
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/products/charging-phone-stand.jpg';
-                }}
-              />
-            ) : (
-              <span className="font-editorial text-5xl text-[#C8A96A]">V</span>
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="relative bg-[#EFEAE0] border border-[#111111]/10 aspect-square w-full flex items-center justify-center rounded-xs overflow-hidden group select-none"
+          >
+            <LuxuryImage
+              src={displayImage}
+              alt={product.imageAlt || product.title}
+              onClick={() => setIsZoomOpen(true)}
+              wrapperClassName="w-full h-full"
+              className={`h-full w-full object-cover object-center cursor-zoom-in transition-transform duration-500 ease-out group-hover:scale-[1.03] ${
+                isOutOfStock ? 'opacity-50' : ''
+              }`}
+              loading="eager"
+              referrerPolicy="no-referrer"
+            />
+
+            {galleryList.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setGalleryIndex((prev) => wrapGalleryIndex(prev, -1, galleryList.length))}
+                  aria-label="Previous image"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-[#F7F3EC]/85 backdrop-blur-xs border border-[#111111]/15 text-[#111111] hover:border-[#B89B5E] rounded-full inline-flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGalleryIndex((prev) => wrapGalleryIndex(prev, 1, galleryList.length))}
+                  aria-label="Next image"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-[#F7F3EC]/85 backdrop-blur-xs border border-[#111111]/15 text-[#111111] hover:border-[#B89B5E] rounded-full inline-flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+              </>
             )}
 
             <button
               type="button"
               onClick={() => setIsZoomOpen(true)}
               aria-label="Enlarge product photograph"
-              className="absolute bottom-4 right-4 bg-[#0B0B0C]/85 border border-white/12 text-[#F5F1E8] hover:border-[#C8A96A] hover:text-[#C8A96A] px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] rounded-xs transition-colors cursor-pointer"
+              className="absolute bottom-4 right-4 bg-[#F7F3EC]/90 backdrop-blur-xs border border-[#111111]/15 text-[#111111] hover:border-[#B89B5E] hover:text-[#7A6230] px-3.5 py-2 text-[10px] uppercase tracking-[0.18em] rounded-xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
-              Zoom View
+              <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>Zoom</span>
             </button>
           </div>
 
-          {/* Uniform Framing Strip or Product Gallery */}
-          {Array.isArray(product.galleryImages) && product.galleryImages.length > 1 ? (
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
-              {product.galleryImages.slice(0, 6).map((imgUrl, idx) => (
+          {/* Thumbnail Strip */}
+          {galleryList.length > 1 && (
+            <div className="grid grid-cols-5 sm:grid-cols-6 gap-2.5">
+              {galleryList.slice(0, 6).map((imgUrl, idx) => (
                 <button
                   key={`${imgUrl}-${idx}`}
                   type="button"
-                  onClick={() => {
-                    setActiveView('studio');
-                    setSelectedGalleryImage(imgUrl);
-                  }}
+                  onClick={() => setGalleryIndex(idx)}
                   aria-label={`View gallery photo ${idx + 1}`}
-                  className={`bg-[#141416] border rounded-xs overflow-hidden p-2 aspect-square flex items-center justify-center transition-colors cursor-pointer ${
-                    displayImage === imgUrl
-                      ? 'border-[#C8A96A]'
-                      : 'border-white/8 hover:border-white/25'
+                  className={`bg-[#EFEAE0] border rounded-xs overflow-hidden aspect-square transition-colors cursor-pointer ${
+                    galleryIndex === idx
+                      ? 'border-[#B89B5E] ring-1 ring-[#B89B5E]'
+                      : 'border-[#111111]/10 hover:border-[#111111]/30'
                   }`}
                 >
                   <img
                     src={imgUrl}
                     alt={`${product.title} — View ${idx + 1}`}
-                    className="h-full w-full object-contain"
+                    className="h-full w-full object-cover"
                     referrerPolicy="no-referrer"
+                    loading="lazy"
                   />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              {views.map((view) => (
-                <button
-                  key={view.id}
-                  type="button"
-                  onClick={() => setActiveView(view.id)}
-                  className={`bg-[#141416] border rounded-xs overflow-hidden p-3 flex flex-col items-center gap-2 transition-colors cursor-pointer ${
-                    activeView === view.id
-                      ? 'border-[#C8A96A]'
-                      : 'border-white/8 hover:border-white/25'
-                  }`}
-                >
-                  <div className="aspect-square w-full max-h-20 bg-[#0B0B0C] flex items-center justify-center overflow-hidden p-2">
-                    <img
-                      src={displayImage || '/products/charging-phone-stand.jpg'}
-                      alt={`${product.title} — ${view.label}`}
-                      className={`h-full w-full ${view.imgClass}`}
-                    />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[0.16em] text-[#A8A297]">
-                    {view.label}
-                  </span>
                 </button>
               ))}
             </div>
@@ -254,11 +306,11 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
 
         {/* Right: Calm Purchase & Accordion Details Column */}
         <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-8">
-          <div className="bg-[#141416] border border-white/8 p-6 sm:p-8 rounded-xs space-y-6">
-            <div className="space-y-3 border-b border-white/8 pb-6">
-              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[#A8A297]">
+          <div className="bg-[#FAF7F2] border border-[#111111]/10 p-6 sm:p-8 rounded-xs space-y-6">
+            <div className="space-y-3 border-b border-[#111111]/10 pb-6">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[#5C574E]">
                 <span>{categoryLabel}</span>
-                <span className={isOutOfStock ? 'text-[#E57373]' : 'text-[#C8A96A]'}>
+                <span className={isOutOfStock ? 'text-[#8E3A3A] font-semibold' : 'text-[#7A6230] font-semibold'}>
                   {isOutOfStock
                     ? 'Out of stock'
                     : effectiveStock <= 5
@@ -268,58 +320,46 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
               </div>
 
               <div className="flex items-start justify-between gap-4">
-                <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#F5F1E8] leading-tight text-balance">
+                <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[#111111] leading-tight text-balance">
                   {product.title}
                 </h1>
                 <button
                   type="button"
                   onClick={() => toggleWishlist(product)}
                   aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'}
-                  className={`p-2 rounded-xs border transition-colors cursor-pointer shrink-0 ${
+                  className={`min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xs border transition-colors cursor-pointer shrink-0 ${
                     saved
-                      ? 'border-[#C8A96A] text-[#C8A96A] bg-[#C8A96A]/10'
-                      : 'border-white/12 text-[#A8A297] hover:text-[#F5F1E8]'
+                      ? 'border-[#B89B5E] text-[#B89B5E] bg-[#B89B5E]/10'
+                      : 'border-[#111111]/15 text-[#5C574E] hover:text-[#111111]'
                   }`}
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill={saved ? 'currentColor' : 'none'}
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-                    />
-                  </svg>
+                  <Heart className="w-4 h-4" strokeWidth={1.5} fill={saved ? 'currentColor' : 'none'} />
                 </button>
               </div>
 
               <div className="flex items-baseline gap-3 pt-2">
-                <span className="text-2xl sm:text-3xl font-medium text-[#C8A96A] tabular-nums">
+                <span className="text-2xl sm:text-3xl font-medium text-[#111111] tabular-nums">
                   {formatAmount(effectivePriceCents)}
                 </span>
                 {product.referencePriceCents && product.referencePriceCents > effectivePriceCents && (
-                  <span className="text-sm text-[#A8A297] line-through tabular-nums">
+                  <span className="text-sm text-[#5C574E] line-through tabular-nums">
                     {formatAmount(product.referencePriceCents)}
                   </span>
                 )}
-                <span className="text-[10px] uppercase tracking-[0.2em] text-[#A8A297] ml-auto">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[#5C574E] ml-auto">
                   {currency}
                 </span>
               </div>
             </div>
 
-            <p className="text-sm text-[#A8A297] leading-relaxed">{product.description}</p>
+            <p className="text-sm text-[#5C574E] font-light leading-relaxed">{product.description}</p>
 
             {/* Real Variants or Finish Swatches */}
             {productVariants ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.16em]">
-                  <span className="text-[#A8A297]">Edition / Variant</span>
-                  <span className="text-[#F5F1E8]">{activeVariant?.name}</span>
+                  <span className="text-[#5C574E]">Edition / Variant</span>
+                  <span className="text-[#111111] font-medium">{activeVariant?.name}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {productVariants.map((variant) => {
@@ -333,17 +373,18 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                           setSelectedVariantId(variant.id);
                           setQuantity(1);
                           if (variant.image) {
-                            setSelectedGalleryImage(variant.image);
+                            const idx = galleryList.indexOf(variant.image);
+                            if (idx >= 0) setGalleryIndex(idx);
                           }
                         }}
-                        className={`px-3 py-2 text-[11px] rounded-xs border transition-colors cursor-pointer text-left ${
+                        className={`px-3.5 py-2 text-[11px] rounded-xs border transition-colors cursor-pointer text-left ${
                           variantSelected
-                            ? 'border-[#C8A96A] bg-[#C8A96A]/10 text-[#F5F1E8]'
-                            : 'border-white/12 bg-[#0B0B0C] text-[#A8A297] hover:border-white/30 hover:text-[#F5F1E8]'
+                            ? 'border-[#B89B5E] bg-[#B89B5E]/15 text-[#111111]'
+                            : 'border-[#111111]/12 bg-[#F7F3EC] text-[#5C574E] hover:border-[#111111]/30 hover:text-[#111111]'
                         } ${variantOutOfStock ? 'opacity-50' : ''}`}
                       >
                         <span className="block font-medium">{variant.name}</span>
-                        <span className="block text-[9px] uppercase tracking-wider text-[#A8A297]">
+                        <span className="block text-[9px] uppercase tracking-wider text-[#5C574E]">
                           {variantOutOfStock ? 'Out of stock' : 'Available'}
                         </span>
                       </button>
@@ -354,8 +395,8 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.16em]">
-                  <span className="text-[#A8A297]">Finish</span>
-                  <span className="text-[#F5F1E8]">{selectedFinish}</span>
+                  <span className="text-[#5C574E]">Finish</span>
+                  <span className="text-[#111111] font-medium">{selectedFinish}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   {finishes.map((f) => (
@@ -367,8 +408,8 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                       title={f.name}
                       className={`w-7 h-7 rounded-full border transition-all cursor-pointer ${
                         selectedFinish === f.name
-                          ? 'border-[#C8A96A] ring-2 ring-[#C8A96A]/40 ring-offset-2 ring-offset-[#141416]'
-                          : 'border-white/15 opacity-75 hover:opacity-100'
+                          ? 'border-[#B89B5E] ring-2 ring-[#B89B5E]/40 ring-offset-2 ring-offset-[#FAF7F2]'
+                          : 'border-[#111111]/20 opacity-75 hover:opacity-100'
                       }`}
                       style={{ backgroundColor: f.hex }}
                     />
@@ -381,27 +422,27 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
             {!isReservedPhone && !isOutOfStock ? (
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] uppercase tracking-[0.16em] text-[#A8A297]">
+                  <span className="text-[11px] uppercase tracking-[0.16em] text-[#5C574E]">
                     Quantity
                   </span>
-                  <div className="inline-flex items-center border border-white/12 rounded-xs bg-[#0B0B0C]">
+                  <div className="inline-flex items-center border border-[#111111]/15 rounded-xs bg-[#F7F3EC]">
                     <button
                       type="button"
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="px-3.5 py-2 text-sm text-[#A8A297] hover:text-[#F5F1E8] cursor-pointer"
+                      className="px-3.5 py-2.5 text-[#5C574E] hover:text-[#111111] cursor-pointer"
                       aria-label="Decrease quantity"
                     >
-                      −
+                      <Minus className="w-3.5 h-3.5" strokeWidth={1.5} />
                     </button>
-                    <span className="px-4 text-sm font-medium text-[#F5F1E8] tabular-nums">{quantity}</span>
+                    <span className="px-4 text-sm font-medium text-[#111111] tabular-nums">{quantity}</span>
                     <button
                       type="button"
                       disabled={quantity >= effectiveStock}
                       onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
-                      className="px-3.5 py-2 text-sm text-[#A8A297] hover:text-[#F5F1E8] disabled:opacity-40 cursor-pointer"
+                      className="px-3.5 py-2.5 text-[#5C574E] hover:text-[#111111] disabled:opacity-40 cursor-pointer"
                       aria-label="Increase quantity"
                     >
-                      +
+                      <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>
@@ -415,12 +456,15 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                 </button>
 
                 {addedNotice && (
-                  <div className="flex items-center justify-between gap-3 p-3.5 bg-[#0F2E22] border border-[#2E9B6B]/40 text-xs text-[#F5F1E8] rounded-xs">
-                    <span>Added to your shopping bag.</span>
+                  <div className="flex items-center justify-between gap-3 p-3.5 bg-[#F7F3EC] border border-[#B89B5E] text-xs text-[#111111] rounded-xs">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-[#7A6230]" strokeWidth={2} />
+                      <span>Added to your shopping bag.</span>
+                    </span>
                     <button
                       type="button"
                       onClick={() => setIsCartOpen(true)}
-                      className="text-[#C8A96A] font-semibold underline cursor-pointer shrink-0"
+                      className="text-[#7A6230] font-semibold underline cursor-pointer shrink-0"
                     >
                       Open Bag
                     </button>
@@ -428,11 +472,11 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                 )}
               </div>
             ) : isOutOfStock ? (
-              <div className="p-5 bg-[#1B1212] border border-[#E57373]/25 rounded-xs space-y-2">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[#E57373] font-semibold">
+              <div className="p-5 bg-[#FAF7F2] border border-[#8E3A3A]/30 rounded-xs space-y-2">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[#8E3A3A] font-semibold">
                   Currently Out of Stock
                 </p>
-                <p className="text-xs text-[#A8A297] leading-relaxed">
+                <p className="text-xs text-[#5C574E] leading-relaxed">
                   This batch has sold out. Contact CEO Adnuel on WhatsApp for restock scheduling.
                 </p>
                 <a
@@ -441,19 +485,19 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block pt-1 text-[11px] uppercase tracking-[0.18em] text-[#C8A96A] hover:underline"
+                  className="inline-block pt-1 text-[11px] uppercase tracking-[0.18em] text-[#111111] border-b border-[#B89B5E] hover:text-[#7A6230]"
                 >
                   Request Restock Update ↗
                 </a>
               </div>
             ) : (
-              <div className="p-4 bg-[#0B0B0C] border border-white/10 text-xs text-[#C8A96A] rounded-xs">
+              <div className="p-4 bg-[#F7F3EC] border border-[#111111]/12 text-xs text-[#7A6230] rounded-xs">
                 Available via private WhatsApp allocation (+234 913 279 3670).
               </div>
             )}
 
             {/* Expandable Product Accordions */}
-            <div className="pt-4 border-t border-white/8 divide-y divide-white/8">
+            <div className="pt-4 border-t border-[#111111]/10 divide-y divide-[#111111]/10">
               <div>
                 <button
                   type="button"
@@ -461,13 +505,15 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                   onClick={() => toggleSection('materials')}
                   className="w-full py-4 flex items-center justify-between text-left cursor-pointer"
                 >
-                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#F5F1E8] font-medium">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#111111] font-medium">
                     Materials & Craft
                   </span>
-                  <span className="text-[#C8A96A] text-sm">{openAccordion === 'materials' ? '−' : '+'}</span>
+                  <span className="text-[#7A6230]">
+                    {openAccordion === 'materials' ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  </span>
                 </button>
                 {openAccordion === 'materials' && (
-                  <p className="pb-4 text-xs text-[#A8A297] leading-relaxed">
+                  <p className="pb-4 text-xs text-[#5C574E] leading-relaxed">
                     Precision-finished exterior, reinforced stress points, and voltage-regulated hardware inspected prior to dispatch for long-term everyday performance.
                   </p>
                 )}
@@ -480,21 +526,23 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                   onClick={() => toggleSection('specs')}
                   className="w-full py-4 flex items-center justify-between text-left cursor-pointer"
                 >
-                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#F5F1E8] font-medium">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#111111] font-medium">
                     Specifications
                   </span>
-                  <span className="text-[#C8A96A] text-sm">{openAccordion === 'specs' ? '−' : '+'}</span>
+                  <span className="text-[#7A6230]">
+                    {openAccordion === 'specs' ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  </span>
                 </button>
                 {openAccordion === 'specs' && (
                   <div className="pb-4 space-y-2 text-xs">
                     <div className="flex justify-between gap-4">
-                      <span className="text-[#A8A297]">Category</span>
-                      <span className="text-[#F5F1E8]">{categoryLabel}</span>
+                      <span className="text-[#5C574E]">Category</span>
+                      <span className="text-[#111111] font-medium">{categoryLabel}</span>
                     </div>
                     {activeVariant?.sku && (
                       <div className="flex justify-between gap-4">
-                        <span className="text-[#A8A297]">SKU</span>
-                        <span className="text-[#F5F1E8] font-mono">{activeVariant.sku}</span>
+                        <span className="text-[#5C574E]">SKU</span>
+                        <span className="text-[#111111] tabular-nums">{activeVariant.sku}</span>
                       </div>
                     )}
                     {Array.isArray(product.cjSpecs) &&
@@ -503,13 +551,13 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                         .slice(0, 6)
                         .map((spec) => (
                           <div key={spec.label} className="flex justify-between gap-4">
-                            <span className="text-[#A8A297]">{spec.label}</span>
-                            <span className="text-[#F5F1E8] text-right">{spec.value}</span>
+                            <span className="text-[#5C574E]">{spec.label}</span>
+                            <span className="text-[#111111] text-right">{spec.value}</span>
                           </div>
                         ))}
                     <div className="flex justify-between gap-4">
-                      <span className="text-[#A8A297]">Settlement</span>
-                      <span className="text-[#F5F1E8]">Card (NGN / USD) & Bank Transfer</span>
+                      <span className="text-[#5C574E]">Settlement</span>
+                      <span className="text-[#111111]">Card (NGN / USD) & Bank Transfer</span>
                     </div>
                   </div>
                 )}
@@ -522,13 +570,15 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                   onClick={() => toggleSection('delivery')}
                   className="w-full py-4 flex items-center justify-between text-left cursor-pointer"
                 >
-                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#F5F1E8] font-medium">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#111111] font-medium">
                     Delivery & State Transit
                   </span>
-                  <span className="text-[#C8A96A] text-sm">{openAccordion === 'delivery' ? '−' : '+'}</span>
+                  <span className="text-[#7A6230]">
+                    {openAccordion === 'delivery' ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  </span>
                 </button>
                 {openAccordion === 'delivery' && (
-                  <p className="pb-4 text-xs text-[#A8A297] leading-relaxed">
+                  <p className="pb-4 text-xs text-[#5C574E] leading-relaxed">
                     Lagos delivery arrives in 1–2 business days (₦2,500). Other Nigerian states take 2–5 business days (₦3,500–₦5,000), and orders over ₦75,000 ($50) qualify for complimentary domestic shipping.
                   </p>
                 )}
@@ -541,13 +591,15 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
                   onClick={() => toggleSection('returns')}
                   className="w-full py-4 flex items-center justify-between text-left cursor-pointer"
                 >
-                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#F5F1E8] font-medium">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-[#111111] font-medium">
                     Returns & 12-Month Warranty
                   </span>
-                  <span className="text-[#C8A96A] text-sm">{openAccordion === 'returns' ? '−' : '+'}</span>
+                  <span className="text-[#7A6230]">
+                    {openAccordion === 'returns' ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  </span>
                 </button>
                 {openAccordion === 'returns' && (
-                  <p className="pb-4 text-xs text-[#A8A297] leading-relaxed">
+                  <p className="pb-4 text-xs text-[#5C574E] leading-relaxed">
                     Every VANTÉRA piece carries a 12-month defect warranty and a 14-day return window managed directly inside your client account.
                   </p>
                 )}
@@ -559,15 +611,15 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
 
       {/* Related Pieces */}
       {related.length > 0 && (
-        <section className="pt-12 border-t border-white/8 space-y-10">
+        <section className="pt-12 border-t border-[#111111]/10 space-y-10">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="font-editorial text-2xl sm:text-3xl font-medium text-[#F5F1E8]">
-              You May Also Like
+            <h2 className="font-editorial text-2xl sm:text-3xl font-medium text-[#111111]">
+              You May Also <em className="italic font-normal">Like</em>
             </h2>
             <button
               type="button"
               onClick={() => onNavigate(`/category/${mappedCatId}`)}
-              className="text-[11px] uppercase tracking-[0.2em] text-[#C8A96A] hover:underline cursor-pointer"
+              className="text-[11px] uppercase tracking-[0.2em] text-[#7A6230] hover:text-[#111111] border-b border-[#B89B5E] pb-0.5 cursor-pointer"
             >
               View Category →
             </button>
@@ -580,6 +632,33 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
         </section>
       )}
 
+      {/* Mobile Sticky Bottom Add-to-Cart Bar positioned above the MobileBottomNav */}
+      {!isReservedPhone && (
+        <div
+          className="lg:hidden fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom))] z-30 bg-[#F7F3EC]/95 backdrop-blur-md border-t border-[#111111]/10 px-4 py-2.5 flex items-center justify-between gap-3"
+        >
+          <div className="min-w-0">
+            <p className="font-editorial text-sm font-medium text-[#111111] truncate">{product.title}</p>
+            <p className="text-xs font-medium text-[#7A6230] tabular-nums">
+              {formatAmount(effectivePriceCents * quantity)}
+            </p>
+          </div>
+          {!isOutOfStock ? (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="gold-gradient-bg px-5 py-2.5 min-h-[42px] text-[10px] uppercase tracking-[0.2em] font-semibold rounded-xs cursor-pointer shrink-0"
+            >
+              Add to Cart
+            </button>
+          ) : (
+            <span className="px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#8E3A3A] border border-[#8E3A3A]/30 rounded-xs shrink-0">
+              Out of Stock
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Clean Interactive Image Zoom Lightbox */}
       {isZoomOpen && displayImage && (
         <div
@@ -587,15 +666,15 @@ export const ProductPage: React.FC<ProductPageProps> = ({ productSlug, products,
           aria-modal="true"
           aria-label={`${product.title} enlarged photograph`}
           onClick={() => setIsZoomOpen(false)}
-          className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex items-center justify-center p-4 sm:p-10 cursor-zoom-out"
+          className="vantera-overlay-fade fixed inset-0 z-50 bg-[#111111]/92 backdrop-blur-md flex items-center justify-center p-4 sm:p-10 cursor-zoom-out"
         >
           <button
             type="button"
             onClick={() => setIsZoomOpen(false)}
             aria-label="Close zoom view"
-            className="absolute top-6 right-6 text-[#F5F1E8] hover:text-[#C8A96A] text-xl p-2 cursor-pointer"
+            className="absolute top-6 right-6 text-[#F7F3EC] hover:text-[#B89B5E] p-2 cursor-pointer"
           >
-            ✕
+            <X className="w-6 h-6" strokeWidth={1.5} />
           </button>
           <img
             src={displayImage}

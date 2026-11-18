@@ -1,0 +1,2464 @@
+{
+  "users": [
+    {
+      "id": "usr_ceo_adnuel",
+      "email": "emmanueladarikwu@gmail.com",
+      "name": "Adnuel",
+      "role": "admin",
+      "isPasswordSet": true,
+      "createdAt": "2026-10-15T08:22:07.163Z",
+      "updatedAt": "2026-10-15T08:25:57.640Z",
+      "passwordHash": "cb8bdcba849e6cefcbddda46bb14b9fff671ecedae4d924a9e7432ce89bb5cce61d9d6f7c600412e45865eefecbacbecf49337b744da44e9d434f762dbe8360a",
+      "salt": "62a9e5b638bc36c2acba8e4eb31fa8ce"
+    },
+    {
+      "id": "usr_5da5696a0293c0b9",
+      "email": "testregister@example.com",
+      "name": "Adnuel Test",
+      "phone": "+2348000000000",
+      "role": "customer",
+      "passwordHash": "5c0e2fd3a669e12894e3a1a7c4ad8b3bd5f9d07b1b66f1e64ab4261d04d6e91306733e590a389e883613bfe0477c4d54b738df474abcb3366538297d01c3acb2",
+      "salt": "bd031d6c2646b4edaeca657cc384fdce",
+      "isPasswordSet": true,
+      "createdAt": "2026-10-29T11:10:01.045Z",
+      "updatedAt": "2026-10-29T11:10:01.045Z"
+    },
+    {
+      "id": "usr_3b11ed14a9f314af",
+      "email": "chinedu@example.com",
+      "name": "Chinedu Eze",
+      "phone": "+2348031234567",
+      "role": "customer",
+      "passwordHash": "5ea0cf4c7ad6fe3e435a7051271d6dbef8c7c98ace11044feae29651be4fb7bbc5a9e2fc15fe8f5850a8940e9f4b6e67c60be1fe528f5f3821232ab2fdce5ee8",
+      "salt": "1cf980e898a10e1071f452e3af8d65a0",
+      "isPasswordSet": true,
+      "createdAt": "2026-10-29T11:16:34.045Z",
+      "updatedAt": "2026-10-29T11:16:34.045Z"
+    },
+    {
+      "id": "usr_b6466bf325997430",
+      "email": "comfortugbada@gmail.com",
+      "name": "Comfort",
+      "phone": "08167925842",
+      "role": "customer",
+      "passwordHash": "86b7e57b0aedd7167e2030387e4bc777f4d84bf7a9d564bb3bdcfbfa00443ad40599f915c4a15d685ff7ed7d1957240493630bbca5d62547d2819ba9b48132cf",
+      "salt": "622ef8d4e0ff225c6f49aced49edf9e7",
+      "isPasswordSet": true,
+      "createdAt": "2026-10-29T11:51:48.174Z",
+      "updatedAt": "2026-10-29T11:51:48.174Z"
+    },
+    {
+      "id": "usr_65a6ba207d7d860c",
+      "email": "newclient1793562668521@gmail.com",
+      "name": "New Client",
+      "phone": "08012345678",
+      "role": "customer",
+      "passwordHash": "e9ab4b2dcbb0c88bb3bfb2aaeef2c2b3b386a27069a31ab463f8ba65cbf6f681aad0df523b349c6a708fdbd6779eba6ac08bb16786ceb3319669ec6dd63217d4",
+      "salt": "7cbf2ddf3e300208c3a48e6b847e0cc4",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-01T19:51:08.622Z",
+      "updatedAt": "2026-11-01T19:51:08.622Z"
+    },
+    {
+      "id": "usr_a6802b9df352f827",
+      "email": "newclient@gmail.com",
+      "name": "New Client",
+      "phone": "08012345678",
+      "role": "customer",
+      "passwordHash": "ba16683106bb641193ad9dd63cf6867dd45c64099626b82618a0d61dabab0b34f1a713bbe12774a68b15548ab5d75d85d53617e7bde5fa229f741ab378c93b88",
+      "salt": "c118f0123625cc09d7c8bc6a1b3f9d71",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-01T19:51:13.760Z",
+      "updatedAt": "2026-11-01T19:51:13.760Z"
+    },
+    {
+      "id": "usr_bfdece7aaacb88b9",
+      "email": "comfort_test_1793710364@gmail.com",
+      "name": "Comfort Test",
+      "phone": "08167925842",
+      "role": "customer",
+      "passwordHash": "3223338bdca75c4a1854abd04cadc67276f4e37b49b54edbf78de6f57374315710b7d952fe8ae7e83d9afc8ceaf3ed8e95d7e6323917770f0cafd4f01d11019a",
+      "salt": "59bd1f6716a4a51b21a11031af9c179b",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-03T12:52:44.619Z",
+      "updatedAt": "2026-11-03T12:52:44.620Z"
+    },
+    {
+      "id": "usr_9decc0de878541d6",
+      "email": "customer_a_1794818427220@example.com",
+      "name": "Customer Alpha",
+      "phone": "08011112222",
+      "role": "customer",
+      "passwordHash": "5339299efbacaeba945c4775a3e42c33482ea2d7c058acc3b391e871b0d50b2fdec8630f9f2b4e7e0f0bc2e6ed807716be17c8048ddbee6a0444332f09bd51ed",
+      "salt": "e35795a1a348dcc16ae15dfa1935e028",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-16T08:40:27.306Z",
+      "updatedAt": "2026-11-16T08:40:27.307Z",
+      "emailVerificationCode": "249173",
+      "emailVerificationExpiry": 1794819327307,
+      "isEmailVerified": false
+    },
+    {
+      "id": "usr_0f7c04d4aa52dfb4",
+      "email": "customer_b_1794818427220@example.com",
+      "name": "Customer Beta",
+      "phone": "08033334444",
+      "role": "customer",
+      "passwordHash": "a8ebf7aa084b49dddb13544019214d3784da9a830fbc4fa1cac008964718d7b8d3509b7de8b72a42ee642a6756cea7816c885610647d35869f09bbff4b5ab167",
+      "salt": "91b0c1711f74e795c942b73f0888ef9a",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-16T08:40:27.391Z",
+      "updatedAt": "2026-11-16T08:40:27.391Z",
+      "emailVerificationCode": "458410",
+      "emailVerificationExpiry": 1794819327391,
+      "isEmailVerified": false
+    },
+    {
+      "id": "usr_238e0cb7cf363fa6",
+      "email": "upgrade_test_1794818429292@example.com",
+      "name": "Adaora Okafor",
+      "phone": "+2348031234567",
+      "role": "customer",
+      "passwordHash": "c3e52f34291a8a5567183f37bf2dc6afbc9628165898e6226716af64d6a3681a61950b930babd004a949dea9371036ce492ae7816fe9385ab5301d34aec6c86c",
+      "salt": "4eb06c21bef719cdea29d68bfa254a2a",
+      "isPasswordSet": true,
+      "createdAt": "2026-11-16T08:40:29.366Z",
+      "updatedAt": "2026-11-16T08:40:29.451Z",
+      "isEmailVerified": true
+    }
+  ],
+  "deliveryAddresses": [],
+  "products": [
+    {
+      "id": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+      "slug": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+      "title": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+      "category": "room-desk",
+      "retailPriceCents": 313,
+      "priceCents": 313,
+      "supplierCostCents": 174,
+      "stockQuantity": 35063,
+      "isAvailable": true,
+      "availability": "In Stock · Ready to Ship",
+      "description": "Overview: \n\n \nThis desktop phone and tablet stand is made of aluminum alloy and ABS materials, ensuring durability and stability.\nThe foldable design makes it easy to carry and saves space when not in use.\nThe sleek and stylish silver appearance adds a touch of elegance to your desktop.\nThis stand is suitable for both phones and tablets, making it a versatile accessory for any device.\nThe 360-degree rotation allows for easy adjustment of the viewing angle to meet different needs. \n \n\n \n \n \n\n \n Product Information: \nType: desktop stand\n Color: black, white\n Material: Alloy\n Style: Universal\n Product Size: 100*70 * 162mm\n\n \n\n Packing List: \n \n1*Phone Bracket\n \n\n Product Image:",
+      "image": "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/a8635acf-25b8-44ad-af0f-d9445a74f7ae_trans.jpeg",
+      "imageAlt": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+      "imageNeedsReview": false,
+      "sourceTitle": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+      "referencePriceCents": null,
+      "priceBasis": "cj-live-sync",
+      "sourceDescription": true,
+      "trending": false,
+      "supplierName": "CJdropshipping Global",
+      "supplierSource": "cjdropshipping",
+      "cjPid": "1735490206582710272",
+      "cjProductSku": "CJSJ1921386",
+      "cjCategoryName": "Phones & Accessories / Mobile Phone Accessories / Holders & Stands",
+      "cjSpecs": [
+        {
+          "label": "CJ Product ID",
+          "value": "1735490206582710272"
+        },
+        {
+          "label": "CJ Product SKU",
+          "value": "CJSJ1921386"
+        },
+        {
+          "label": "Category",
+          "value": "Phones & Accessories / Mobile Phone Accessories / Holders & Stands"
+        },
+        {
+          "label": "Product Weight",
+          "value": "180.00-205.00g"
+        },
+        {
+          "label": "Material",
+          "value": "[\"Metal\"]"
+        },
+        {
+          "label": "Packing",
+          "value": "[\"Plastic bags\"]"
+        },
+        {
+          "label": "Product Type",
+          "value": "ORDINARY_PRODUCT"
+        },
+        {
+          "label": "Attributes",
+          "value": "[\"COMMON\"]"
+        },
+        {
+          "label": "HS / Entry Code",
+          "value": "7616999000"
+        }
+      ],
+      "galleryImages": [
+        "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/a8635acf-25b8-44ad-af0f-d9445a74f7ae_trans.jpeg",
+        "https://cf.cjdropshipping.com/quick/product/91e50f83-a008-4900-b20e-34857e1892bb.jpg",
+        "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/352adec5-b8ec-4045-8e3d-df1623b9de04_trans.jpeg",
+        "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/573311aa-a3e6-41af-84c3-eb06301b133d_trans.jpeg",
+        "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/71195c6c-8fcb-4d4a-9b07-a018c4fd6ef7_trans.jpeg",
+        "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/170af882-62d0-4130-a5f4-5016edeab119_trans.jpeg",
+        "https://oss-cf.cjdropshipping.com/product/2024/04/01/05/6de0dea8-d7a8-4c9f-ad03-b37f11e1b761.jpg"
+      ],
+      "variants": [
+        {
+          "id": "cjv_1735490206708539392",
+          "cjVid": "1735490206708539392",
+          "sku": "CJSJ192138601AZ",
+          "name": "Black",
+          "color": "Black",
+          "variantKey": "Black",
+          "image": "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/71195c6c-8fcb-4d4a-9b07-a018c4fd6ef7_trans.jpeg",
+          "supplierCostCents": 174,
+          "retailPriceCents": 313,
+          "stockQuantity": 11706,
+          "isAvailable": true
+        },
+        {
+          "id": "cjv_1735490206930837504",
+          "cjVid": "1735490206930837504",
+          "sku": "CJSJ192138602BY",
+          "name": "White",
+          "color": "White",
+          "variantKey": "White",
+          "image": "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/a8635acf-25b8-44ad-af0f-d9445a74f7ae_trans.jpeg",
+          "supplierCostCents": 174,
+          "retailPriceCents": 313,
+          "stockQuantity": 11999,
+          "isAvailable": true
+        },
+        {
+          "id": "cjv_1735548521505370112",
+          "cjVid": "1735548521505370112",
+          "sku": "CJSJ192138603CX",
+          "name": "Silver",
+          "color": "Silver",
+          "variantKey": "Silver",
+          "image": "https://oss-cf.cjdropshipping.com/product/2023/12/15/02/170af882-62d0-4130-a5f4-5016edeab119_trans.jpeg",
+          "supplierCostCents": 174,
+          "retailPriceCents": 313,
+          "stockQuantity": 11358,
+          "isAvailable": true
+        }
+      ],
+      "pricingConfig": {
+        "mode": "markup_percent",
+        "value": 80
+      },
+      "cjLastSyncedAt": "2026-11-16T09:09:13.461Z",
+      "addedByCeo": true,
+      "protectedFromAutoPrune": true,
+      "updatedAt": "2026-11-16T09:08:33.974Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ord_fb1b99b76de7eded",
+      "orderReference": "VAN-2026-9145",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "customerPhone": "+2348031234567",
+      "shippingAddress": {
+        "fullName": "Adaora Okafor",
+        "phone": "+2348031234567",
+        "streetAddress": "12 Adeola Odeku",
+        "city": "Eti-Osa",
+        "state": "Lagos",
+        "postalCode": "101241",
+        "country": "Nigeria"
+      },
+      "deliveryState": "Lagos",
+      "deliveryLga": "Eti-Osa",
+      "estimatedTransitTime": "1 – 2 Business Days",
+      "items": [
+        {
+          "productId": "limited-edition-magsafe-dock-1794818429454",
+          "slug": "limited-edition-magsafe-dock-1794818429454",
+          "title": "Limited Edition MagSafe Dock 1794818429454",
+          "unitPriceCents": 4500,
+          "quantity": 1,
+          "totalCents": 4500,
+          "supplierCostCents": 2000,
+          "image": "/products/charging-phone-stand.jpg"
+        }
+      ],
+      "subtotalCents": 4500,
+      "discountCents": 0,
+      "couponCode": null,
+      "shippingFeeCents": 200,
+      "totalCents": 4700,
+      "currency": "NGN",
+      "exchangeRateUsed": 1500,
+      "exchangeRateProvider": "ExchangeRate-API Live",
+      "exchangeRateTimestamp": "2026-11-16T08:40:29.461Z",
+      "originalPriceCents": 4500,
+      "originalCurrency": "USD",
+      "paymentReference": "WAVY_TX_12345",
+      "paymentGateway": "wavy",
+      "paymentMethod": "card_online",
+      "paymentStatus": "refunded",
+      "paymentProofNotes": "Gateway Reference: WAVY_TX_12345",
+      "paymentVerifiedAt": "2026-11-16T08:40:29.464Z",
+      "paymentVerifiedBy": "Wavy Gateway (wavy_webhook)",
+      "fulfilmentStatus": "cancelled",
+      "carrier": null,
+      "trackingNumber": null,
+      "trackingUrl": null,
+      "supplierOrderId": null,
+      "supplierName": null,
+      "notes": null,
+      "createdAt": "2026-11-16T08:40:29.461Z",
+      "updatedAt": "2026-11-16T09:11:02.051Z",
+      "returnRequested": true,
+      "returnReason": "Ordered wrong model size",
+      "returnNotes": "Seal remains intact",
+      "returnRequestedAt": "2026-11-16T08:40:29.488Z",
+      "returnStatus": "approved"
+    },
+    {
+      "id": "ord_524f2772a5ab5a91",
+      "orderReference": "VAN-2026-1303",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "customerPhone": "+2348031234567",
+      "shippingAddress": {
+        "fullName": "Adaora Okafor",
+        "phone": "+2348031234567",
+        "streetAddress": "12 Adeola Odeku",
+        "city": "Eti-Osa",
+        "state": "Lagos",
+        "postalCode": "101241",
+        "country": "Nigeria"
+      },
+      "deliveryState": "Lagos",
+      "deliveryLga": "Eti-Osa",
+      "estimatedTransitTime": "1 – 2 Business Days",
+      "items": [
+        {
+          "productId": "limited-edition-magsafe-dock-1794818429454",
+          "slug": "limited-edition-magsafe-dock-1794818429454",
+          "title": "Limited Edition MagSafe Dock 1794818429454",
+          "unitPriceCents": 4500,
+          "quantity": 1,
+          "totalCents": 4500,
+          "supplierCostCents": 2000,
+          "image": "/products/charging-phone-stand.jpg"
+        }
+      ],
+      "subtotalCents": 4500,
+      "discountCents": 0,
+      "couponCode": null,
+      "shippingFeeCents": 200,
+      "totalCents": 4700,
+      "currency": "NGN",
+      "exchangeRateUsed": 1500,
+      "exchangeRateProvider": "ExchangeRate-API Live",
+      "exchangeRateTimestamp": "2026-11-16T08:40:29.456Z",
+      "originalPriceCents": 4500,
+      "originalCurrency": "USD",
+      "paymentReference": null,
+      "paymentGateway": "wavy",
+      "paymentMethod": "card_online",
+      "paymentStatus": "failed",
+      "paymentProofNotes": "Card declined by issuer",
+      "paymentVerifiedAt": null,
+      "paymentVerifiedBy": null,
+      "fulfilmentStatus": "cancelled",
+      "carrier": null,
+      "trackingNumber": null,
+      "trackingUrl": null,
+      "supplierOrderId": null,
+      "supplierName": null,
+      "notes": null,
+      "createdAt": "2026-11-16T08:40:29.456Z",
+      "updatedAt": "2026-11-16T08:40:29.460Z"
+    },
+    {
+      "id": "ord_97c28d633bebe8c8",
+      "orderReference": "VAN-2026-9130",
+      "customerId": null,
+      "customerEmail": "john@vantra-customer.com",
+      "customerName": "John Customer",
+      "customerPhone": "+234 812 999 8888",
+      "shippingAddress": {
+        "fullName": "John Customer",
+        "phone": "+234 812 999 8888",
+        "streetAddress": "10 Broad Street",
+        "apartment": "",
+        "city": "Lagos",
+        "state": "Lagos State",
+        "postalCode": "100001",
+        "country": "Nigeria"
+      },
+      "items": [
+        {
+          "productId": "clear-phone-case",
+          "slug": "clear-phone-case",
+          "title": "Clear Phone Case",
+          "unitPriceCents": 799,
+          "quantity": 1,
+          "totalCents": 799,
+          "supplierCostCents": 199,
+          "image": "/manus-storage/clear-protective-phone-case_330a13cf.jpg"
+        }
+      ],
+      "subtotalCents": 799,
+      "shippingFeeCents": 500,
+      "totalCents": 1299,
+      "currency": "USD",
+      "paymentMethod": "bank_transfer",
+      "paymentStatus": "refunded",
+      "paymentProofNotes": null,
+      "paymentVerifiedAt": "2026-10-15T08:31:22.591Z",
+      "paymentVerifiedBy": "Adnuel (emmanueladarikwu@gmail.com)",
+      "fulfilmentStatus": "cancelled",
+      "carrier": "DHL Express",
+      "trackingNumber": "DHL-VAN-9130",
+      "trackingUrl": "https://www.google.com/search?q=DHL-VAN-9130",
+      "supplierOrderId": null,
+      "supplierName": null,
+      "supplierCostTotalCents": null,
+      "notes": "Customer confirmed WhatsApp address update",
+      "createdAt": "2026-10-15T08:28:37.637Z",
+      "updatedAt": "2026-10-18T18:27:39.607Z",
+      "adminNotes": "Updated in real-time by CEO Adnuel"
+    }
+  ],
+  "bankSettings": {
+    "bankName": "Guaranty Trust Bank (GTBank)",
+    "accountName": "ADARIKWU EMMANUEL UGBADA",
+    "accountNumber": "1033269410",
+    "sortCode": "058-152062",
+    "instructions": "Transfer the exact order total using your unique Order Reference (e.g. VAN-2026-XXXX) as the transaction narration. Once sent, click \"I Have Transferred\" to notify CEO Adnuel for instant verification.",
+    "whatsapp": "+234 913 279 3670",
+    "email": "emmanueladarikwu@gmail.com"
+  },
+  "suppliers": [
+    {
+      "id": "sup_aliexpress",
+      "name": "AliExpress Direct Dropship",
+      "website": "https://www.aliexpress.com",
+      "contact": "supplier-support@aliexpress.com",
+      "integrationType": "aliexpress_api",
+      "status": "pending_setup",
+      "notes": "API credentials required before live automated supplier order dispatch.",
+      "createdAt": "2026-10-15T08:22:07.163Z"
+    },
+    {
+      "id": "sup_cjdropshipping",
+      "name": "CJdropshipping Global",
+      "website": "https://cjdropshipping.com",
+      "contact": "support@cjdropshipping.com",
+      "integrationType": "cjdropshipping_api",
+      "status": "operational",
+      "notes": "CJ Dropshipping API 2.0 authenticated and ready.",
+      "createdAt": "2026-10-15T08:22:07.163Z",
+      "lastSyncedAt": "2026-11-16T09:15:09.055Z"
+    },
+    {
+      "id": "sup_manual_direct",
+      "name": "Shenzhen Fast Logistics Hub",
+      "website": "https://1688.com",
+      "contact": "+86 755 8321 4400",
+      "integrationType": "manual",
+      "status": "operational",
+      "notes": "Manual order placement and tracking confirmation verified by CEO Adnuel.",
+      "createdAt": "2026-10-15T08:22:07.163Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "log_1794821057315_dsze",
+      "timestamp": "2026-11-16T09:24:17.315Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794820510201_s00q",
+      "timestamp": "2026-11-16T09:15:10.201Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794820506012_irs6",
+      "timestamp": "2026-11-16T09:15:06.012Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794820262051_64nk",
+      "timestamp": "2026-11-16T09:11:02.051Z",
+      "actor": "Adnuel (emmanueladarikwu@gmail.com)",
+      "action": "CONFIRM_REFUND",
+      "details": "Order VAN-2026-9145 ($47.00) refunded. Reason: Customer return request"
+    },
+    {
+      "id": "log_1794820153461_j6m5",
+      "timestamp": "2026-11-16T09:09:13.461Z",
+      "actor": "Adnuel (CJ Stock Sync)",
+      "action": "CJ_INVENTORY_SYNC",
+      "details": "Synced CJ stock for 360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand: 35063 units"
+    },
+    {
+      "id": "log_1794820137029_mz81",
+      "timestamp": "2026-11-16T09:08:57.029Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794820113974_9770",
+      "timestamp": "2026-11-16T09:08:33.974Z",
+      "actor": "Adnuel",
+      "action": "UPDATE_PRODUCT",
+      "details": "Updated product: 360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand (360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-)"
+    },
+    {
+      "id": "log_1794820110789_xodv",
+      "timestamp": "2026-11-16T09:08:30.789Z",
+      "actor": "Adnuel",
+      "action": "UPDATE_PRODUCT",
+      "details": "Updated product: 360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand (360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-)"
+    },
+    {
+      "id": "log_1794820099833_ey2g",
+      "timestamp": "2026-11-16T09:08:19.833Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794819501756_hlqp",
+      "timestamp": "2026-11-16T08:58:21.756Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794819446900_e7pt",
+      "timestamp": "2026-11-16T08:57:26.900Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794819377714_8ctq",
+      "timestamp": "2026-11-16T08:56:17.714Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794819274421_pcn3",
+      "timestamp": "2026-11-16T08:54:34.421Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794818579520_9r7i",
+      "timestamp": "2026-11-16T08:42:59.520Z",
+      "actor": "Adnuel",
+      "action": "DELETE_PRODUCT",
+      "details": "Removed product: VANTÉRA Executive MagSafe Stand Test (vant-ra-executive-magsafe-stand-test)"
+    },
+    {
+      "id": "log_1794818574069_kmq3",
+      "timestamp": "2026-11-16T08:42:54.069Z",
+      "actor": "Adnuel",
+      "action": "PRUNE_NON_CJ_PRODUCTS",
+      "details": "Removed 0 legacy non-CJ product(s); 2 protected/CJ product(s) remain."
+    },
+    {
+      "id": "log_1794818563065_njyj",
+      "timestamp": "2026-11-16T08:42:43.065Z",
+      "actor": "Adnuel",
+      "action": "ADD_PRODUCT",
+      "details": "Added new product: VANTÉRA Executive MagSafe Stand Test (vant-ra-executive-magsafe-stand-test)"
+    },
+    {
+      "id": "log_1794818559594_uaxu",
+      "timestamp": "2026-11-16T08:42:39.594Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794818518497_pk2f",
+      "timestamp": "2026-11-16T08:41:58.497Z",
+      "actor": "System",
+      "action": "DELETE_PRODUCT",
+      "details": "Removed product: Limited Edition MagSafe Dock 1794818429454 (limited-edition-magsafe-dock-1794818429454)"
+    },
+    {
+      "id": "log_1794818441959_tw2l",
+      "timestamp": "2026-11-16T08:40:41.959Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794818429489_m7bh",
+      "timestamp": "2026-11-16T08:40:29.489Z",
+      "actor": "CEO Adnuel",
+      "action": "UPDATE_RETURN_STATUS",
+      "details": "Return request for VAN-2026-9145 marked approved"
+    },
+    {
+      "id": "log_1794818429488_8nvx",
+      "timestamp": "2026-11-16T08:40:29.488Z",
+      "actor": "Customer",
+      "action": "RETURN_REQUESTED",
+      "details": "Return requested for order VAN-2026-9145: Ordered wrong model size"
+    },
+    {
+      "id": "log_1794818429464_81sq",
+      "timestamp": "2026-11-16T08:40:29.464Z",
+      "actor": "System:Wavy",
+      "action": "PAYMENT_VERIFIED",
+      "details": "Order VAN-2026-9145 paid via gateway (WAVY_TX_12345)"
+    },
+    {
+      "id": "log_1794818429461_9zxo",
+      "timestamp": "2026-11-16T08:40:29.461Z",
+      "actor": "System",
+      "action": "ORDER_CREATED",
+      "details": "Order VAN-2026-9145 placed by upgrade_test_1794818429292@example.com ($47.00)"
+    },
+    {
+      "id": "log_1794818429460_kthg",
+      "timestamp": "2026-11-16T08:40:29.460Z",
+      "actor": "System:Gateway",
+      "action": "PAYMENT_FAILED",
+      "details": "Order VAN-2026-1303: Card declined by issuer"
+    },
+    {
+      "id": "log_1794818429456_rcxh",
+      "timestamp": "2026-11-16T08:40:29.456Z",
+      "actor": "System",
+      "action": "ORDER_CREATED",
+      "details": "Order VAN-2026-1303 placed by upgrade_test_1794818429292@example.com ($47.00)"
+    },
+    {
+      "id": "log_1794818429455_wmcg",
+      "timestamp": "2026-11-16T08:40:29.455Z",
+      "actor": "Test Runner",
+      "action": "ADD_PRODUCT",
+      "details": "Added new product: Limited Edition MagSafe Dock 1794818429454 (limited-edition-magsafe-dock-1794818429454)"
+    },
+    {
+      "id": "log_1794818429451_lg77",
+      "timestamp": "2026-11-16T08:40:29.451Z",
+      "actor": "upgrade_test_1794818429292@example.com",
+      "action": "PASSWORD_RESET",
+      "details": "Customer reset password via verified 6-digit one-time code."
+    },
+    {
+      "id": "log_1794818429370_qb7f",
+      "timestamp": "2026-11-16T08:40:29.370Z",
+      "actor": "Customer",
+      "action": "EMAIL_VERIFIED",
+      "details": "Customer verified email: upgrade_test_1794818429292@example.com"
+    },
+    {
+      "id": "log_1794818429366_wp83",
+      "timestamp": "2026-11-16T08:40:29.366Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer pending email verification: upgrade_test_1794818429292@example.com"
+    },
+    {
+      "id": "log_1794818428481_as31",
+      "timestamp": "2026-11-16T08:40:28.481Z",
+      "actor": "CEO Adnuel",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1355.5 NGN/USD)"
+    },
+    {
+      "id": "log_1794818428479_dv6j",
+      "timestamp": "2026-11-16T08:40:28.479Z",
+      "actor": "CEO Adnuel",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1355.5 NGN/USD)"
+    },
+    {
+      "id": "log_1794818427639_tyku",
+      "timestamp": "2026-11-16T08:40:27.639Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794818427391_z9ko",
+      "timestamp": "2026-11-16T08:40:27.391Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer pending email verification: customer_b_1794818427220@example.com"
+    },
+    {
+      "id": "log_1794818427307_wd8i",
+      "timestamp": "2026-11-16T08:40:27.307Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer pending email verification: customer_a_1794818427220@example.com"
+    },
+    {
+      "id": "log_1794818369440_6j3m",
+      "timestamp": "2026-11-16T08:39:29.440Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794818361705_jdh6",
+      "timestamp": "2026-11-16T08:39:21.705Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.11 NGN/USD)"
+    },
+    {
+      "id": "log_1794691457499_dx7x",
+      "timestamp": "2026-11-14T21:24:17.499Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.36 NGN/USD)"
+    },
+    {
+      "id": "log_1794691397580_39tg",
+      "timestamp": "2026-11-14T21:23:17.580Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.36 NGN/USD)"
+    },
+    {
+      "id": "log_1794691316059_xg06",
+      "timestamp": "2026-11-14T21:21:56.059Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794691310958_85zu",
+      "timestamp": "2026-11-14T21:21:50.958Z",
+      "actor": "Adnuel",
+      "action": "CREATE_COUPON",
+      "details": "Created coupon KJV12568 (undefined off)"
+    },
+    {
+      "id": "log_1794691271923_vu1s",
+      "timestamp": "2026-11-14T21:21:11.923Z",
+      "actor": "Adnuel",
+      "action": "DELETE_COUPON",
+      "details": "Deleted coupon VANTERA10"
+    },
+    {
+      "id": "log_1794691195329_232y",
+      "timestamp": "2026-11-14T21:19:55.329Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.36 NGN/USD)"
+    },
+    {
+      "id": "log_1794690354289_7318",
+      "timestamp": "2026-11-14T21:05:54.289Z",
+      "actor": "Adnuel (CJ Stock Sync)",
+      "action": "CJ_INVENTORY_SYNC",
+      "details": "Synced CJ stock for 360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand: 35063 units"
+    },
+    {
+      "id": "log_1794690342903_s9lc",
+      "timestamp": "2026-11-14T21:05:42.903Z",
+      "actor": "Adnuel",
+      "action": "CJ_PRODUCT_IMPORTED",
+      "details": "Imported CJ product 360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand (PID: 1735490206582710272, stock: 35063)"
+    },
+    {
+      "id": "log_1794690225225_t2kl",
+      "timestamp": "2026-11-14T21:03:45.225Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.36 NGN/USD)"
+    },
+    {
+      "id": "log_1794690225164_9rzf",
+      "timestamp": "2026-11-14T21:03:45.164Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794687500720_12qv",
+      "timestamp": "2026-11-14T20:18:20.720Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.36 NGN/USD)"
+    },
+    {
+      "id": "log_1794655289695_q2yh",
+      "timestamp": "2026-11-14T11:21:29.695Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794655263472_2qak",
+      "timestamp": "2026-11-14T11:21:03.472Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.36 NGN/USD)"
+    },
+    {
+      "id": "log_1794655239903_dsxx",
+      "timestamp": "2026-11-14T11:20:39.903Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794655238194_rq5a",
+      "timestamp": "2026-11-14T11:20:38.194Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794655195962_tu9v",
+      "timestamp": "2026-11-14T11:19:55.962Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794655195358_4bxr",
+      "timestamp": "2026-11-14T11:19:55.358Z",
+      "actor": "CJ API 2.0 Auth Monitor",
+      "action": "UPDATE_SUPPLIER",
+      "details": "Updated supplier CJdropshipping Global"
+    },
+    {
+      "id": "log_1794604611699_b4y9",
+      "timestamp": "2026-11-13T21:16:51.699Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1794568128098_t1gb",
+      "timestamp": "2026-11-13T11:08:48.098Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1794568088238_z7xj",
+      "timestamp": "2026-11-13T11:08:08.238Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1794568043257_z6eq",
+      "timestamp": "2026-11-13T11:07:23.257Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1794564282053_xnqv",
+      "timestamp": "2026-11-13T10:04:42.053Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1350.46 NGN/USD)"
+    },
+    {
+      "id": "log_1793883136367_00pi",
+      "timestamp": "2026-11-05T12:52:16.367Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1346.47 NGN/USD)"
+    },
+    {
+      "id": "log_1793710364620_n9oi",
+      "timestamp": "2026-11-03T12:52:44.620Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: comfort_test_1793710364@gmail.com"
+    },
+    {
+      "id": "log_1793562673760_bdx2",
+      "timestamp": "2026-11-01T19:51:13.760Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: newclient@gmail.com"
+    },
+    {
+      "id": "log_1793562668623_v44f",
+      "timestamp": "2026-11-01T19:51:08.623Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: newclient1793562668521@gmail.com"
+    },
+    {
+      "id": "log_1793274708174_ujvf",
+      "timestamp": "2026-10-29T11:51:48.174Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: comfortugbada@gmail.com"
+    },
+    {
+      "id": "log_1793272594045_96sn",
+      "timestamp": "2026-10-29T11:16:34.045Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: chinedu@example.com"
+    },
+    {
+      "id": "log_1793272201045_txdh",
+      "timestamp": "2026-10-29T11:10:01.045Z",
+      "actor": "Customer",
+      "action": "REGISTER_ACCOUNT",
+      "details": "New customer registered: testregister@example.com"
+    },
+    {
+      "id": "log_1792853204680_gcbf",
+      "timestamp": "2026-10-24T14:46:44.680Z",
+      "actor": "Adnuel",
+      "action": "UPDATE_DOMAIN_SETTINGS",
+      "details": "Configured custom domain: vantera.com.ng"
+    },
+    {
+      "id": "log_1792592629282_ngis",
+      "timestamp": "2026-10-21T14:23:49.282Z",
+      "actor": "CEO Adnuel",
+      "action": "ADMIN_LOGIN",
+      "details": "CEO signed into private dashboard."
+    },
+    {
+      "id": "log_1792419816296_2epg",
+      "timestamp": "2026-10-19T14:23:36.296Z",
+      "actor": "CEO Adnuel",
+      "action": "ADMIN_LOGIN",
+      "details": "CEO signed into private dashboard."
+    },
+    {
+      "id": "log_1792419624618_v0lg",
+      "timestamp": "2026-10-19T14:20:24.618Z",
+      "actor": "CEO Adnuel",
+      "action": "ADMIN_LOGIN",
+      "details": "CEO signed into private dashboard."
+    },
+    {
+      "id": "log_1792400763466_hmom",
+      "timestamp": "2026-10-19T09:06:03.466Z",
+      "actor": "Adnuel (emmanueladarikwu@gmail.com)",
+      "action": "VERIFY_PAYMENT",
+      "details": "Payment verified for order VAN-2026-9335 ($20.98)"
+    },
+    {
+      "id": "log_1792400758670_yu0k",
+      "timestamp": "2026-10-19T09:05:58.670Z",
+      "actor": "Adnuel (emmanueladarikwu@gmail.com)",
+      "action": "VERIFY_PAYMENT",
+      "details": "Payment verified for order VAN-2026-9841 ($12.99)"
+    },
+    {
+      "id": "log_1792400749297_apgv",
+      "timestamp": "2026-10-19T09:05:49.297Z",
+      "actor": "System",
+      "action": "ORDER_CREATED",
+      "details": "Order VAN-2026-9841 placed by emmanueladarikwu@gmail.com ($12.99)"
+    },
+    {
+      "id": "log_1792400745216_39wu",
+      "timestamp": "2026-10-19T09:05:45.216Z",
+      "actor": "CEO Adnuel",
+      "action": "ADMIN_LOGIN",
+      "details": "CEO signed into private dashboard."
+    },
+    {
+      "id": "log_1792400243803_tycf",
+      "timestamp": "2026-10-19T08:57:23.803Z",
+      "actor": "System",
+      "action": "ORDER_CREATED",
+      "details": "Order VAN-2026-9335 placed by emmanueladarikwu@gmail.com ($20.98)"
+    },
+    {
+      "id": "log_1792349622183_cz3b",
+      "timestamp": "2026-10-18T18:53:42.183Z",
+      "actor": "CEO Adnuel",
+      "action": "ADMIN_LOGIN",
+      "details": "CEO signed into private dashboard."
+    },
+    {
+      "id": "log_1792348059607_xmak",
+      "timestamp": "2026-10-18T18:27:39.607Z",
+      "actor": "Adnuel (emmanueladarikwu@gmail.com)",
+      "action": "CONFIRM_REFUND",
+      "details": "Order VAN-2026-9130 ($12.99) refunded. Reason: Customer return request"
+    },
+    {
+      "id": "log_1792348027222_8aph",
+      "timestamp": "2026-10-18T18:27:07.222Z",
+      "actor": "CEO Adnuel",
+      "action": "ADMIN_LOGIN",
+      "details": "CEO signed into private dashboard."
+    },
+    {
+      "id": "log_1792150487016_bjrp",
+      "timestamp": "2026-10-16T11:34:47.016Z",
+      "actor": "Adnuel",
+      "action": "UPDATE_ORDER_DETAILS",
+      "details": "CEO updated order details for VAN-2026-9130."
+    },
+    {
+      "id": "log_1792053089532_s2h3",
+      "timestamp": "2026-10-15T08:31:29.532Z",
+      "actor": "Adnuel",
+      "action": "UPDATE_SHIPPING",
+      "details": "Tracking added for VAN-2026-9130: DHL Express DHL-VAN-9130"
+    },
+    {
+      "id": "log_1792053082591_j2s0",
+      "timestamp": "2026-10-15T08:31:22.591Z",
+      "actor": "Adnuel (emmanueladarikwu@gmail.com)",
+      "action": "VERIFY_PAYMENT",
+      "details": "Payment verified for order VAN-2026-9130 ($12.99)"
+    },
+    {
+      "id": "log_1792053077433_54bj",
+      "timestamp": "2026-10-15T08:31:17.433Z",
+      "actor": "CEO Adnuel",
+      "action": "ADMIN_LOGIN",
+      "details": "CEO signed into private dashboard."
+    },
+    {
+      "id": "log_1792052917637_9ig8",
+      "timestamp": "2026-10-15T08:28:37.637Z",
+      "actor": "System",
+      "action": "ORDER_CREATED",
+      "details": "Order VAN-2026-9130 placed by john@vantra-customer.com ($12.99)"
+    },
+    {
+      "id": "log_1792052757641_7rq8",
+      "timestamp": "2026-10-15T08:25:57.641Z",
+      "actor": "CEO Adnuel",
+      "action": "ADMIN_PASSWORD_ESTABLISHED",
+      "details": "CEO established administrative access credentials."
+    },
+    {
+      "id": "log_init",
+      "timestamp": "2026-10-15T08:22:07.163Z",
+      "actor": "System",
+      "action": "INITIALIZE_STORE",
+      "details": "VANTÉRA unified database seeded with 60 products and CEO authorization for Adnuel."
+    }
+  ],
+  "notifications": [
+    {
+      "orderId": "ord_fb1b99b76de7eded",
+      "recipient": "upgrade_test_1794818429292@example.com",
+      "channel": "email",
+      "event": "payment_verified",
+      "message": "Your refund for VANTÉRA order VAN-2026-9145 ($47.00) has been confirmed.",
+      "id": "notif_1794820262053_hbqv",
+      "status": "dispatched",
+      "timestamp": "2026-11-16T09:11:02.053Z"
+    },
+    {
+      "orderId": "ord_fb1b99b76de7eded",
+      "recipient": "upgrade_test_1794818429292@example.com",
+      "channel": "email",
+      "event": "order_status_updated",
+      "message": "Your return/cancellation request for VAN-2026-9145 has been approved.",
+      "id": "notif_1794818429489_ehsz",
+      "status": "dispatched",
+      "timestamp": "2026-11-16T08:40:29.489Z"
+    },
+    {
+      "recipient": "emmanueladarikwu@gmail.com",
+      "channel": "email",
+      "event": "order_created",
+      "message": "RETURN REQUEST: Order VAN-2026-9145 - Reason: Ordered wrong model size - Notes: Seal remains intact",
+      "id": "notif_1794818429488_9dhu",
+      "status": "dispatched",
+      "timestamp": "2026-11-16T08:40:29.488Z"
+    },
+    {
+      "orderId": "ord_fb1b99b76de7eded",
+      "recipient": "upgrade_test_1794818429292@example.com",
+      "channel": "email",
+      "event": "order_created",
+      "message": "Your VANTÉRA order VAN-2026-9145 has been received! Please complete your bank transfer referencing VAN-2026-9145.",
+      "id": "notif_1794818429461_kcpg",
+      "status": "dispatched",
+      "timestamp": "2026-11-16T08:40:29.461Z"
+    },
+    {
+      "orderId": "ord_524f2772a5ab5a91",
+      "recipient": "upgrade_test_1794818429292@example.com",
+      "channel": "email",
+      "event": "order_created",
+      "message": "Your VANTÉRA order VAN-2026-1303 has been received! Please complete your bank transfer referencing VAN-2026-1303.",
+      "id": "notif_1794818429457_o3pi",
+      "status": "dispatched",
+      "timestamp": "2026-11-16T08:40:29.457Z"
+    },
+    {
+      "recipient": "upgrade_test_1794818429292@example.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Your VANTÉRA password was updated successfully. You may now sign in with your new credentials.",
+      "id": "notif_1794818429452_sa5b",
+      "status": "dispatched",
+      "timestamp": "2026-11-16T08:40:29.452Z"
+    },
+    {
+      "recipient": "upgrade_test_1794818429292@example.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Your VANTÉRA security verification code is: 248910. This code expires in 5 minutes. If you did not request this, please secure your account immediately.",
+      "id": "notif_1794818429374_gw4o",
+      "status": "dispatched",
+      "timestamp": "2026-11-16T08:40:29.374Z"
+    },
+    {
+      "recipient": "comfort_test_1793710364@gmail.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, Comfort Test! Your customer account has been created.",
+      "id": "notif_1793710364620_l2eh",
+      "status": "dispatched",
+      "timestamp": "2026-11-03T12:52:44.620Z"
+    },
+    {
+      "recipient": "newclient@gmail.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, New Client! Your customer account has been created.",
+      "id": "notif_1793562673760_sz3t",
+      "status": "dispatched",
+      "timestamp": "2026-11-01T19:51:13.760Z"
+    },
+    {
+      "recipient": "newclient1793562668521@gmail.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, New Client! Your customer account has been created.",
+      "id": "notif_1793562668623_bx9m",
+      "status": "dispatched",
+      "timestamp": "2026-11-01T19:51:08.623Z"
+    },
+    {
+      "recipient": "comfortugbada@gmail.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, Comfort! Your customer account has been created.",
+      "id": "notif_1793274708174_ilvo",
+      "status": "dispatched",
+      "timestamp": "2026-10-29T11:51:48.174Z"
+    },
+    {
+      "recipient": "chinedu@example.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, Chinedu Eze! Your customer account has been created.",
+      "id": "notif_1793272594045_7ft4",
+      "status": "dispatched",
+      "timestamp": "2026-10-29T11:16:34.045Z"
+    },
+    {
+      "recipient": "testregister@example.com",
+      "channel": "email",
+      "event": "account_registered",
+      "message": "Welcome to VANTÉRA, Adnuel Test! Your customer account has been created.",
+      "id": "notif_1793272201045_tgni",
+      "status": "dispatched",
+      "timestamp": "2026-10-29T11:10:01.045Z"
+    },
+    {
+      "orderId": "ord_2560957137718fe7",
+      "recipient": "emmanueladarikwu@gmail.com",
+      "channel": "email",
+      "event": "payment_verified",
+      "message": "Great news! Your bank transfer for VANTÉRA order VAN-2026-9335 has been verified. We are preparing your order for dispatch.",
+      "id": "notif_1792400763466_h8q3",
+      "status": "dispatched",
+      "timestamp": "2026-10-19T09:06:03.466Z"
+    },
+    {
+      "orderId": "ord_354c954f866baa1e",
+      "recipient": "emmanueladarikwu@gmail.com",
+      "channel": "email",
+      "event": "payment_verified",
+      "message": "Great news! Your bank transfer for VANTÉRA order VAN-2026-9841 has been verified. We are preparing your order for dispatch.",
+      "id": "notif_1792400758670_gvpa",
+      "status": "dispatched",
+      "timestamp": "2026-10-19T09:05:58.670Z"
+    },
+    {
+      "orderId": "ord_354c954f866baa1e",
+      "recipient": "emmanueladarikwu@gmail.com",
+      "channel": "email",
+      "event": "order_created",
+      "message": "Your VANTÉRA order VAN-2026-9841 has been received! Please complete your bank transfer referencing VAN-2026-9841.",
+      "id": "notif_1792400749297_rwv0",
+      "status": "dispatched",
+      "timestamp": "2026-10-19T09:05:49.297Z"
+    },
+    {
+      "orderId": "ord_2560957137718fe7",
+      "recipient": "emmanueladarikwu@gmail.com",
+      "channel": "email",
+      "event": "order_created",
+      "message": "Your VANTÉRA order VAN-2026-9335 has been received! Please complete your bank transfer referencing VAN-2026-9335.",
+      "id": "notif_1792400243803_7bog",
+      "status": "dispatched",
+      "timestamp": "2026-10-19T08:57:23.803Z"
+    },
+    {
+      "orderId": "ord_97c28d633bebe8c8",
+      "recipient": "john@vantra-customer.com",
+      "channel": "email",
+      "event": "payment_verified",
+      "message": "Your refund for VANTÉRA order VAN-2026-9130 ($12.99) has been confirmed.",
+      "id": "notif_1792348059609_bbyv",
+      "status": "dispatched",
+      "timestamp": "2026-10-18T18:27:39.609Z"
+    },
+    {
+      "orderId": "ord_97c28d633bebe8c8",
+      "recipient": "john@vantra-customer.com",
+      "channel": "email",
+      "event": "order_shipped",
+      "message": "Your VANTÉRA order VAN-2026-9130 has shipped via DHL Express! Tracking Number: DHL-VAN-9130",
+      "id": "notif_1792053089532_x4vy",
+      "status": "dispatched",
+      "timestamp": "2026-10-15T08:31:29.532Z"
+    },
+    {
+      "orderId": "ord_97c28d633bebe8c8",
+      "recipient": "john@vantra-customer.com",
+      "channel": "email",
+      "event": "payment_verified",
+      "message": "Great news! Your bank transfer for VANTÉRA order VAN-2026-9130 has been verified. We are preparing your order for dispatch.",
+      "id": "notif_1792053082591_9wa4",
+      "status": "dispatched",
+      "timestamp": "2026-10-15T08:31:22.591Z"
+    },
+    {
+      "orderId": "ord_97c28d633bebe8c8",
+      "recipient": "john@vantra-customer.com",
+      "channel": "email",
+      "event": "order_created",
+      "message": "Your VANTÉRA order VAN-2026-9130 has been received! Please complete your bank transfer referencing VAN-2026-9130.",
+      "id": "notif_1792052917637_jbzo",
+      "status": "dispatched",
+      "timestamp": "2026-10-15T08:28:37.637Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "evt_1794820262051_b4bb47ea",
+      "type": "refund_confirmed",
+      "timestamp": "2026-11-16T09:11:02.051Z",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "sessionId": null,
+      "status": "completed",
+      "metadata": {
+        "orderId": "ord_fb1b99b76de7eded",
+        "orderReference": "VAN-2026-9145",
+        "amountCents": 4700,
+        "reason": "Customer return request"
+      }
+    },
+    {
+      "id": "evt_1794819383021_a9c386a9",
+      "type": "product_viewed",
+      "timestamp": "2026-11-16T08:56:23.022Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1794819377475_frh15af1",
+      "status": "success",
+      "metadata": {
+        "productId": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+        "productTitle": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+        "category": "room-desk",
+        "retailPriceCents": 313
+      }
+    },
+    {
+      "id": "evt_1794818429464_0565609a",
+      "type": "payment_confirmed",
+      "timestamp": "2026-11-16T08:40:29.464Z",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "sessionId": null,
+      "status": "completed",
+      "metadata": {
+        "orderId": "ord_fb1b99b76de7eded",
+        "orderReference": "VAN-2026-9145",
+        "gatewayReference": "WAVY_TX_12345",
+        "totalCents": 4700,
+        "currency": "NGN",
+        "channel": "wavy_webhook"
+      }
+    },
+    {
+      "id": "evt_1794818429461_ab59087a",
+      "type": "order_placed",
+      "timestamp": "2026-11-16T08:40:29.461Z",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "orderId": "ord_fb1b99b76de7eded",
+        "orderReference": "VAN-2026-9145",
+        "amountCents": 4700,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": "evt_1794818429457_890e4e9c",
+      "type": "order_placed",
+      "timestamp": "2026-11-16T08:40:29.457Z",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "orderId": "ord_524f2772a5ab5a91",
+        "orderReference": "VAN-2026-1303",
+        "amountCents": 4700,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": "evt_1794818429375_5d808253",
+      "type": "contact_form_submitted",
+      "timestamp": "2026-11-16T08:40:29.375Z",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "action": "password_reset_code_requested"
+      }
+    },
+    {
+      "id": "evt_1794818429366_ac84b704",
+      "type": "customer_registered",
+      "timestamp": "2026-11-16T08:40:29.366Z",
+      "customerId": "usr_238e0cb7cf363fa6",
+      "customerEmail": "upgrade_test_1794818429292@example.com",
+      "customerName": "Adaora Okafor",
+      "sessionId": null,
+      "status": "pending",
+      "metadata": {
+        "role": "customer",
+        "verificationPending": true
+      }
+    },
+    {
+      "id": "evt_1794818427391_37a57232",
+      "type": "customer_registered",
+      "timestamp": "2026-11-16T08:40:27.391Z",
+      "customerId": "usr_0f7c04d4aa52dfb4",
+      "customerEmail": "customer_b_1794818427220@example.com",
+      "customerName": "Customer Beta",
+      "sessionId": null,
+      "status": "pending",
+      "metadata": {
+        "role": "customer",
+        "verificationPending": true
+      }
+    },
+    {
+      "id": "evt_1794818427307_f02043ac",
+      "type": "customer_registered",
+      "timestamp": "2026-11-16T08:40:27.307Z",
+      "customerId": "usr_9decc0de878541d6",
+      "customerEmail": "customer_a_1794818427220@example.com",
+      "customerName": "Customer Alpha",
+      "sessionId": null,
+      "status": "pending",
+      "metadata": {
+        "role": "customer",
+        "verificationPending": true
+      }
+    },
+    {
+      "id": "evt_1794690364535_c52d5fe1",
+      "type": "product_viewed",
+      "timestamp": "2026-11-14T21:06:04.535Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1794690251223_ahie985v",
+      "status": "success",
+      "metadata": {
+        "productId": "360-degrees-rotate-metal-desk-mobile-phone-holder-stand-for-",
+        "productTitle": "360 Degrees Rotate Metal Desk Mobile Phone Holder Stand For Phone Pad Adjustable Desktop Tablet Holderl Table Cell Phone Stand",
+        "category": "room-desk",
+        "retailPriceCents": 313
+      }
+    },
+    {
+      "id": "evt_1793710364620_a55558a1",
+      "type": "customer_registered",
+      "timestamp": "2026-11-03T12:52:44.620Z",
+      "customerId": "usr_bfdece7aaacb88b9",
+      "customerEmail": "comfort_test_1793710364@gmail.com",
+      "customerName": "Comfort Test",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793562673760_ee3e2c84",
+      "type": "customer_registered",
+      "timestamp": "2026-11-01T19:51:13.760Z",
+      "customerId": "usr_a6802b9df352f827",
+      "customerEmail": "newclient@gmail.com",
+      "customerName": "New Client",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793562668623_799db16d",
+      "type": "customer_registered",
+      "timestamp": "2026-11-01T19:51:08.623Z",
+      "customerId": "usr_65a6ba207d7d860c",
+      "customerEmail": "newclient1793562668521@gmail.com",
+      "customerName": "New Client",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793274750753_1f9cce07",
+      "type": "customer_login",
+      "timestamp": "2026-10-29T11:52:30.753Z",
+      "customerId": "usr_b6466bf325997430",
+      "customerEmail": "comfortugbada@gmail.com",
+      "customerName": "Comfort",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793274708175_bf9434a4",
+      "type": "customer_registered",
+      "timestamp": "2026-10-29T11:51:48.175Z",
+      "customerId": "usr_b6466bf325997430",
+      "customerEmail": "comfortugbada@gmail.com",
+      "customerName": "Comfort",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793272622132_4d7990a9",
+      "type": "customer_login",
+      "timestamp": "2026-10-29T11:17:02.132Z",
+      "customerId": "usr_3b11ed14a9f314af",
+      "customerEmail": "chinedu@example.com",
+      "customerName": "Chinedu Eze",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793272594045_6974501a",
+      "type": "customer_registered",
+      "timestamp": "2026-10-29T11:16:34.045Z",
+      "customerId": "usr_3b11ed14a9f314af",
+      "customerEmail": "chinedu@example.com",
+      "customerName": "Chinedu Eze",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793272203960_44268464",
+      "type": "customer_login",
+      "timestamp": "2026-10-29T11:10:03.960Z",
+      "customerId": "usr_5da5696a0293c0b9",
+      "customerEmail": "testregister@example.com",
+      "customerName": "Adnuel Test",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1793272201045_5acf0460",
+      "type": "customer_registered",
+      "timestamp": "2026-10-29T11:10:01.045Z",
+      "customerId": "usr_5da5696a0293c0b9",
+      "customerEmail": "testregister@example.com",
+      "customerName": "Adnuel Test",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "role": "customer"
+      }
+    },
+    {
+      "id": "evt_1792749113393_532a1d3c",
+      "type": "product_viewed",
+      "timestamp": "2026-10-23T09:51:53.393Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792061095986_oeq1ne6d",
+      "status": "success",
+      "metadata": {
+        "productId": "clear-phone-case",
+        "productTitle": "Clear Phone Case",
+        "category": "phone-cases"
+      }
+    },
+    {
+      "id": "evt_1792749113385_817f63fe",
+      "type": "product_viewed",
+      "timestamp": "2026-10-23T09:51:53.385Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792061095986_oeq1ne6d",
+      "status": "success",
+      "metadata": {
+        "productId": "clear-phone-case",
+        "productTitle": "Clear Phone Case",
+        "category": "phone-cases",
+        "retailPriceCents": 799
+      }
+    },
+    {
+      "id": "evt_1792592552963_f76ebdf7",
+      "type": "product_viewed",
+      "timestamp": "2026-10-21T14:22:32.963Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792592368441_81ianljg",
+      "status": "success",
+      "metadata": {
+        "productId": "wireless-earbuds",
+        "productTitle": "Wireless Earbuds",
+        "category": "audio",
+        "retailPriceCents": 1999
+      }
+    },
+    {
+      "id": "evt_1792592482580_fec0a399",
+      "type": "product_viewed",
+      "timestamp": "2026-10-21T14:21:22.581Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792592368441_81ianljg",
+      "status": "success",
+      "metadata": {
+        "productId": "wireless-earbuds",
+        "productTitle": "Wireless Earbuds",
+        "category": "audio",
+        "retailPriceCents": 1999
+      }
+    },
+    {
+      "id": "evt_1792400763467_6b0df9ca",
+      "type": "payment_confirmed",
+      "timestamp": "2026-10-19T09:06:03.467Z",
+      "customerId": null,
+      "customerEmail": "emmanueladarikwu@gmail.com",
+      "customerName": "Emmanuel Adarikwu",
+      "sessionId": null,
+      "status": "completed",
+      "metadata": {
+        "orderId": "ord_2560957137718fe7",
+        "orderReference": "VAN-2026-9335",
+        "amountCents": 2098,
+        "verifiedBy": "Adnuel (emmanueladarikwu@gmail.com)"
+      }
+    },
+    {
+      "id": "evt_1792400758670_42e90617",
+      "type": "payment_confirmed",
+      "timestamp": "2026-10-19T09:05:58.670Z",
+      "customerId": null,
+      "customerEmail": "emmanueladarikwu@gmail.com",
+      "customerName": "Emmanuel Adarikwu",
+      "sessionId": null,
+      "status": "completed",
+      "metadata": {
+        "orderId": "ord_354c954f866baa1e",
+        "orderReference": "VAN-2026-9841",
+        "amountCents": 1299,
+        "verifiedBy": "Adnuel (emmanueladarikwu@gmail.com)"
+      }
+    },
+    {
+      "id": "evt_1792400749297_482e1e47",
+      "type": "order_placed",
+      "timestamp": "2026-10-19T09:05:49.297Z",
+      "customerId": null,
+      "customerEmail": "emmanueladarikwu@gmail.com",
+      "customerName": "Emmanuel Adarikwu",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "orderId": "ord_354c954f866baa1e",
+        "orderReference": "VAN-2026-9841",
+        "amountCents": 1299,
+        "itemCount": 1
+      }
+    },
+    {
+      "id": "evt_1792400741688_7b5a889c",
+      "type": "checkout_initiated",
+      "timestamp": "2026-10-19T09:05:41.689Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792400730156_0esesn0c",
+      "status": "success",
+      "metadata": {
+        "itemCount": 1,
+        "subtotalCents": 799,
+        "currency": "NGN",
+        "items": [
+          {
+            "productId": "clear-phone-case",
+            "title": "Clear Phone Case",
+            "quantity": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "evt_1792400574617_f90a88dd",
+      "type": "product_viewed",
+      "timestamp": "2026-10-19T09:02:54.617Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792061095986_oeq1ne6d",
+      "status": "success",
+      "metadata": {
+        "productId": "magnetic-phone-mount",
+        "productTitle": "Magnetic Phone Mount",
+        "category": "photography",
+        "retailPriceCents": 1499
+      }
+    },
+    {
+      "id": "evt_1792400574586_c0233bdc",
+      "type": "product_viewed",
+      "timestamp": "2026-10-19T09:02:54.587Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792061095986_oeq1ne6d",
+      "status": "success",
+      "metadata": {
+        "productId": "magnetic-phone-mount",
+        "productTitle": "Magnetic Phone Mount",
+        "category": "photography"
+      }
+    },
+    {
+      "id": "evt_1792400243803_a8ffaeb5",
+      "type": "order_placed",
+      "timestamp": "2026-10-19T08:57:23.804Z",
+      "customerId": null,
+      "customerEmail": "emmanueladarikwu@gmail.com",
+      "customerName": "Emmanuel Adarikwu",
+      "sessionId": null,
+      "status": "success",
+      "metadata": {
+        "orderId": "ord_2560957137718fe7",
+        "orderReference": "VAN-2026-9335",
+        "amountCents": 2098,
+        "itemCount": 2
+      }
+    },
+    {
+      "id": "evt_1792400235025_00627762",
+      "type": "checkout_initiated",
+      "timestamp": "2026-10-19T08:57:15.025Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792400222951_e2ck3kz6",
+      "status": "success",
+      "metadata": {
+        "itemCount": 2,
+        "subtotalCents": 1598,
+        "currency": "NGN",
+        "items": [
+          {
+            "productId": "clear-phone-case",
+            "title": "Clear Phone Case",
+            "quantity": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "evt_1792348059607_c7f86cbd",
+      "type": "refund_confirmed",
+      "timestamp": "2026-10-18T18:27:39.607Z",
+      "customerId": null,
+      "customerEmail": "john@vantra-customer.com",
+      "customerName": "John Customer",
+      "sessionId": null,
+      "status": "completed",
+      "metadata": {
+        "orderId": "ord_97c28d633bebe8c8",
+        "orderReference": "VAN-2026-9130",
+        "amountCents": 1299,
+        "reason": "Customer return request"
+      }
+    },
+    {
+      "id": "evt_1792346743982_017741b7",
+      "type": "product_viewed",
+      "timestamp": "2026-10-18T18:05:43.982Z",
+      "customerId": null,
+      "customerEmail": null,
+      "customerName": null,
+      "sessionId": "ses_1792346743796_aqmaqdde",
+      "status": "success",
+      "metadata": {
+        "productId": "clear-phone-case",
+        "productTitle": "Clear Phone Case",
+        "category": "phone-cases",
+        "retailPriceCents": 799
+      }
+    },
+    {
+      "id": "evt_1792150487016_333ba3d8",
+      "type": "order_status_updated",
+      "timestamp": "2026-10-16T11:34:47.016Z",
+      "customerId": null,
+      "customerEmail": "john@vantra-customer.com",
+      "customerName": "John Customer",
+      "sessionId": null,
+      "status": "completed",
+      "metadata": {
+        "orderId": "ord_97c28d633bebe8c8",
+        "orderReference": "VAN-2026-9130",
+        "paymentStatus": "paid",
+        "fulfilmentStatus": "shipped",
+        "carrier": "DHL Express",
+        "trackingNumber": "DHL-VAN-9130",
+        "updatedBy": "Adnuel"
+      }
+    }
+  ],
+  "carts": [
+    {
+      "id": "cart_usr_0f7c04d4aa52dfb4_1794818427396",
+      "customerId": "usr_0f7c04d4aa52dfb4",
+      "customerEmail": "customer_b_1794818427220@example.com",
+      "items": [
+        {
+          "product": {
+            "id": "clear-protective-phone-case",
+            "title": "Titanium Edge MagSafe Shield",
+            "retailPriceCents": 2400
+          },
+          "quantity": 1
+        }
+      ],
+      "itemCount": 1,
+      "subtotalCents": 2400,
+      "createdAt": "2026-11-16T08:40:27.396Z",
+      "updatedAt": "2026-11-16T08:40:27.396Z"
+    },
+    {
+      "id": "cart_usr_9decc0de878541d6_1794818427394",
+      "customerId": "usr_9decc0de878541d6",
+      "customerEmail": "customer_a_1794818427220@example.com",
+      "items": [
+        {
+          "product": {
+            "id": "festive-3in1-foldable-magsafe-charger",
+            "title": "3-in-1 Foldable MagSafe Station",
+            "retailPriceCents": 3800
+          },
+          "quantity": 2
+        }
+      ],
+      "itemCount": 2,
+      "subtotalCents": 7600,
+      "createdAt": "2026-11-16T08:40:27.394Z",
+      "updatedAt": "2026-11-16T08:40:27.394Z"
+    },
+    {
+      "id": "cart__1793883136208",
+      "customerId": "",
+      "customerEmail": "customer_b_1793883136203@example.com",
+      "items": [
+        {
+          "product": {
+            "id": "clear-protective-phone-case",
+            "title": "Titanium Edge MagSafe Shield",
+            "retailPriceCents": 2400
+          },
+          "quantity": 1
+        }
+      ],
+      "itemCount": 1,
+      "subtotalCents": 2400,
+      "createdAt": "2026-11-05T12:52:16.208Z",
+      "updatedAt": "2026-11-05T12:52:16.210Z"
+    },
+    {
+      "id": "ses_1793389444228_jvtz4eih",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1793389444228_jvtz4eih",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-30T19:44:04.660Z",
+      "updatedAt": "2026-10-30T19:44:04.660Z"
+    },
+    {
+      "id": "ses_1793274683591_lomv3tru",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1793274683591_lomv3tru",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-29T11:51:23.887Z",
+      "updatedAt": "2026-10-29T11:51:23.887Z"
+    },
+    {
+      "id": "ses_1793272561851_0odbt3wp",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1793272561851_0odbt3wp",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-29T11:16:02.278Z",
+      "updatedAt": "2026-10-29T11:16:02.278Z"
+    },
+    {
+      "id": "ses_1792749259163_voi7v5jm",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792749259163_voi7v5jm",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-23T09:54:19.643Z",
+      "updatedAt": "2026-10-23T09:54:19.643Z"
+    },
+    {
+      "id": "ses_1792747687471_3c81504z",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792747687471_3c81504z",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-23T09:28:07.897Z",
+      "updatedAt": "2026-10-23T09:28:07.897Z"
+    },
+    {
+      "id": "ses_1792666524081_dn0qiowl",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792666524081_dn0qiowl",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-22T10:55:24.345Z",
+      "updatedAt": "2026-10-22T10:55:24.345Z"
+    },
+    {
+      "id": "ses_1792665121537_u9s53sp8",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792665121537_u9s53sp8",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-22T10:32:01.744Z",
+      "updatedAt": "2026-10-22T10:32:01.744Z"
+    },
+    {
+      "id": "ses_1792664988469_xv2as9ca",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792664988469_xv2as9ca",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-22T10:29:48.722Z",
+      "updatedAt": "2026-10-22T10:31:55.773Z"
+    },
+    {
+      "id": "ses_1792664843953_6z7oir6q",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792664843953_6z7oir6q",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-22T10:27:24.234Z",
+      "updatedAt": "2026-10-22T10:27:24.234Z"
+    },
+    {
+      "id": "ses_1792664465953_jwub1o8e",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792664465953_jwub1o8e",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-22T10:21:06.280Z",
+      "updatedAt": "2026-10-22T10:26:32.410Z"
+    },
+    {
+      "id": "ses_1792592368441_81ianljg",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792592368441_81ianljg",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-21T14:19:28.828Z",
+      "updatedAt": "2026-10-21T14:25:24.432Z"
+    },
+    {
+      "id": "ses_1792419841565_xvp2jw2c",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792419841565_xvp2jw2c",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-19T14:24:01.791Z",
+      "updatedAt": "2026-10-19T14:24:01.791Z"
+    },
+    {
+      "id": "ses_1792419812728_35crp9xr",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792419812728_35crp9xr",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-19T14:23:32.807Z",
+      "updatedAt": "2026-10-19T14:23:32.807Z"
+    },
+    {
+      "id": "ses_1792419793529_2eigwcbr",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792419793529_2eigwcbr",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-19T14:23:13.815Z",
+      "updatedAt": "2026-10-19T14:23:13.815Z"
+    },
+    {
+      "id": "ses_1792061095986_oeq1ne6d",
+      "customerId": null,
+      "customerEmail": null,
+      "sessionId": "ses_1792061095986_oeq1ne6d",
+      "items": [],
+      "itemCount": 0,
+      "subtotalCents": 0,
+      "createdAt": "2026-10-19T14:13:16.456Z",
+      "updatedAt": "2026-11-05T12:36:56.011Z"
+    }
+  ],
+  "visitorSessions": [
+    {
+      "sessionId": "ses_1794819377475_frh15af1",
+      "firstSeen": "2026-11-16T08:56:23.018Z",
+      "lastActive": "2026-11-16T08:56:23.020Z",
+      "authenticatedUserId": null,
+      "pageViews": 2
+    },
+    {
+      "sessionId": "ses_1794690251223_ahie985v",
+      "firstSeen": "2026-11-14T21:06:04.532Z",
+      "lastActive": "2026-11-14T21:06:04.534Z",
+      "authenticatedUserId": null,
+      "pageViews": 2
+    },
+    {
+      "sessionId": "ses_1793389444228_jvtz4eih",
+      "firstSeen": "2026-10-30T19:44:04.658Z",
+      "lastActive": "2026-10-30T19:44:04.658Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1793274683591_lomv3tru",
+      "firstSeen": "2026-10-29T11:51:23.885Z",
+      "lastActive": "2026-10-29T11:51:23.885Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1793272561851_0odbt3wp",
+      "firstSeen": "2026-10-29T11:16:02.276Z",
+      "lastActive": "2026-10-29T11:16:02.276Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792749259163_voi7v5jm",
+      "firstSeen": "2026-10-23T09:54:19.641Z",
+      "lastActive": "2026-10-23T09:54:19.641Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792747687471_3c81504z",
+      "firstSeen": "2026-10-23T09:28:07.895Z",
+      "lastActive": "2026-10-23T09:28:07.895Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792666524081_dn0qiowl",
+      "firstSeen": "2026-10-22T10:55:24.344Z",
+      "lastActive": "2026-10-22T10:55:24.344Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792665121537_u9s53sp8",
+      "firstSeen": "2026-10-22T10:32:01.742Z",
+      "lastActive": "2026-10-22T10:32:01.742Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792664988469_xv2as9ca",
+      "firstSeen": "2026-10-22T10:29:48.720Z",
+      "lastActive": "2026-10-22T10:31:55.772Z",
+      "authenticatedUserId": null,
+      "pageViews": 2
+    },
+    {
+      "sessionId": "ses_1792664843953_6z7oir6q",
+      "firstSeen": "2026-10-22T10:27:24.232Z",
+      "lastActive": "2026-10-22T10:27:24.232Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792664465953_jwub1o8e",
+      "firstSeen": "2026-10-22T10:21:06.278Z",
+      "lastActive": "2026-10-22T10:26:32.404Z",
+      "authenticatedUserId": null,
+      "pageViews": 9
+    },
+    {
+      "sessionId": "ses_1792592368441_81ianljg",
+      "firstSeen": "2026-10-21T14:19:28.826Z",
+      "lastActive": "2026-10-21T14:25:24.430Z",
+      "authenticatedUserId": null,
+      "pageViews": 13
+    },
+    {
+      "sessionId": "ses_1792419841565_xvp2jw2c",
+      "firstSeen": "2026-10-19T14:24:01.790Z",
+      "lastActive": "2026-10-19T14:24:01.790Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792419812728_35crp9xr",
+      "firstSeen": "2026-10-19T14:23:32.805Z",
+      "lastActive": "2026-10-19T14:23:32.805Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792419793529_2eigwcbr",
+      "firstSeen": "2026-10-19T14:23:13.813Z",
+      "lastActive": "2026-10-19T14:23:13.813Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792400730156_0esesn0c",
+      "firstSeen": "2026-10-19T09:05:30.404Z",
+      "lastActive": "2026-10-19T09:05:49.401Z",
+      "authenticatedUserId": null,
+      "pageViews": 5
+    },
+    {
+      "sessionId": "ses_1792400222951_e2ck3kz6",
+      "firstSeen": "2026-10-19T08:57:03.193Z",
+      "lastActive": "2026-10-19T08:57:23.900Z",
+      "authenticatedUserId": null,
+      "pageViews": 5
+    },
+    {
+      "sessionId": "ses_1792400170284_qi0l7euf",
+      "firstSeen": "2026-10-19T08:56:10.588Z",
+      "lastActive": "2026-10-19T08:56:14.285Z",
+      "authenticatedUserId": null,
+      "pageViews": 2
+    },
+    {
+      "sessionId": "ses_1792350824628_ctw2bfjn",
+      "firstSeen": "2026-10-18T19:13:45.091Z",
+      "lastActive": "2026-10-18T19:13:45.091Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792346944036_y3n6ec5d",
+      "firstSeen": "2026-10-18T18:09:04.076Z",
+      "lastActive": "2026-10-18T18:09:04.076Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792346845224_iwq88i2p",
+      "firstSeen": "2026-10-18T18:07:25.270Z",
+      "lastActive": "2026-10-18T18:07:25.270Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792346786710_a8ralfm6",
+      "firstSeen": "2026-10-18T18:06:26.732Z",
+      "lastActive": "2026-10-18T18:06:26.732Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792346763736_bh7ah56u",
+      "firstSeen": "2026-10-18T18:06:03.764Z",
+      "lastActive": "2026-10-18T18:06:03.764Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792346743796_aqmaqdde",
+      "firstSeen": "2026-10-18T18:05:43.980Z",
+      "lastActive": "2026-10-18T18:05:43.986Z",
+      "authenticatedUserId": null,
+      "pageViews": 3
+    },
+    {
+      "sessionId": "ses_1792346724404_eurnusxu",
+      "firstSeen": "2026-10-18T18:05:24.799Z",
+      "lastActive": "2026-10-18T18:05:24.799Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792346696788_rzwan35s",
+      "firstSeen": "2026-10-18T18:04:57.215Z",
+      "lastActive": "2026-10-18T18:04:57.215Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792232117627_ysd5sz3d",
+      "firstSeen": "2026-10-17T10:15:17.672Z",
+      "lastActive": "2026-10-17T10:15:17.672Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792232037064_z5q2tdhu",
+      "firstSeen": "2026-10-17T10:13:57.125Z",
+      "lastActive": "2026-10-17T10:13:57.125Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231798916_xkrtwana",
+      "firstSeen": "2026-10-17T10:09:59.244Z",
+      "lastActive": "2026-10-17T10:09:59.244Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231760492_cx4i3d3m",
+      "firstSeen": "2026-10-17T10:09:20.789Z",
+      "lastActive": "2026-10-17T10:09:20.789Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231723224_0791pvi4",
+      "firstSeen": "2026-10-17T10:08:43.512Z",
+      "lastActive": "2026-10-17T10:08:43.512Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231690627_va7hzmif",
+      "firstSeen": "2026-10-17T10:08:10.888Z",
+      "lastActive": "2026-10-17T10:08:10.888Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231678988_9rtb1xvs",
+      "firstSeen": "2026-10-17T10:07:59.303Z",
+      "lastActive": "2026-10-17T10:07:59.303Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231664323_qed82juj",
+      "firstSeen": "2026-10-17T10:07:44.566Z",
+      "lastActive": "2026-10-17T10:07:44.566Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231646909_yqcdxgh6",
+      "firstSeen": "2026-10-17T10:07:27.161Z",
+      "lastActive": "2026-10-17T10:07:27.161Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231631428_3vaz2wir",
+      "firstSeen": "2026-10-17T10:07:11.686Z",
+      "lastActive": "2026-10-17T10:07:11.686Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231621796_bv466q38",
+      "firstSeen": "2026-10-17T10:07:02.058Z",
+      "lastActive": "2026-10-17T10:07:02.058Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231603411_cjr2ls66",
+      "firstSeen": "2026-10-17T10:06:43.678Z",
+      "lastActive": "2026-10-17T10:06:43.678Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231576126_da5y4mqb",
+      "firstSeen": "2026-10-17T10:06:16.372Z",
+      "lastActive": "2026-10-17T10:06:16.372Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231477066_jjj26ew7",
+      "firstSeen": "2026-10-17T10:04:37.326Z",
+      "lastActive": "2026-10-17T10:04:37.326Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231444121_8tpp809o",
+      "firstSeen": "2026-10-17T10:04:04.372Z",
+      "lastActive": "2026-10-17T10:04:04.372Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231432549_cr0ptw6j",
+      "firstSeen": "2026-10-17T10:03:52.796Z",
+      "lastActive": "2026-10-17T10:03:52.796Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792231404297_hhm0eqih",
+      "firstSeen": "2026-10-17T10:03:24.577Z",
+      "lastActive": "2026-10-17T10:03:24.577Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792230738519_ih7bfpxc",
+      "firstSeen": "2026-10-17T09:52:18.825Z",
+      "lastActive": "2026-10-17T09:52:18.825Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792230722556_h0lehnip",
+      "firstSeen": "2026-10-17T09:52:02.608Z",
+      "lastActive": "2026-10-17T09:52:02.608Z",
+      "authenticatedUserId": null,
+      "pageViews": 1
+    },
+    {
+      "sessionId": "ses_1792149888081_00xnccop",
+      "firstSeen": "2026-10-16T11:24:48.253Z",
+      "lastActive": "2026-10-17T09:50:13.881Z",
+      "authenticatedUserId": null,
+      "pageViews": 4
+    },
+    {
+      "sessionId": "ses_1792061095986_oeq1ne6d",
+      "firstSeen": "2026-10-16T10:47:53.257Z",
+      "lastActive": "2026-11-05T12:36:56.009Z",
+      "authenticatedUserId": null,
+      "pageViews": 23
+    }
+  ],
+  "currencySettings": {
+    "defaultCurrency": "USD",
+    "ngnExchangeRate": 1352.11,
+    "enableNgn": true,
+    "enableUsd": true,
+    "lastUpdated": "2026-11-16T09:24:17.315Z",
+    "isManualOverride": false,
+    "manualOverrideBy": null,
+    "manualOverrideReason": null,
+    "provider": "ExchangeRate-API"
+  },
+  "bankDestinations": [
+    {
+      "id": "dest_ngn_gtbank",
+      "currency": "NGN",
+      "bankName": "Guaranty Trust Bank (GTBank)",
+      "accountName": "ADARIKWU EMMANUEL UGBADA",
+      "accountNumber": "1033269410",
+      "sortCodeOrRouting": "058-152062",
+      "instructions": "Transfer the exact order total in Nigerian Naira (₦) using your Order Reference as narration. Click \"I Have Transferred\" to notify CEO Adnuel for verification.",
+      "isActive": true,
+      "isVerified": true,
+      "whatsappContact": "+234 913 279 3670",
+      "emailContact": "emmanueladarikwu@gmail.com",
+      "updatedAt": "2026-10-19T02:04:30.000Z"
+    },
+    {
+      "id": "dest_usd_wire",
+      "currency": "USD",
+      "bankName": "VANTÉRA Global Settlement (Mercury / Wire)",
+      "accountName": "VANTÉRA ENTERPRISES - Adnuel",
+      "accountNumber": "984102938471",
+      "sortCodeOrRouting": "021000021",
+      "swiftBic": "MERCUS33XXX",
+      "instructions": "Wire transfer order total in USD ($) referencing your Order Reference in the memo. Submit transfer confirmation for verification by CEO Adnuel.",
+      "isActive": true,
+      "isVerified": true,
+      "whatsappContact": "+234 913 279 3670",
+      "emailContact": "emmanueladarikwu@gmail.com",
+      "updatedAt": "2026-10-16T11:16:11.822Z"
+    }
+  ],
+  "coupons": [
+    {
+      "code": "KJV12568",
+      "type": "percent",
+      "value": 20,
+      "minSubtotalCents": 7000,
+      "description": "Store Promotion",
+      "isActive": true,
+      "id": "cpn_1794691310958_zal6",
+      "usedCount": 0,
+      "createdAt": "2026-11-14T21:21:50.958Z"
+    }
+  ],
+  "supportTickets": [],
+  "verificationCodes": [
+    {
+      "id": "vcode_1794818429373_738f90d6",
+      "email": "upgrade_test_1794818429292@example.com",
+      "codeHash": "3a4110e28b56f247128cc62dacb86a97935fc20f6ab520f3f4df87e209d0d7c0",
+      "salt": "8b60127f9d4bdb67cd37e08ffdf4e334",
+      "expiresAt": 1794818729374,
+      "attempts": 1,
+      "used": true,
+      "createdAt": "2026-11-16T08:40:29.374Z"
+    }
+  ],
+  "imageAudit": {
+    "lastScannedAt": "2026-11-16T09:08:33.974Z",
+    "totalProducts": 1,
+    "withWorkingImages": 1,
+    "missingImages": 0,
+    "repairedImages": 0,
+    "awaitingReview": 0
+  },
+  "paymentSettings": {
+    "paystackEnabled": true,
+    "paystackPublicKey": "pk_test_sample_vantera_key",
+    "paystackSecretKey": "sk_test_sample_vantera_key",
+    "paystackTestMode": true,
+    "bankTransferEnabled": true,
+    "activeCurrencies": [
+      "NGN",
+      "USD"
+    ],
+    "updatedAt": "2026-10-19T14:13:16.454Z"
+  },
+  "customDomainSettings": {
+    "domain": "vantera.com.ng",
+    "status": "propagating",
+    "primaryRegistrar": "WhoGoHost (Nigeria)",
+    "targetCname": "ais-pre-mya5tkvgiwvj2cq7n3u4lg-518971387912.europe-west2.run.app",
+    "sslStatus": "provisioning",
+    "configuredAt": "2026-10-24T14:46:44.680Z",
+    "lastChecked": "2026-10-24T14:46:44.680Z"
+  },
+  "processedWebhooks": {
+    "WAVY_TX_1794818428473": {
+      "timestamp": "2026-11-16T08:40:28.473Z",
+      "payload": {
+        "event": "charge.success",
+        "data": {
+          "reference": "WAVY_TX_1794818428473",
+          "orderReference": "VAN-2026-TEST",
+          "amount": 7600,
+          "currency": "NGN",
+          "status": "success"
+        }
+      }
+    }
+  }
+}
