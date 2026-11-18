@@ -471,6 +471,20 @@
   ],
   "auditLogs": [
     {
+      "id": "log_1795016312649_xdua",
+      "timestamp": "2026-11-18T15:38:32.649Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
+      "id": "log_1795016269956_nc4n",
+      "timestamp": "2026-11-18T15:37:49.956Z",
+      "actor": "SYSTEM_FX_CRON",
+      "action": "UPDATE_CURRENCY_SETTINGS",
+      "details": "Updated currency settings (Rate: 1352.74 NGN/USD)"
+    },
+    {
       "id": "log_1795015900037_nymp",
       "timestamp": "2026-11-18T15:31:40.037Z",
       "actor": "SYSTEM_FX_CRON",
@@ -2537,7 +2551,7 @@
     "ngnExchangeRate": 1352.74,
     "enableNgn": true,
     "enableUsd": true,
-    "lastUpdated": "2026-11-18T15:31:40.037Z",
+    "lastUpdated": "2026-11-18T15:38:32.649Z",
     "isManualOverride": false,
     "manualOverrideBy": null,
     "manualOverrideReason": null,
