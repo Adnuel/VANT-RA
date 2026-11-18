@@ -44,8 +44,18 @@
           event.stopImmediatePropagation();
         }
       });
-      // Ensure mobile browsers update service workers to eliminate stale cached bundles
+      // Ensure browsers upgrade outdated service workers and load the newest live bundle
       if ('serviceWorker' in navigator) {
+        var refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          if (refreshing) return;
+          try {
+            if (sessionStorage.getItem('vantera_sw_reloaded') === '1') return;
+            sessionStorage.setItem('vantera_sw_reloaded', '1');
+          } catch (e) {}
+          refreshing = true;
+          window.location.reload();
+        });
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for (var i = 0; i < registrations.length; i++) {
             registrations[i].update();

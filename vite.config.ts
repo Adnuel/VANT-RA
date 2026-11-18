@@ -48,8 +48,9 @@ export default defineConfig(() => {
           skipWaiting: true,
           clientsClaim: true,
           cleanupOutdatedCaches: true,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-          globIgnores: ['**/products/**', '**/manus-storage/**', '**/*.zip', '**/festive_*.png', '**/vantera-flagship-hero.jpg'],
+          navigateFallback: null,
+          globPatterns: ['**/*.{js,css,ico,png,svg}'],
+          globIgnores: ['**/products/**', '**/manus-storage/**', '**/*.zip', '**/festive_*.png', '**/vantera-flagship-hero.jpg', '**/lv__20261118155532_9655fbf2.mp4'],
           maximumFileSizeToCacheInBytes: 4000000,
           runtimeCaching: [
             {
