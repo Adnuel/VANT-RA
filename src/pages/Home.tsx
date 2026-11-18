@@ -221,7 +221,6 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
         <div className="relative w-full aspect-[1920/1004] lg:max-h-[calc(100svh-68px)] bg-[#0B0B0B] overflow-hidden">
           <video
             ref={heroVideoRef}
-            src="/assets/aistudio/hero-showcase-faststart.mp4"
             autoPlay
             muted
             loop
@@ -230,7 +229,10 @@ export const Home: React.FC<HomeProps> = ({ products, isLoading = false, onNavig
             poster={heroShowcaseWebp}
             aria-label="VANTÉRA flagship tech showcase film"
             className="absolute inset-0 w-full h-full object-contain object-center"
-          />
+          >
+            <source src="/media/vantera-hero-v1.mp4" type="video/mp4" />
+            <source src="/assets/aistudio/lv__20261118155532_9655fbf2.mp4" type="video/mp4" />
+          </video>
           <div
             aria-hidden="true"
             className="hidden lg:block pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0B]/92 via-[#0B0B0B]/35 to-transparent"
